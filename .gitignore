@@ -1,0 +1,76 @@
+# ===== .NET / C# Backend =====
+## Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.csproj.user
+
+## NuGet
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nupkg
+**/packages/repositories.config
+
+## Publish output
+publish/
+
+# ===== Vue 3 / Node.js Frontend =====
+node_modules/
+dist/
+.output/
+.nuxt/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor directories and files
+.idea/
+*.swp
+*.swo
+*~
+.vscode/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ===== Sensitive / Config files =====
+*.env
+.env.*
+
+# ===== Misc =====
+*.zip
+*.rar
+*.7z
+nul
+
+# ===== Excluded directories (not part of the project) =====
+weblog-springboot/
+weblog-vue3-2/
+hongjin-ai-robot/
+spoilerjs-main/
+spoiler-implementation/
+GenPassword/
+Blue岛/
+比赛材料/
+docs/

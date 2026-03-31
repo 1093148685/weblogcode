@@ -1,0 +1,23 @@
+项目介绍：Weblog.Core 个人博客系统 一个前后端分离的全栈博客平台，面向博主提供内容管理与多渠道展示能力。系统涵盖文章发布、分类标签管理、知识库、评论互动、AI 智能辅助、数据统计看板等功能，前台供访客浏览阅读，后台供博主运营管理，已部署上线并稳定运行。
+技术栈：C#、ASP.NET Core 8、SqlSugar、MySQL、JWT、MinIO、Docker、Vue 3、Pinia、Element Plus、Tailwind CSS、ECharts、Vite。
+主要功能：
+文章管理：博主可在后台通过 Markdown 编辑器撰写并发布文章，支持文章分类、多标签关联、置顶推荐、草稿/已发布状态切换，文章正文与主表分离存储以降低查询压力；前台支持按分类、标签、归档时间线等多维度浏览，具备全文搜索能力。
+知识库系统：支持创建多个知识库并维护树形目录结构，可将系列化内容以知识库形式组织和展示，提供独立的知识库阅读界面与目录导航。
+评论系统：访客可通过 QQ 号自动拉取头像与昵称进行评论，支持多级嵌套回复、送花互动、图片附件、私密评论（基于 AES 加密 + 密钥验证）、Spoiler 折叠内容、贴纸与 GIF 表情，评论提交后自动触发 SMTP 邮件通知博主及被回复用户。
+AI 智能模块：自研 AI 调用引擎（AiKernel），支持多服务商（OpenAI/DeepSeek/Claude 等）动态切换与优先级轮询，内置文章摘要生成、AI 对话助手、编辑器智能写作辅助、标签推荐、翻译等插件，API Key 采用 AES 加密存储。
+数据统计看板：后台 Dashboard 展示文章总数、分类数、标签数、全站 PV 等核心指标，并通过 ECharts 可视化呈现文章发布趋势折线图、每日 PV 访问趋势图、分类文章占比饼图、标签文章数量柱状图。
+技术亮点：
+分层架构设计：采用 5 层清晰分层架构（Model → Common → Repository → Service → Api），严格遵循依赖注入与接口隔离原则（IXxxService + XxxService），Controller 按 Admin/Portal 职责拆分，Admin 端拥有完整增删改查权限且需 JWT 鉴权，Portal 端仅暴露只读接口供游客访问，有效实现了权限分离与代码可维护性。
+评论安全防护体系：基于 ToolGood.Words 实现 DFA 敏感词过滤算法，对评论内容与昵称进行实时检测与自动拦截；私密评论采用 AES-256 加密存储 + SHA-256 密钥哈希校验 + 验证码 + 失败次数限流的四重安全机制；结合 IP 属地解析、User-Agent 设备识别、评论审核流程，构建了完整的评论安全防护链路。
+AI 多服务商调度引擎：设计并实现 AiKernel + ProviderRegistry + AiProviderSelector 三层架构的 AI 调用框架，支持 OpenAI、DeepSeek、Claude 及其他兼容 OpenAI 协议的模型动态注册与优先级轮询，Provider 连接失败时自动降级切换；通过 PluginManager 插件化管理 AI 能力（摘要生成、对话、编辑辅助、标签推荐、翻译），实现了 AI 功能的高度可扩展性。
+文件上传与去重优化：基于 MinIO 对象存储构建文件上传服务，利用文件内容 MD5 哈希值作为对象名实现自动去重（秒传），上传失败时采用指数退避策略自动重试 3 次，通过 double-check locking 保证 Bucket 初始化的线程安全性。
+前端工程化实践：基于 Vue 3 Composition API + Pinia 状态管理 + Vue Router 构建 SPA 应用，集成 md-editor-v3 Markdown 编辑器（支持代码高亮与实时预览）、ECharts 数据可视化图表、GSAP 动画引擎与打字机效果，采用 Tailwind CSS + Element Plus 实现响应式布局，支持亮/暗主题切换。
+容器化部署：采用 Docker 多阶段构建（SDK Build + Runtime）优化镜像体积，通过 Docker Compose 编排 API 服务，配合 Nginx 反向代理实现前后端统一入口与跨域处理，支持一键部署上线。
+
+负责开发并独立完成博客系统全部功能模块，涵盖文章管理、分类标签、知识库、评论系统、AI 智能模块、Dashboard 统计看板等核心功能的设计与实现。
+设计并实现自研 AI 多服务商调度引擎（AiKernel），支持 OpenAI/DeepSeek/Claude 等多家大模型动态注册、优先级轮询与故障自动降级，并通过插件化架构（PluginManager）集成文章摘要生成、AI 对话、智能写作辅助等 5 项 AI 能力。
+构建多层级评论安全防护体系，集成 DFA 敏感词过滤算法实时拦截违规内容，设计私密评论功能采用 AES-256 加密 + SHA-256 密钥哈希 + 验证码 + 失败次数限流四重安全机制，保障用户数据安全。
+深度优化文件上传模块，基于 MinIO 实现文件内容 MD5 哈希去重（秒传），采用指数退避重试策略保障上传可靠性，通过 double-check locking 实现线程安全的 Bucket 初始化。
+独立完成评论系统的完整设计与开发，支持多级嵌套回复、送花互动、图片附件、QQ 头像自动拉取、IP 属地解析与设备识别、SMTP 邮件异步通知等功能，评论审核与敏感词拦截流程全链路闭环。
+负责前端全部页面开发，基于 Vue 3 + Pinia + Element Plus + Tailwind CSS 构建前后台 SPA 应用，集成 ECharts 实现 Dashboard 数据可视化，集成 md-editor-v3 实现 Markdown 编辑器，整体 UI 支持响应式布局与亮/暗主题切换。
+搭建 Docker 多阶段构建 + Docker Compose 编排的容器化部署方案，配合 Nginx 反向代理实现生产环境一键部署，系统上线后稳定运行。

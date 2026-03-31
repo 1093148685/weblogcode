@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  api:
+    image: weblog-core:latest
+    container_name: weblog-api
+    restart: always
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5000;https://+:5001
+      - ConnectionStrings__DefaultConnection=Server=1Panel-mysql-xe2L;Port=3306;Database=netweblog;User=root;Password=mysql_Z77rPz;
+      - MinIO__Endpoint=http://1Panel-minio-1no2:9000
+      - MinIO__AccessKey=quanxiaoha
+      - MinIO__SecretKey=quanxiaoha
+      - MinIO__BucketName=weblog
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    network_mode: bridge
