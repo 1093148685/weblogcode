@@ -606,3 +606,284 @@ public class TranslationPlugin : BaseAiPlugin
         };
     }
 }
+
+// ═══════════════════════════════════════════════════════════
+// 写作增强插件
+// ═══════════════════════════════════════════════════════════
+
+[AiPlugin("article_writer", "一键生成文章", "根据标题和大纲，AI 自动生成完整 Markdown 文章", "content")]
+public class ArticleWriterPlugin : BaseAiPlugin
+{
+    public override string PluginId => "article_writer";
+    public override string Name => "一键生成文章";
+    public override string Description => "根据标题和大纲，AI 自动生成完整 Markdown 文章";
+    public override string Category => "content";
+    public override string Version => "1.0.0";
+    public override string Author => "Weblog";
+    public override List<string> RequiredProviders => new() { "openai", "claude", "deepseek", "zhipu", "gemini", "minimax" };
+
+    public override async Task<AiPluginResult> ExecuteAsync(AiPluginExecuteRequest request)
+    {
+        var context = Context ?? throw new InvalidOperationException("Plugin not initialized");
+
+        var title     = request.Parameters.GetValueOrDefault("title")?.ToString();
+        var outline   = request.Parameters.GetValueOrDefault("outline")?.ToString();
+        var style     = request.Parameters.GetValueOrDefault("style")?.ToString() ?? "技术";
+        var wordCount = GetIntParam(request, "wordCount") ?? 800;
+        var resolvedModel = await ResolveModelAsync(request);
+
+        if (string.IsNullOrWhiteSpace(title))
+            return new AiPluginResult { Success = false, Error = "标题不能为空" };
+
+        var outlineSection = string.IsNullOrWhiteSpace(outline)
+            ? ""
+            : $"\n\n参考大纲：\n{outline}";
+
+        var styleGuide = style switch
+        {
+            "技术" => "技术博客风格：逻辑严谨，代码示例丰富，适当使用专业术语",
+            "随笔" => "随笔风格：文笔轻松，富有个人感悟，叙事自然流畅",
+            "教程" => "教程风格：步骤清晰，循序渐进，包含注意事项和示例",
+            _ => "专业博客风格，内容充实"
+        };
+
+        var systemPrompt = $@"你是一个专业的博客写手。请根据给定的标题和要求，生成一篇高质量的 Markdown 格式文章。
+
+写作风格：{styleGuide}
+目标字数：约 {wordCount} 字
+
+要求：
+1. 文章结构清晰，包含引言、正文（多个章节）、总结
+2. 使用 Markdown 格式，合理使用标题（## ### ####）、列表、代码块等
+3. 内容充实，有深度，避免空话
+4. 直接输���文章正文，不要包含标题行（标题已单独存储）";
+
+        var userPrompt = $"请以「{title}」为主题写一篇文章。{outlineSection}";
+
+        var chatRequest = new AiChatRequest
+        {
+            Model = resolvedModel,
+            Messages = new List<AiChatMessage>
+            {
+                new() { Role = "system", Content = systemPrompt },
+                new() { Role = "user",   Content = userPrompt }
+            },
+            Temperature = 0.75,
+            MaxTokens   = Math.Max(2000, wordCount * 3)
+        };
+
+        try
+        {
+            var (provider, apiKey, error) = await context.ProviderSelector.SelectAsync(type: AiProviderType.Chat);
+            if (provider == null || apiKey == null)
+                return new AiPluginResult { Success = false, Error = error ?? "No available provider" };
+
+            var response = await provider.ChatAsync(chatRequest, apiKey);
+            context.ProviderSelector.RecordSuccess(provider.Name, apiKey);
+
+            return new AiPluginResult
+            {
+                Success = true,
+                Data    = response.Content,
+                Metadata = new Dictionary<string, object>
+                {
+                    { "model", response.Model },
+                    { "usage", response.UsageInput + response.UsageOutput },
+                    { "style", style },
+                    { "wordCount", wordCount }
+                }
+            };
+        }
+        catch (Exception ex)
+        {
+            return new AiPluginResult { Success = false, Error = ex.Message };
+        }
+    }
+
+    private static int? GetIntParam(AiPluginExecuteRequest request, string key)
+    {
+        if (!request.Parameters.TryGetValue(key, out var value)) return null;
+        if (value is int i) return i;
+        if (value is System.Text.Json.JsonElement je && je.ValueKind == System.Text.Json.JsonValueKind.Number)
+            return je.GetInt32();
+        if (int.TryParse(value?.ToString(), out var parsed)) return parsed;
+        return null;
+    }
+}
+
+[AiPlugin("seo_optimizer", "SEO 优化建议", "分析文章标题和内容，给出 SEO 评分与优化建议", "content")]
+public class SeoOptimizerPlugin : BaseAiPlugin
+{
+    public override string PluginId => "seo_optimizer";
+    public override string Name => "SEO 优化建议";
+    public override string Description => "分析文章标题和内容，给出 SEO 评分与优化建议";
+    public override string Category => "content";
+    public override string Version => "1.0.0";
+    public override string Author => "Weblog";
+    public override List<string> RequiredProviders => new() { "openai", "claude", "deepseek", "zhipu", "gemini", "minimax" };
+
+    public override async Task<AiPluginResult> ExecuteAsync(AiPluginExecuteRequest request)
+    {
+        var context = Context ?? throw new InvalidOperationException("Plugin not initialized");
+
+        var title    = request.Parameters.GetValueOrDefault("title")?.ToString();
+        var content  = request.Parameters.GetValueOrDefault("content")?.ToString();
+        var keywords = request.Parameters.GetValueOrDefault("keywords")?.ToString() ?? "";
+        var resolvedModel = await ResolveModelAsync(request);
+
+        if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(content))
+            return new AiPluginResult { Success = false, Error = "标题和内容不能为空" };
+
+        // 截断内容避免超 token
+        if (content.Length > 6000) content = content[..6000] + "...";
+
+        var systemPrompt = @"你是一个专业的 SEO 顾问。请分析给定文章的 SEO 质量，并以 JSON 格式返回分析结果。
+
+返回的 JSON 结构如下（严格遵守，不要有额外文字）：
+{
+  ""score"": 75,
+  ""titleAnalysis"": {
+    ""length"": 28,
+    ""hasKeyword"": true,
+    ""suggestions"": [""建议1"", ""建议2""]
+  },
+  ""contentAnalysis"": {
+    ""wordCount"": 1200,
+    ""readabilityScore"": 80,
+    ""keywordDensity"": ""2.5%"",
+    ""headingCount"": 5,
+    ""hasImages"": false
+  },
+  ""suggestions"": [""优化建议1"", ""优化建议2"", ""优化建议3""]
+}";
+
+        var userPrompt = $"标题：{title}\n目标关键词：{(string.IsNullOrEmpty(keywords) ? "未指定" : keywords)}\n\n文章内容：\n{content}";
+
+        var chatRequest = new AiChatRequest
+        {
+            Model = resolvedModel,
+            Messages = new List<AiChatMessage>
+            {
+                new() { Role = "system", Content = systemPrompt },
+                new() { Role = "user",   Content = userPrompt }
+            },
+            Temperature = 0.3,
+            MaxTokens   = 1500
+        };
+
+        try
+        {
+            var (provider, apiKey, error) = await context.ProviderSelector.SelectAsync(type: AiProviderType.Chat);
+            if (provider == null || apiKey == null)
+                return new AiPluginResult { Success = false, Error = error ?? "No available provider" };
+
+            var response = await provider.ChatAsync(chatRequest, apiKey);
+            context.ProviderSelector.RecordSuccess(provider.Name, apiKey);
+
+            // 尝试提取 JSON（AI 可能会有前后缀文字）
+            var rawContent = response.Content;
+            var jsonStart = rawContent.IndexOf('{');
+            var jsonEnd   = rawContent.LastIndexOf('}');
+            var jsonData  = (jsonStart >= 0 && jsonEnd > jsonStart)
+                ? rawContent[jsonStart..(jsonEnd + 1)]
+                : rawContent;
+
+            return new AiPluginResult
+            {
+                Success = true,
+                Data    = jsonData,
+                Metadata = new Dictionary<string, object> { { "model", response.Model } }
+            };
+        }
+        catch (Exception ex)
+        {
+            return new AiPluginResult { Success = false, Error = ex.Message };
+        }
+    }
+}
+
+[AiPlugin("content_moderator", "内容安全检测", "检测文章是否含有敏感内容、违规信息，返回安全等级与详情", "content")]
+public class ContentModeratorPlugin : BaseAiPlugin
+{
+    public override string PluginId => "content_moderator";
+    public override string Name => "内容安全检测";
+    public override string Description => "检测文章是否含有敏感内容、违规信息，返回安全等级与详情";
+    public override string Category => "content";
+    public override string Version => "1.0.0";
+    public override string Author => "Weblog";
+    public override List<string> RequiredProviders => new() { "openai", "claude", "deepseek", "zhipu", "gemini", "minimax" };
+
+    public override async Task<AiPluginResult> ExecuteAsync(AiPluginExecuteRequest request)
+    {
+        var context = Context ?? throw new InvalidOperationException("Plugin not initialized");
+
+        var content = request.Parameters.GetValueOrDefault("content")?.ToString();
+        var resolvedModel = await ResolveModelAsync(request);
+
+        if (string.IsNullOrWhiteSpace(content))
+            return new AiPluginResult { Success = false, Error = "内容不能为空" };
+
+        if (content.Length > 8000) content = content[..8000] + "...";
+
+        var systemPrompt = @"你是一个内容安全审核助手。请分析给定内容是否包含违规信息，并以 JSON 格式返回结果。
+
+返回的 JSON 结构如下（严格遵守，不要有额外文字）：
+{
+  ""level"": ""safe"",
+  ""passed"": true,
+  ""categories"": {
+    ""politics"": false,
+    ""violence"": false,
+    ""adult"": false,
+    ""spam"": false,
+    ""illegal"": false
+  },
+  ""issues"": [],
+  ""suggestion"": ""内容符合规范，可以发布""
+}
+
+level 取值：safe（安全）/ warning（需注意）/ danger（危险，建议修改）
+passed：true 表示可发布，false 表示建议修改
+issues：具体问题描述列表，safe 时为空数组";
+
+        var chatRequest = new AiChatRequest
+        {
+            Model = resolvedModel,
+            Messages = new List<AiChatMessage>
+            {
+                new() { Role = "system", Content = systemPrompt },
+                new() { Role = "user",   Content = $"请检测以下内容：\n\n{content}" }
+            },
+            Temperature = 0.1,
+            MaxTokens   = 800
+        };
+
+        try
+        {
+            var (provider, apiKey, error) = await context.ProviderSelector.SelectAsync(type: AiProviderType.Chat);
+            if (provider == null || apiKey == null)
+                return new AiPluginResult { Success = false, Error = error ?? "No available provider" };
+
+            var response = await provider.ChatAsync(chatRequest, apiKey);
+            context.ProviderSelector.RecordSuccess(provider.Name, apiKey);
+
+            var rawContent = response.Content;
+            var jsonStart = rawContent.IndexOf('{');
+            var jsonEnd   = rawContent.LastIndexOf('}');
+            var jsonData  = (jsonStart >= 0 && jsonEnd > jsonStart)
+                ? rawContent[jsonStart..(jsonEnd + 1)]
+                : rawContent;
+
+            return new AiPluginResult
+            {
+                Success = true,
+                Data    = jsonData,
+                Metadata = new Dictionary<string, object> { { "model", response.Model } }
+            };
+        }
+        catch (Exception ex)
+        {
+            return new AiPluginResult { Success = false, Error = ex.Message };
+        }
+    }
+}

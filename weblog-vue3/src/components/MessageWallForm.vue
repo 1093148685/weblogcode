@@ -3,7 +3,7 @@
         <div class="message-form">
             <!-- 头部 -->
             <div class="form-header mb-4 flex items-center justify-between">
-                <span class="text-sm font-medium text-gray-700 dark:text-gray-200">发表留言</span>
+                <span class="text-sm font-medium text-[var(--text-body)]">发表留言</span>
                 <CommentAdminLogin />
             </div>
             
@@ -12,9 +12,9 @@
                     <!-- 头像 -->
                     <div class="w-10 h-10 flex-shrink-0">
                         <img v-if="commentStore.userInfo.avatar && commentStore.userInfo.avatar.length > 0"
-                            :src="commentStore.userInfo.avatar" 
-                            class="w-10 h-10 rounded-full border border-gray-200 dark:border-gray-600">
-                        <div v-else class="w-10 h-10 rounded-full border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 dark:text-gray-500">
+                            :src="commentStore.userInfo.avatar"
+                            class="w-10 h-10 rounded-full border border-[var(--border-base)]">
+                        <div v-else class="w-10 h-10 rounded-full border border-[var(--border-base)] bg-[var(--bg-hover)] flex items-center justify-center text-[var(--text-muted)]">
                             <i class="fas fa-user text-sm"></i>
                         </div>
                     </div>
@@ -26,63 +26,63 @@
                             <input @blur="onNicknameInputBlur" v-model="commentStore.userInfo.nickname"
                                 type="text"
                                 placeholder="QQ号/昵称"
-                                class="flex-1 min-w-0 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                                class="flex-1 min-w-0 bg-[var(--bg-base)] border border-[var(--border-base)] rounded-md px-3 py-2 text-sm text-[var(--text-heading)] placeholder-[var(--text-placeholder)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]">
                             <input v-model="commentStore.userInfo.mail"
                                 type="text"
                                 placeholder="邮箱 (选填)"
-                                class="flex-1 min-w-0 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                                class="flex-1 min-w-0 bg-[var(--bg-base)] border border-[var(--border-base)] rounded-md px-3 py-2 text-sm text-[var(--text-heading)] placeholder-[var(--text-placeholder)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]">
                             <input v-model="commentStore.userInfo.website"
                                 type="text"
                                 placeholder="网站 (选填)"
-                                class="flex-1 min-w-0 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                                class="flex-1 min-w-0 bg-[var(--bg-base)] border border-[var(--border-base)] rounded-md px-3 py-2 text-sm text-[var(--text-heading)] placeholder-[var(--text-placeholder)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]">
                         </div>
                         
                         <!-- 文本框 -->
                         <div class="relative">
                             <textarea v-model="commentForm.content" rows="3" :maxlength="MAX_CONTENT_LENGTH"
-                                class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
+                                class="w-full bg-[var(--bg-base)] border border-[var(--border-base)] rounded-md px-3 py-2 text-sm text-[var(--text-heading)] placeholder-[var(--text-placeholder)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] resize-none"
                                 placeholder="说点什么..."></textarea>
                             
                             <!-- 工具按钮组 -->
                             <div class="absolute bottom-2 right-2 flex items-center gap-1">
                                 <!-- 打码标签按钮 -->
                                 <button type="button" @click.stop="insertSpoilerTag"
-                                    class="p-1.5 text-gray-400 hover:text-purple-500 dark:hover:text-purple-400 transition-colors"
+                                    class="p-1.5 text-[var(--text-muted)] hover:text-purple-500 transition-colors"
                                     title="插入打码文字">
                                     <i class="fas fa-eye-slash text-xs"></i>
                                 </button>
                                 <!-- 表情按钮 -->
                                 <button type="button" @click.stop="toggleEmojiPicker"
-                                    class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                                    class="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors">
                                     <i class="far fa-laugh"></i>
                                 </button>
                             </div>
                             
                             <!-- 表情选择器 -->
-                            <div v-if="showEmojiPicker" class="absolute bottom-10 right-0 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg w-80 shadow-sm">
+                            <div v-if="showEmojiPicker" class="absolute bottom-10 right-0 z-20 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-lg w-80 shadow-sm">
                                 <!-- 分类切换 -->
-                                <div class="flex border-b border-gray-100 dark:border-gray-700">
+                                <div class="flex border-b border-[var(--border-base)]">
                                     <button v-for="(category, key) in simpleEmojiCategories" :key="key"
                                         type="button"
                                         @click="activeEmojiCategory = key"
-                                        :class="['flex-1 py-2 text-center text-xs hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors whitespace-nowrap',
-                                            activeEmojiCategory === key ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-500']">
+                                        :class="['flex-1 py-2 text-center text-xs hover:bg-[var(--bg-base)] transition-colors whitespace-nowrap',
+                                            activeEmojiCategory === key ? 'text-blue-500 border-b-2 border-blue-500' : 'text-[var(--text-secondary)]']">
                                         {{ category.icon }} {{ category.name }}
                                     </button>
                                     <button type="button" @click="activeEmojiCategory = 'sticker'"
-                                        :class="['flex-1 py-2 text-center text-xs hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors whitespace-nowrap',
-                                            activeEmojiCategory === 'sticker' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-500']">
+                                        :class="['flex-1 py-2 text-center text-xs hover:bg-[var(--bg-base)] transition-colors whitespace-nowrap',
+                                            activeEmojiCategory === 'sticker' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-[var(--text-secondary)]']">
                                         <i class="fas fa-image mr-1"></i>贴纸
                                     </button>
                                     <button type="button" @click="openGiphyPicker"
-                                        class="flex-1 py-2 text-center text-xs hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors whitespace-nowrap text-gray-500">
+                                        class="flex-1 py-2 text-center text-xs hover:bg-[var(--bg-base)] transition-colors whitespace-nowrap text-[var(--text-secondary)]">
                                         <i class="fas fa-gift mr-1"></i>GIF
                                     </button>
                                 </div>
                                 <!-- 表情网格 -->
                                 <div class="p-2 max-h-40 overflow-y-auto">
                                     <div v-if="activeEmojiCategory === 'sticker'">
-                                        <div class="text-center text-xs text-gray-500 py-4">
+                                        <div class="text-center text-xs text-[var(--text-secondary)] py-4">
                                             <button @click="openStickerPicker" class="text-blue-500 hover:text-blue-600">
                                                 <i class="fas fa-images mr-1"></i>点击选择贴纸
                                             </button>
@@ -92,12 +92,12 @@
                                         <img v-for="(emoji, index) in simpleEmojiCategories[activeEmojiCategory].emojis" :key="index"
                                             :src="emoji.icon"
                                             :alt="emoji.text"
-                                            class="w-7 h-7 object-contain hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer p-0.5 transition-colors"
+                                            class="w-7 h-7 object-contain hover:bg-[var(--bg-hover)] rounded cursor-pointer p-0.5 transition-colors"
                                             @click="addEmoji(emoji)">
                                     </div>
                                     <div v-else class="grid grid-cols-8 gap-1">
                                         <span v-for="(emoji, index) in simpleEmojiCategories[activeEmojiCategory].emojis" :key="index"
-                                            class="hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer p-1 transition-colors text-center text-base"
+                                            class="hover:bg-[var(--bg-hover)] rounded cursor-pointer p-1 transition-colors text-center text-base"
                                             @click="addEmoji(emoji)">{{ emoji }}</span>
                                     </div>
                                 </div>
@@ -121,28 +121,28 @@
                             <div v-if="secretForm.isSecret" class="space-y-3 mt-3">
                                 <div>
                                     <label class="block text-xs text-amber-600 dark:text-amber-400 mb-1">私密内容</label>
-                                    <textarea 
-                                        v-model="secretForm.secretContent" 
+                                    <textarea
+                                        v-model="secretForm.secretContent"
                                         rows="2"
-                                        class="w-full px-3 py-2 text-sm border border-amber-200 dark:border-amber-700 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-amber-400 resize-none"
+                                        class="w-full px-3 py-2 text-sm border border-amber-200 dark:border-amber-700 rounded-md bg-[var(--bg-card)] text-[var(--text-heading)] focus:outline-none focus:border-amber-400 resize-none"
                                         placeholder="输入仅管理员可见的私密内容"
                                     ></textarea>
                                 </div>
                                 <div class="grid grid-cols-2 gap-3">
                                     <div>
                                         <label class="block text-xs text-amber-600 dark:text-amber-400 mb-1">密钥</label>
-                                        <input 
-                                            v-model="secretForm.secretKey" 
+                                        <input
+                                            v-model="secretForm.secretKey"
                                             type="text"
-                                            class="w-full px-3 py-2 text-sm border border-amber-200 dark:border-amber-700 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-amber-400"
+                                            class="w-full px-3 py-2 text-sm border border-amber-200 dark:border-amber-700 rounded-md bg-[var(--bg-card)] text-[var(--text-heading)] focus:outline-none focus:border-amber-400"
                                             placeholder="查看密钥"
                                         >
                                     </div>
                                     <div>
                                         <label class="block text-xs text-amber-600 dark:text-amber-400 mb-1">过期时间</label>
-                                        <select 
+                                        <select
                                             v-model="secretForm.expirationOption"
-                                            class="w-full px-3 py-2 text-sm border border-amber-200 dark:border-amber-700 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-amber-400"
+                                            class="w-full px-3 py-2 text-sm border border-amber-200 dark:border-amber-700 rounded-md bg-[var(--bg-card)] text-[var(--text-heading)] focus:outline-none focus:border-amber-400"
                                         >
                                             <option value="never">永不过期</option>
                                             <option value="1day">1天后过期</option>
@@ -154,10 +154,10 @@
                                 </div>
                                 <div v-if="secretForm.expirationOption === 'custom'">
                                     <label class="block text-xs text-amber-600 dark:text-amber-400 mb-1">自定义过期时间</label>
-                                    <input 
-                                        v-model="secretForm.customExpiration" 
+                                    <input
+                                        v-model="secretForm.customExpiration"
                                         type="datetime-local"
-                                        class="w-full px-3 py-2 text-sm border border-amber-200 dark:border-amber-700 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-amber-400"
+                                        class="w-full px-3 py-2 text-sm border border-amber-200 dark:border-amber-700 rounded-md bg-[var(--bg-card)] text-[var(--text-heading)] focus:outline-none focus:border-amber-400"
                                     >
                                 </div>
                             </div>
@@ -169,14 +169,14 @@
                                 <!-- 图片上传按钮 -->
                                 <button type="button" @click="triggerImageUpload"
                                     :disabled="hasSticker || hasGiphy"
-                                    :class="['text-xs flex items-center gap-1 transition-colors', 
-                                        (hasSticker || hasGiphy) ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-blue-500']">
+                                    :class="['text-xs flex items-center gap-1 transition-colors',
+                                        (hasSticker || hasGiphy) ? 'text-gray-300 cursor-not-allowed' : 'text-[var(--text-muted)] hover:text-blue-500']">
                                     <i class="far fa-image"></i>
                                     <span>图片{{ hasImages ? `(${selectedMedia.filter(m => m.type === 'image').length}/${MAX_IMAGES})` : '' }}</span>
                                 </button>
                                 <input type="file" ref="imageInputRef" @change="handleImageChange" accept="image/*" multiple class="hidden">
-                                <span class="text-xs text-gray-400">输入 QQ 号可自动获取信息</span>
-                                <span :class="['text-xs', contentLength > warningThreshold ? 'text-red-500' : 'text-gray-400']">
+                                <span class="text-xs text-[var(--text-muted)]">输入 QQ 号可自动获取信息</span>
+                                <span :class="['text-xs', contentLength > warningThreshold ? 'text-red-500' : 'text-[var(--text-muted)]']">
                                     {{ contentLength }}/{{ MAX_CONTENT_LENGTH }}
                                 </span>
                             </div>
@@ -190,13 +190,13 @@
                         <div v-if="selectedMedia.length > 0" class="mt-3">
                             <VueDraggable v-model="selectedMedia" class="flex flex-wrap gap-2" :animation="200">
                                 <div v-for="(media, index) in selectedMedia" :key="index" class="relative group">
-                                    <video v-if="isAnimatedUrl(media.url)" 
-                                        :src="media.url" 
-                                        class="w-16 h-16 object-cover rounded-md border border-gray-200 dark:border-gray-600"
+                                    <video v-if="isAnimatedUrl(media.url)"
+                                        :src="media.url"
+                                        class="w-16 h-16 object-cover rounded-md border border-[var(--border-base)]"
                                         autoplay loop muted playsinline></video>
-                                    <img v-else 
-                                        :src="media.url" 
-                                        class="w-16 h-16 object-cover rounded-md border border-gray-200 dark:border-gray-600">
+                                    <img v-else
+                                        :src="media.url"
+                                        class="w-16 h-16 object-cover rounded-md border border-[var(--border-base)]">
                                     <button @click.stop="removeMedia(index)" type="button"
                                         class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                         <i class="fas fa-times"></i>
@@ -217,10 +217,10 @@
         
         <!-- 成功动画 -->
         <transition name="fade">
-            <div v-if="showSuccessAnimation" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-lg">
+            <div v-if="showSuccessAnimation" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-lg p-6 shadow-lg">
                 <div class="text-center">
                     <div class="text-4xl mb-2">🎉</div>
-                    <div class="text-gray-700 dark:text-gray-200 text-sm font-medium">留言发布成功</div>
+                    <div class="text-[var(--text-body)] text-sm font-medium">留言发布成功</div>
                 </div>
             </div>
         </transition>
@@ -593,24 +593,20 @@ const addGiphy = (giphyCode) => {
 }
 
 .message-form {
-    border: 1px solid #dfe2e5;
-    border-radius: 6px;
-    padding: 16px;
-    background-color: #ffffff;
+    border: 1px solid var(--border-base);
+    border-radius: 12px;
+    padding: 20px;
+    background-color: var(--bg-card);
+    transition: box-shadow 0.3s ease;
 }
 
-.dark .message-form {
-    border-color: #30363d;
-    background-color: #1f2937;
+.message-form:focus-within {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 .form-header {
-    padding-bottom: 12px;
-    border-bottom: 1px solid #dfe2e5;
-}
-
-.dark .form-header {
-    border-bottom-color: #30363d;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-light);
 }
 
 .emoticon-16 {

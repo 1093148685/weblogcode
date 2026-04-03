@@ -1,76 +1,96 @@
 <template>
-    <!-- 固钉组件，通过设置 offset 属性来改变吸顶距离，默认值为 0。 -->
+    <!-- 固钉组件 -->
     <el-affix :offset="0">
-        <!-- 设置背景色为白色带模糊、高度为 64px，padding-right 为 4， border-bottom 为 slate 100 -->
-        <div class="bg-white/80 backdrop-blur-md h-[64px] flex pr-4 border-b border-slate-200/50">
-            <!-- 左边栏收缩、展开 -->
-            <div class="w-[42px] h-[64px] cursor-pointer flex items-center justify-center text-gray-700 hover:bg-gray-200"
-                @click="handleMenuWidth">
-                <el-icon>
+        <!-- Header 主体 -->
+        <div class="admin-header h-[64px] flex items-center pr-4 border-b border-slate-200/60">
+
+            <!-- 左边：菜单折叠按钮 -->
+            <div
+                class="header-btn w-[46px] h-[64px] cursor-pointer flex items-center justify-center"
+                @click="handleMenuWidth"
+                title="折叠菜单"
+            >
+                <el-icon class="text-slate-500 text-[18px]">
                     <Fold v-if="menuStore.menuWidth == '250px'" />
                     <Expand v-else />
                 </el-icon>
             </div>
 
-            <!-- 右边容器 -->
-            <div class="ml-auto flex">
-                <!-- 点击刷新页面 -->
-                <el-tooltip class="box-item" effect="dark" content="刷新" placement="bottom">
-                    <div class="w-[42px] h-[64px] cursor-pointer flex items-center justify-center text-gray-700 hover:bg-gray-200"
-                        @click="handleRefresh">
-                        <el-icon>
-                            <Refresh />
-                        </el-icon>
+            <!-- 面包屑区域 -->
+            <div class="flex-1 hidden md:flex items-center ml-2">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item :to="{ path: '/admin/index' }">首页</el-breadcrumb-item>
+                    <el-breadcrumb-item v-if="currentPageTitle" class="text-slate-600">{{ currentPageTitle }}</el-breadcrumb-item>
+                </el-breadcrumb>
+            </div>
+
+            <!-- 右边工具栏 -->
+            <div class="ml-auto flex items-center gap-1">
+
+                <!-- 刷新 -->
+                <el-tooltip effect="dark" content="刷新页面" placement="bottom">
+                    <div class="header-btn w-[38px] h-[38px] cursor-pointer flex items-center justify-center rounded-lg" @click="handleRefresh">
+                        <el-icon class="text-slate-500 text-[16px]"><Refresh /></el-icon>
                     </div>
                 </el-tooltip>
 
-                <!-- 点击跳转前台首页 -->
-                <el-tooltip class="box-item" effect="dark" content="跳转前台" placement="bottom">
-                    <div class="w-[42px] h-[64px] cursor-pointer flex items-center justify-center text-gray-700 hover:bg-gray-200"
-                        @click="router.push('/')">
-                        <el-icon>
-                            <Monitor />
-                        </el-icon>
+                <!-- 跳转前台 -->
+                <el-tooltip effect="dark" content="访问前台" placement="bottom">
+                    <div class="header-btn w-[38px] h-[38px] cursor-pointer flex items-center justify-center rounded-lg" @click="router.push('/')">
+                        <el-icon class="text-slate-500 text-[16px]"><Monitor /></el-icon>
                     </div>
                 </el-tooltip>
 
-                <!-- 点击全屏展示 -->
-                <el-tooltip class="box-item" effect="dark" content="全屏" placement="bottom">
-                    <div class="w-[42px] h-[64px] cursor-pointer flex items-center justify-center text-gray-700 mr-2 hover:bg-gray-200"
-                        @click="toggle">
-                        <el-icon>
+                <!-- 全屏 -->
+                <el-tooltip effect="dark" :content="isFullscreen ? '退出全屏' : '全屏'" placement="bottom">
+                    <div class="header-btn w-[38px] h-[38px] cursor-pointer flex items-center justify-center rounded-lg" @click="toggle">
+                        <el-icon class="text-slate-500 text-[16px]">
                             <FullScreen v-if="!isFullscreen" />
                             <Aim v-else />
                         </el-icon>
                     </div>
                 </el-tooltip>
 
-                <!-- 登录用户头像 -->
-                <el-dropdown class="flex items-center justify-center" @command="handleCommand">
-                    <span class="el-dropdown-link flex items-center justify-center text-gray-700 text-xs">
-                        <!-- 头像 Avatar -->
-                        <el-avatar class="mr-2" :size="25"
-                            src="src\assets\avr.jpg" />
-                        {{ userStore.userInfo.username }}
-                        <el-icon class="el-icon--right">
-                            <arrow-down />
+                <!-- 夜晚模式 -->
+                <el-tooltip effect="dark" :content="themeStore.mode === 'dark' ? '切换白天模式' : '切换夜晚模式'" placement="bottom">
+                    <div class="header-btn w-[38px] h-[38px] cursor-pointer flex items-center justify-center rounded-lg theme-btn" @click="themeStore.toggle()">
+                        <el-icon class="text-[16px]">
+                            <Sunny v-if="themeStore.mode === 'dark'" />
+                            <Moon v-else />
                         </el-icon>
-                    </span>
+                    </div>
+                </el-tooltip>
+
+                <!-- 分割线 -->
+                <div class="w-px h-5 bg-slate-200 mx-1"></div>
+
+                <!-- 用户头像下拉 -->
+                <el-dropdown class="flex items-center" @command="handleCommand" trigger="click">
+                    <div class="user-trigger flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-all duration-200">
+                        <el-avatar :size="28" src="src/assets/avr.jpg" class="ring-2 ring-indigo-200/60" />
+                        <span class="text-slate-600 text-sm font-medium hidden sm:block">{{ userStore.userInfo.username }}</span>
+                        <el-icon class="text-slate-400 text-xs"><arrow-down /></el-icon>
+                    </div>
                     <template #dropdown>
                         <el-dropdown-menu>
-                            <el-dropdown-item command="updatePassword">修改密码</el-dropdown-item>
-                            <el-dropdown-item command="logout">退出登录</el-dropdown-item>
+                            <el-dropdown-item command="updatePassword">
+                                <el-icon class="mr-1"><EditPen /></el-icon>
+                                修改密码
+                            </el-dropdown-item>
+                            <el-dropdown-item command="logout" divided>
+                                <el-icon class="mr-1"><SwitchButton /></el-icon>
+                                退出登录
+                            </el-dropdown-item>
                         </el-dropdown-menu>
                     </template>
                 </el-dropdown>
             </div>
         </div>
 
-        <!-- 修改密码 -->
+        <!-- 修改密码对话框 -->
         <FormDialog ref="formDialogRef" title="修改密码" destroyOnClose @submit="onSubmit">
             <el-form ref="formRef" :rules="rules" :model="form">
                 <el-form-item label="用户名" prop="username" label-width="120px" size="large">
-                    <!-- 输入框组件 -->
                     <el-input v-model="form.username" placeholder="请输入用户名" clearable disabled />
                 </el-form-item>
                 <el-form-item label="新密码" prop="password" label-width="120px" size="large">
@@ -85,139 +105,133 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { useMenuStore } from '@/stores/menu'
 import { useUserStore } from '@/stores/user'
+import { useThemeStore } from '@/stores/theme'
 import { useFullscreen } from '@vueuse/core'
 import { updateAdminPassword } from '@/api/admin/user'
 import { showMessage, showModel } from '@/composables/util'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import FormDialog from '@/components/FormDialog.vue'
 
 const router = useRouter()
+const route = useRoute()
 
-// isFullscreen 表示当前是否处于全屏；toggle 用于动态切换全屏、非全屏
 const { isFullscreen, toggle } = useFullscreen()
 
-// 引入了菜单 Store
 const menuStore = useMenuStore()
-// 引入了用户 Store
 const userStore = useUserStore()
+const themeStore = useThemeStore()
 
-// icon 点击事件
+// 当前页面标题（读取路由 meta）
+const currentPageTitle = computed(() => route.meta?.title || '')
+
 const handleMenuWidth = () => {
     menuStore.handleMenuWidth()
 }
 
-// 刷新页面
 const handleRefresh = () => location.reload()
 
-// 对话框是否显示
 const formDialogRef = ref(false)
 
-// 下拉菜单事件处理
 const handleCommand = (command) => {
-    // 更新密码
     if (command == 'updatePassword') {
-        // 显示修改密码对话框
         formDialogRef.value.open()
-    } else if (command == 'logout') { // 退出登录
+    } else if (command == 'logout') {
         logout()
     }
 }
 
-// 退出登录
 function logout() {
     showModel('是否确认要退出登录？').then(() => {
         userStore.logout()
         showMessage('退出登录成功！')
-        // 跳转登录页
         router.push('/login')
     })
 }
 
-// 表单引用
 const formRef = ref(null)
-
-// 修改用户密码表单对象
 const form = reactive({
     username: userStore.userInfo.username || '',
     password: '',
     rePassword: ''
 })
 
-// 监听Pinia store中的某个值的变化
-watch(() => userStore.userInfo.username, (newValue, oldValue) => {
-    // 在这里处理变化后的值
-    console.log('新值:', newValue);
-    console.log('旧值:', oldValue);
-
-    // 可以在这里执行任何你需要的逻辑
-    // 重新将新的值，设置会 form 对象中
+watch(() => userStore.userInfo.username, (newValue) => {
     form.username = newValue
-});
+})
 
-// 规则校验
 const rules = {
-    username: [
-        {
-            required: true,
-            message: '用户名不能为空',
-            trigger: 'blur'
-        }
-    ],
-    password: [
-        {
-            required: true,
-            message: '密码不能为空',
-            trigger: 'blur',
-        },
-    ],
-    rePassword: [
-        {
-            required: true,
-            message: '确认密码不能为空',
-            trigger: 'blur',
-        },
-    ]
+    username: [{ required: true, message: '用户名不能为空', trigger: 'blur' }],
+    password: [{ required: true, message: '密码不能为空', trigger: 'blur' }],
+    rePassword: [{ required: true, message: '确认密码不能为空', trigger: 'blur' }]
 }
 
 const onSubmit = () => {
-    // 先验证 form 表单字段
     formRef.value.validate((valid) => {
-        if (!valid) {
-            console.log('表单验证不通过')
-            return false
-        }
-
+        if (!valid) return false
         if (form.password != form.rePassword) {
             showMessage('两次密码输入不一致，请检查！', 'warning')
             return
         }
-
         formDialogRef.value.showBtnLoading()
-        // 调用修改用户密码接口
         updateAdminPassword(form).then((res) => {
-            console.log(res)
-            // 判断是否成功
             if (res.success == true) {
                 showMessage('密码重置成功，请重新登录！')
-                // 退出登录
                 userStore.logout()
-
-                // 隐藏对话框
                 formDialogRef.value.close()
-
-                // 跳转登录页
                 router.push('/login')
             } else {
-                // 获取服务端返回的错误消息
-                let message = res.message
-                // 提示消息
-                showMessage(message, 'error')
+                showMessage(res.message, 'error')
             }
         }).finally(() => formDialogRef.value.closeBtnLoading())
     })
 }
-
 </script>
+
+<style scoped>
+/* ===== Header 背景（参考 FeiTwnd 简约白卡风格） ===== */
+.admin-header {
+    background: #ffffff;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+}
+
+/* ===== 工具栏按钮 ===== */
+.header-btn {
+    border-radius: 8px;
+    transition: all 0.18s ease;
+}
+
+.header-btn:hover {
+    background: #f1f5f9;
+}
+
+.header-btn:hover :deep(.el-icon) {
+    color: #6366f1 !important;
+}
+
+/* ===== 用户触发区域 ===== */
+.user-trigger {
+    border-radius: 8px;
+    transition: all 0.18s ease;
+}
+
+.user-trigger:hover {
+    background: #f1f5f9;
+}
+
+/* ===== 面包屑 ===== */
+:deep(.el-breadcrumb__inner) {
+    color: #94a3b8;
+    font-size: 13px;
+}
+
+:deep(.el-breadcrumb__inner.is-link:hover) {
+    color: #6366f1;
+}
+
+:deep(.el-breadcrumb__separator) {
+    color: #cbd5e1;
+}
+</style>

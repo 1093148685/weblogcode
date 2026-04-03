@@ -1,11 +1,39 @@
 <template>
     <div class="markdown-container">
+        <!-- 思考过程折叠面板 -->
+        <div v-if="thinkContent" class="think-panel mb-3">
+            <div
+                class="think-header flex items-center gap-2 cursor-pointer text-sm text-[var(--text-muted)] hover:text-[var(--text-body)] transition-colors py-1.5 select-none"
+                @click="isThinkExpanded = !isThinkExpanded"
+            >
+                <svg
+                    class="w-4 h-4 transition-transform duration-200"
+                    :class="{ 'rotate-90': isThinkExpanded }"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+                <span class="font-medium flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.82 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.496 1.509 1.333 1.509 2.316V18" />
+                    </svg>
+                    思考过程 <span v-if="!isThinkExpanded && isThinking" class="typing-dot-small ml-1"></span>
+                </span>
+            </div>
+
+            <div v-show="isThinkExpanded" class="think-content pl-6 pr-4 py-2 text-sm text-[var(--text-muted)] border-l-2 border-[var(--border-base)] ml-1.5 mt-1 bg-[var(--bg-hover)] rounded-r-lg">
+                <div v-html="renderedThinkContent" class="think-markdown"></div>
+            </div>
+        </div>
+
         <div v-html="renderedContent"></div>
     </div>
 </template>
 
 <script setup>
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
@@ -20,6 +48,10 @@ const props = defineProps({
 })
 
 const renderedContent = ref('')
+const renderedThinkContent = ref('')
+const thinkContent = ref('')
+const isThinkExpanded = ref(true)
+const isThinking = ref(false)
 
 const md = new MarkdownIt({
     html: true,
@@ -109,15 +141,68 @@ const setupCopyFunction = () => {
 
 watch(() => props.content, (newVal) => {
     if (newVal) {
-        renderedContent.value = md.render(newVal)
+        // Extract <think>...</think> blocks
+        const thinkRegex = /<think>([\s\S]*?)(?:<\/think>|$)/
+        const match = newVal.match(thinkRegex)
+
+        let displayContent = newVal
+
+        if (match) {
+            thinkContent.value = match[1]
+            isThinking.value = !newVal.includes('</think>')
+            renderedThinkContent.value = md.render(thinkContent.value || '')
+
+            // Remove think block from main content display
+            displayContent = newVal.replace(/<think>[\s\S]*?(?:<\/think>|$)/, '').trim()
+        } else {
+            thinkContent.value = ''
+            isThinking.value = false
+            renderedThinkContent.value = ''
+        }
+
+        renderedContent.value = md.render(displayContent)
+
         nextTick(() => {
             setupCopyFunction()
         })
+    } else {
+        renderedContent.value = ''
+        thinkContent.value = ''
+        isThinking.value = false
+        renderedThinkContent.value = ''
     }
 }, { immediate: true })
 </script>
 
 <style scoped>
+.think-header {
+    user-select: none;
+}
+
+.think-content {
+    font-size: 0.85em;
+    line-height: 1.6;
+}
+
+.think-markdown :deep(p) {
+    margin: 0.5em 0;
+    font-size: 1em;
+}
+
+.typing-dot-small {
+    display: inline-block;
+    width: 3px;
+    height: 3px;
+    background-color: currentColor;
+    border-radius: 50%;
+    animation: typing 1s infinite alternate;
+}
+
+@keyframes typing {
+    0% { transform: translateY(0px) }
+    100% { transform: translateY(-3px) }
+}
+
 .markdown-container {
     width: 100%;
     line-height: 24px;
@@ -342,10 +427,10 @@ watch(() => props.content, (newVal) => {
     margin-top: 0.7em;
 }
 
-/* Dark mode styles - Theme #121827 */
+/* Dark mode styles - 深空黑蓝主题 */
 :deep(.dark) .markdown-container,
 .dark :deep(.markdown-container) {
-    color: #E2E8F0;
+    color: #e5e7eb;
 }
 
 :deep(.dark) .markdown-container h1,
@@ -360,76 +445,91 @@ watch(() => props.content, (newVal) => {
 .dark :deep(.markdown-container h4),
 .dark :deep(.markdown-container h5),
 .dark :deep(.markdown-container h6) {
-    color: #F1F5F9;
+    color: #f9fafb;
+    border-bottom-color: #253341;
 }
 
 :deep(.dark) .markdown-container a,
 .dark :deep(.markdown-container a) {
-    color: #60A5FA;
+    color: #60a5fa;
 }
 
 :deep(.dark) .markdown-container blockquote,
 .dark :deep(.markdown-container blockquote) {
-    border-left-color: #334155;
-    color: #CBD5E1;
+    border-left-color: #3b82f6;
+    color: #8899a6;
+    background-color: rgba(59, 130, 246, 0.05);
 }
 
 :deep(.dark) .markdown-container .code-block-wrapper,
 .dark :deep(.markdown-container .code-block-wrapper) {
-    background-color: #1E293B;
+    background-color: #0f1419;
+    border: 1px solid #253341;
 }
 
 :deep(.dark) .markdown-container .code-header,
 .dark :deep(.markdown-container .code-header) {
-    background-color: #334155;
+    background-color: #1c2732;
+    border-bottom: 1px solid #253341;
 }
 
 :deep(.dark) .markdown-container .code-language-label,
 .dark :deep(.markdown-container .code-language-label) {
-    color: #CBD5E1;
+    color: #8899a6;
 }
 
 :deep(.dark) .markdown-container .copy-code-btn,
 .dark :deep(.markdown-container .copy-code-btn) {
-    color: #94A3B8;
+    color: #657786;
+}
+
+:deep(.dark) .markdown-container .copy-code-btn:hover,
+.dark :deep(.markdown-container .copy-code-btn:hover) {
+    color: #3b82f6;
+    background-color: rgba(59, 130, 246, 0.1);
 }
 
 :deep(.dark) .markdown-container pre,
 :deep(.dark) .markdown-container pre > code,
 .dark :deep(.markdown-container pre),
 .dark :deep(.markdown-container pre > code) {
-    background-color: #1E293B;
-    color: #E2E8F0;
+    background-color: #0f1419;
+    color: #e5e7eb;
 }
 
 :deep(.dark) .markdown-container :not(pre) > code,
 .dark :deep(.markdown-container :not(pre) > code) {
-    background-color: #334155;
-    color: #F1F5F9;
+    background-color: #253341;
+    color: #93c5fd;
 }
 
 :deep(.dark) .markdown-container table,
 .dark :deep(.markdown-container table) {
-    border-color: #334155;
+    border-color: #253341;
 }
 
 :deep(.dark) .markdown-container th,
 :deep(.dark) .markdown-container td,
 .dark :deep(.markdown-container th),
 .dark :deep(.markdown-container td) {
-    border-color: #374151;
+    border-color: #253341;
     color: #e5e7eb;
 }
 
 :deep(.dark) .markdown-container th,
 .dark :deep(.markdown-container th) {
-    background-color: #374151;
+    background-color: #1c2732;
 }
 
 :deep(.dark) .markdown-container ol li::marker,
 :deep(.dark) .markdown-container ul li::marker,
 .dark :deep(.markdown-container ol li::marker),
 .dark :deep(.markdown-container ul li::marker) {
-    color: #6b7280;
+    color: #3b82f6;
+}
+
+:deep(.dark) .markdown-container hr,
+.dark :deep(.markdown-container hr) {
+    border-color: #253341;
 }
 </style>

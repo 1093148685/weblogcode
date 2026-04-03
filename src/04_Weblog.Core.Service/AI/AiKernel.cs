@@ -23,6 +23,9 @@ public interface IAiKernel
     Task<string> GenerateArticleSummaryAsync(long articleId, string content, string? model = null);
     Task<string> ChatWithAiAsync(List<AiChatMessage> messages, string? sessionId = null, string? model = null);
     Task<string> EditorAssistAsync(string currentContent, string instruction, string? model = null);
+    Task<string> GenerateArticleAsync(string title, string? outline = null, string style = "技术", int wordCount = 800, string? model = null);
+    Task<string> OptimizeSeoAsync(string title, string content, string? keywords = null, string? model = null);
+    Task<string> ModerateContentAsync(string content, string? model = null);
 }
 
 public class AiKernel : IAiKernel
@@ -88,7 +91,10 @@ public class AiKernel : IAiKernel
             new Plugins.ChatAssistantPlugin(),
             new Plugins.EditorAssistantPlugin(),
             new Plugins.TagRecommendPlugin(),
-            new Plugins.TranslationPlugin()
+            new Plugins.TranslationPlugin(),
+            new Plugins.ArticleWriterPlugin(),
+            new Plugins.SeoOptimizerPlugin(),
+            new Plugins.ContentModeratorPlugin()
         });
 
         await _pluginManager.InitializeAllAsync(context);
@@ -145,13 +151,19 @@ public class AiKernel : IAiKernel
 
     public async Task<string> GenerateArticleSummaryAsync(long articleId, string content, string? model = null)
     {
+        // 若未指定 model，用当前可用 Provider 的 DefaultModel
+        if (string.IsNullOrEmpty(model))
+        {
+            var (p, _, _) = await SelectProviderAsync();
+            model = p?.DefaultModel ?? "deepseek-chat";
+        }
         var result = await ExecutePluginAsync("article_summary", new AiPluginExecuteRequest
         {
             Parameters = new Dictionary<string, object>
             {
                 { "articleId", articleId },
                 { "content", content },
-                { "model", model ?? "gpt-4o-mini" }
+                { "model", model }
             }
         });
 
@@ -160,13 +172,18 @@ public class AiKernel : IAiKernel
 
     public async Task<string> ChatWithAiAsync(List<AiChatMessage> messages, string? sessionId = null, string? model = null)
     {
+        if (string.IsNullOrEmpty(model))
+        {
+            var (p, _, _) = await SelectProviderAsync();
+            model = p?.DefaultModel ?? "deepseek-chat";
+        }
         var result = await ExecutePluginAsync("chat_assistant", new AiPluginExecuteRequest
         {
             SessionId = sessionId,
             Parameters = new Dictionary<string, object>
             {
                 { "messages", messages.Select(m => new Dictionary<string, string> { { "role", m.Role }, { "content", m.Content } }).ToList() },
-                { "model", model ?? "gpt-4o-mini" }
+                { "model", model }
             }
         });
 
@@ -175,16 +192,68 @@ public class AiKernel : IAiKernel
 
     public async Task<string> EditorAssistAsync(string currentContent, string instruction, string? model = null)
     {
+        if (string.IsNullOrEmpty(model))
+        {
+            var (p, _, _) = await SelectProviderAsync();
+            model = p?.DefaultModel ?? "deepseek-chat";
+        }
         var result = await ExecutePluginAsync("editor_assistant", new AiPluginExecuteRequest
         {
             Parameters = new Dictionary<string, object>
             {
                 { "currentContent", currentContent },
                 { "instruction", instruction },
-                { "model", model ?? "gpt-4o-mini" }
+                { "model", model }
             }
         });
 
+        return result.Success ? result.Data ?? "" : throw new Exception(result.Error);
+    }
+
+    public async Task<string> GenerateArticleAsync(string title, string? outline = null, string style = "技术", int wordCount = 800, string? model = null)
+    {
+        if (string.IsNullOrEmpty(model)) { var (p, _, _) = await SelectProviderAsync(); model = p?.DefaultModel ?? "deepseek-chat"; }
+        var result = await ExecutePluginAsync("article_writer", new AiPluginExecuteRequest
+        {
+            Parameters = new Dictionary<string, object>
+            {
+                { "title", title },
+                { "outline", outline ?? "" },
+                { "style", style },
+                { "wordCount", wordCount },
+                { "model", model }
+            }
+        });
+        return result.Success ? result.Data ?? "" : throw new Exception(result.Error);
+    }
+
+    public async Task<string> OptimizeSeoAsync(string title, string content, string? keywords = null, string? model = null)
+    {
+        if (string.IsNullOrEmpty(model)) { var (p, _, _) = await SelectProviderAsync(); model = p?.DefaultModel ?? "deepseek-chat"; }
+        var result = await ExecutePluginAsync("seo_optimizer", new AiPluginExecuteRequest
+        {
+            Parameters = new Dictionary<string, object>
+            {
+                { "title", title },
+                { "content", content },
+                { "keywords", keywords ?? "" },
+                { "model", model }
+            }
+        });
+        return result.Success ? result.Data ?? "" : throw new Exception(result.Error);
+    }
+
+    public async Task<string> ModerateContentAsync(string content, string? model = null)
+    {
+        if (string.IsNullOrEmpty(model)) { var (p, _, _) = await SelectProviderAsync(); model = p?.DefaultModel ?? "deepseek-chat"; }
+        var result = await ExecutePluginAsync("content_moderator", new AiPluginExecuteRequest
+        {
+            Parameters = new Dictionary<string, object>
+            {
+                { "content", content },
+                { "model", model }
+            }
+        });
         return result.Success ? result.Data ?? "" : throw new Exception(result.Error);
     }
 }

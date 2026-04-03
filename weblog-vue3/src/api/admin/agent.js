@@ -18,6 +18,20 @@ export function sendAgentMessage(data) {
     })
 }
 
+// ──────── 会话历史 API ────────
+
+export function getAgentSessions() {
+    return axios.get('/admin/agent/sessions')
+}
+
+export function getAgentSession(sessionId) {
+    return axios.get(`/admin/agent/session/${sessionId}`)
+}
+
+export function deleteAgentSession(sessionId) {
+    return axios.delete(`/admin/agent/session/${sessionId}`)
+}
+
 // ──────── 配置文件 API ────────
 
 // 获取所有配置文件列表
@@ -50,4 +64,36 @@ export function getAgentLogs(params) {
 // 清空操作日志
 export function clearAgentLogs() {
     return axios.delete('/admin/agent/logs')
+}
+
+// ──────── 写作助手 API ────────
+
+export function generateArticle(data) {
+    return axios.post('/admin/ai/assistant/generate-article', data)
+}
+
+export function seoOptimize(data) {
+    return axios.post('/admin/ai/assistant/seo-optimize', data)
+}
+
+export function moderateContent(data) {
+    return axios.post('/admin/ai/assistant/moderate', data)
+}
+
+// ──────── Provider 管理 API ────────
+
+export function getProviderHealth() {
+    return axios.get('/admin/ai/provider/health')
+}
+
+export function getKeyPoolStatus() {
+    return axios.get('/admin/ai/provider/key-pool-status')
+}
+
+export function resetProviderKeys(name) {
+    return axios.post(`/admin/ai/provider/${name}/reset-keys`)
+}
+
+export function getTokenStats(days = 7) {
+    return axios.get('/admin/ai/assistant/token-stats', { params: { days } })
 }

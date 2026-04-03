@@ -103,6 +103,14 @@ public class AiUsageLog
     public DateTime UsageDate { get; set; } = DateTime.Now.Date;
 
     public DateTime UpdatedAt { get; set; } = DateTime.Now;
+
+    /// <summary>本次请求消耗的 Token 数（输入+输出，旧数据为 null）</summary>
+    [SugarColumn(IsNullable = true)]
+    public int? TokensUsed { get; set; }
+
+    /// <summary>使用的 Provider 名称，旧数据为 null</summary>
+    [SugarColumn(Length = 50, IsNullable = true)]
+    public string? Provider { get; set; }
 }
 
 [SugarTable("t_ai_agent_log")]

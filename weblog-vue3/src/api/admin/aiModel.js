@@ -34,3 +34,18 @@ export function deleteAiModel(id) {
 export function testAiModel(id) {
     return axios.post(`/admin/ai-model/test/${id}`)
 }
+
+// 获取模型使用统计
+export function getAiModelStats() {
+    return axios.get('/admin/ai-model/stats')
+}
+
+// 获取用量趋势（最近N天）
+export function getAiModelTrend(days = 30) {
+    return axios.get('/admin/ai-model/trend', { params: { days } })
+}
+
+// 批量启用/禁用
+export function batchUpdateModels(ids, isEnabled) {
+    return axios.put('/admin/ai-model/batch', { ids, isEnabled })
+}

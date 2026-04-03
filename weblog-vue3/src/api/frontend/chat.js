@@ -29,3 +29,8 @@ export function deleteUserSession(sessionId, clientId) {
 export function getUsageInfo(clientId) {
     return axios.get('/ai/usage', { params: { clientId } })
 }
+
+// 获取可用知识库列表（前台用，无需登录）
+export function getPublicKbList() {
+    return axios.get('/portal/rag/knowledge-bases')
+}

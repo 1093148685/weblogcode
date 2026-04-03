@@ -2,8 +2,7 @@
 <template>
    <!-- 设置语言为中文 -->
    <el-config-provider :locale="locale">
-      <StarryCanvas />
-      <div class="flex flex-col min-h-screen">
+      <div class="flex flex-col min-h-screen bg-[var(--bg-base)] transition-colors duration-300">
          <router-view v-slot="{ Component }">
             <keep-alive :include="cachedViews">
                <component :is="Component" />
@@ -17,7 +16,6 @@
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import { computed, onMounted, onUnmounted } from 'vue'
 import { startPeriodicCleanup, stopPeriodicCleanup } from '@/composables/useCache'
-import StarryCanvas from '@/components/StarryCanvas.vue'
 
 const locale = zhCn
 
@@ -33,29 +31,39 @@ const cachedViews = computed(() => {
    const views = ['index', 'archive-list', 'category-list', 'tag-list', 'wiki-list']
    return views
 })
-
-console.log(import.meta.env)
 </script>
 
 <style>
-/* 自定义顶部加载 Loading 颜色 */
-#nprogress .bar {
-   background: #409eff!important;
+/* 页面切换过渡动画 */
+.page-fade-enter-active,
+.page-fade-leave-active {
+   transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.page-fade-enter-from {
+   opacity: 0;
+   transform: translateY(10px);
+}
+.page-fade-leave-to {
+   opacity: 0;
+   transform: translateY(-10px);
 }
 
-/* 暗黑模式 body 背景色 */
-.dark body {
-   --tw-bg-opacity: 1;
-    background-color: rgb(17 24 39 / var(--tw-bg-opacity));
+/* NProgress 加载条 - Cool Gray 主色 */
+#nprogress .bar {
+   background: var(--color-primary) !important;
+}
+#nprogress .peg {
+   box-shadow: 0 0 10px var(--color-primary), 0 0 5px var(--color-primary) !important;
 }
 
 /* Markdown 内容样式 */
 .markdown-body {
     font-size: 14px;
-    line-height: 1.6;
+    line-height: 1.7;
+    color: var(--text-body);
 }
 .markdown-body p {
-    margin-bottom: 0.5em;
+    margin-bottom: 0.6em;
 }
 .markdown-body p:last-child {
     margin-bottom: 0;
@@ -65,21 +73,41 @@ console.log(import.meta.env)
     margin-bottom: 0.5em;
 }
 .markdown-body code {
-    background-color: #f3f4f6;
-    padding: 0.1em 0.3em;
-    border-radius: 3px;
-    font-size: 0.9em;
+    background-color: var(--bg-hover);
+    color: var(--text-heading);
+    padding: 0.15em 0.4em;
+    border-radius: 4px;
+    font-size: 0.88em;
+    font-family: var(--font-mono);
 }
 .markdown-body pre {
-    background-color: #f3f4f6;
-    padding: 0.5em;
-    border-radius: 5px;
+    background-color: var(--bg-hover);
+    padding: 0.75em 1em;
+    border-radius: var(--radius-sm);
     overflow-x: auto;
-    margin: 0.5em 0;
+    margin: 0.6em 0;
+    border: 1px solid var(--border-base);
 }
-.dark .markdown-body code,
-.dark .markdown-body pre {
-    background-color: #374151;
+.markdown-body pre code {
+    background: none;
+    padding: 0;
+    border-radius: 0;
+}
+.markdown-body a {
+    color: var(--color-primary);
+    text-decoration: underline;
+    text-decoration-color: var(--border-heavy);
+    text-underline-offset: 2px;
+}
+.markdown-body a:hover {
+    color: var(--color-accent);
+    text-decoration-color: var(--color-accent);
+}
+.markdown-body blockquote {
+    border-left: 3px solid var(--border-heavy);
+    padding-left: 1em;
+    margin: 0.8em 0;
+    color: var(--text-secondary);
 }
 
 /* 公告内容限制高度 */
@@ -90,70 +118,57 @@ console.log(import.meta.env)
 
 /* 公告弹窗样式 */
 .announcement-dialog .el-dialog {
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     overflow: hidden;
+    border: 1px solid var(--border-base);
 }
 .announcement-dialog .el-dialog__header {
-    background: linear-gradient(to right, #f8fafc, #fff);
-    border-bottom: 1px solid #e5e7eb;
-    padding: 12px 20px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-base);
+    padding: 14px 20px;
     margin-right: 0;
-}
-.dark .announcement-dialog .el-dialog__header {
-    background: linear-gradient(to right, #1f2937, #374151);
-    border-bottom-color: #4b5563;
 }
 .announcement-dialog .el-dialog__body {
     padding: 16px 20px;
-    background: #fff;
-}
-.dark .announcement-dialog .el-dialog__body {
-    background: #1f2937;
+    background: var(--bg-card);
 }
 .announcement-dialog .el-dialog__footer {
-    background: #f9fafb;
-    border-top: 1px solid #e5e7eb;
-    padding: 8px 20px;
-}
-.dark .announcement-dialog .el-dialog__footer {
-    background: #374151;
-    border-top-color: #4b5563;
-}
-.announcement-dialog .el-dialog__headerbtn {
-    top: 12px;
+    background: var(--bg-hover);
+    border-top: 1px solid var(--border-base);
+    padding: 10px 20px;
 }
 .announcement-dialog .el-dialog__headerbtn .el-dialog__close {
-    color: #9ca3af;
+    color: var(--text-muted);
+    transition: color var(--transition-fast);
 }
 .announcement-dialog .el-dialog__headerbtn:hover .el-dialog__close {
-    color: #4b5563;
-}
-.dark .announcement-dialog .el-dialog__headerbtn .el-dialog__close {
-    color: #9ca3af;
-}
-.dark .announcement-dialog .el-dialog__headerbtn:hover .el-dialog__close {
-    color: #fff;
+    color: var(--text-heading);
 }
 
-/* 自定义滚动条 - 更细更美观 */
+/* Element Plus 全局微调 */
+.el-button--primary {
+    border-radius: var(--radius-sm) !important;
+}
+.el-dialog {
+    border-radius: var(--radius-lg) !important;
+}
+.el-pagination.is-background .el-pager li:not(.is-disabled).is-active {
+    background-color: var(--color-primary) !important;
+}
+
+/* 自定义滚动条 */
 ::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
+    width: 5px;
+    height: 5px;
 }
 ::-webkit-scrollbar-track {
     background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-    background: #d1d5db;
-    border-radius: 4px;
+    background: var(--border-heavy);
+    border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-    background: #9ca3af;
-}
-.dark ::-webkit-scrollbar-thumb {
-    background: #4b5563;
-}
-.dark ::-webkit-scrollbar-thumb:hover {
-    background: #6b7280;
+    background: var(--text-muted);
 }
 </style>

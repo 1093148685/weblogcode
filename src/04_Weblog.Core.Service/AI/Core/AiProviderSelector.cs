@@ -60,11 +60,12 @@ public class AiProviderSelector
                     {
                         using var scope = _serviceProvider.CreateScope();
                         var dbContext = scope.ServiceProvider.GetRequiredService<Weblog.Core.Repository.DbContext>();
-                        
+
                         var legacyModel = dbContext.Db.Queryable<Weblog.Core.Model.Entities.AiModel>()
                             .Where(m => m.IsEnabled == true)
-                            .First();
-                        
+                            .ToList()
+                            .FirstOrDefault();
+
                         if (legacyModel != null && !string.IsNullOrEmpty(legacyModel.ApiKey))
                         {
                             decryptedKey = legacyModel.ApiKey;
@@ -276,6 +277,51 @@ public class AiProviderSelector
             }
         }
     }
+
+    /// <summary>获取指定 Provider 的 ApiUrl（供 Embedding 等直接构造 URL 使用）</summary>
+    public string? GetApiUrl(string providerName)
+    {
+        lock (_lock)
+        {
+            var config = _providerConfigs.FirstOrDefault(p =>
+                p.Name.Equals(providerName, StringComparison.OrdinalIgnoreCase));
+            return string.IsNullOrWhiteSpace(config?.ApiUrl) ? null : config!.ApiUrl.TrimEnd('/');
+        }
+    }
+
+    /// <summary>获取所有 Provider 的 Key Pool 健康状态（脱敏）</summary>
+    public List<ProviderKeyPoolStatus> GetKeyPoolStatus()
+    {
+        lock (_lock)
+        {
+            var result = new List<ProviderKeyPoolStatus>();
+            foreach (var kvp in _keyPools)
+            {
+                var providerName = kvp.Key;
+                var keys = kvp.Value;
+                result.Add(new ProviderKeyPoolStatus
+                {
+                    ProviderName = providerName,
+                    TotalKeys    = keys.Count,
+                    HealthyKeys  = keys.Count(k => k.IsHealthy),
+                    Keys = keys.Select(k => new KeyStatus
+                    {
+                        KeyPrefix  = k.Key.Length >= 8 ? k.Key[..4] + "****" + k.Key[^4..] : "****",
+                        IsHealthy  = k.IsHealthy,
+                        FailCount  = k.FailCount,
+                        LastUsed   = k.LastUsed == DateTime.MinValue ? null : k.LastUsed
+                    }).ToList()
+                });
+            }
+            return result;
+        }
+    }
+
+    /// <summary>获取所有已启用 Provider 的配置（用于健康检查）</summary>
+    public List<AiProviderConfig> GetEnabledProviderConfigs()
+    {
+        lock (_lock) { return _providerConfigs.Where(p => p.IsEnabled).ToList(); }
+    }
 }
 
 public class ApiKeyState
@@ -284,4 +330,20 @@ public class ApiKeyState
     public int FailCount { get; set; }
     public DateTime LastUsed { get; set; }
     public bool IsHealthy { get; set; } = true;
+}
+
+public class ProviderKeyPoolStatus
+{
+    public string ProviderName { get; set; } = string.Empty;
+    public int TotalKeys { get; set; }
+    public int HealthyKeys { get; set; }
+    public List<KeyStatus> Keys { get; set; } = new();
+}
+
+public class KeyStatus
+{
+    public string KeyPrefix { get; set; } = string.Empty;
+    public bool IsHealthy { get; set; }
+    public int FailCount { get; set; }
+    public DateTime? LastUsed { get; set; }
 }

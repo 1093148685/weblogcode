@@ -8,6 +8,7 @@ using Weblog.Core.Service.AI;
 using Weblog.Core.Service.AI.Core;
 using Weblog.Core.Service.AI.Plugins;
 using Weblog.Core.Service.AI.Providers;
+using Weblog.Core.Service.AI.Rag;
 using SqlSugar;
 
 namespace Weblog.Core.Api.Controllers.Portal;
@@ -20,13 +21,15 @@ public class AiChatController : ControllerBase
     private readonly PluginManager _pluginManager;
     private readonly ILogger<AiChatController> _logger;
     private readonly ISqlSugarClient _db;
+    private readonly IRagService _ragService;
 
-    public AiChatController(IAiKernel aiKernel, PluginManager pluginManager, ILogger<AiChatController> logger, ISqlSugarClient db)
+    public AiChatController(IAiKernel aiKernel, PluginManager pluginManager, ILogger<AiChatController> logger, ISqlSugarClient db, IRagService ragService)
     {
         _aiKernel = aiKernel;
         _pluginManager = pluginManager;
         _logger = logger;
         _db = db;
+        _ragService = ragService;
     }
 
     [HttpGet("models")]
@@ -193,6 +196,39 @@ public class AiChatController : ControllerBase
                 Content = m.Content
             }).ToList();
 
+            // ── 上下文压缩：超过20条时将早期消息压缩为摘要 ──
+            if (request.CompressContext && messages.Count > 20)
+            {
+                try
+                {
+                    var oldMessages = messages.Where(m => m.Role != "system").Take(messages.Count - 10).ToList();
+                    var summaryRequest = new AiChatRequest
+                    {
+                        Model    = model,
+                        Messages = new List<AiChatMessage>
+                        {
+                            new() { Role = "system", Content = "你是一个对话摘要助手，请将以下对话历史压缩为简洁的摘要，保留关键信息。" },
+                            new() { Role = "user",   Content = "对话历史：\n" + string.Join("\n", oldMessages.Select(m => $"{m.Role}: {m.Content}")) }
+                        },
+                        Temperature = 0.3,
+                        MaxTokens   = 500
+                    };
+                    var selectResult2 = await _aiKernel.SelectProviderAsync(GetProviderFromModel(model));
+                    if (selectResult2.provider != null && selectResult2.apiKey != null)
+                    {
+                        var summaryResp = await selectResult2.provider.ChatAsync(summaryRequest, selectResult2.apiKey, ct);
+                        var summaryMsg  = new AiChatMessage { Role = "system", Content = $"[早期对话摘要] {summaryResp.Content}" };
+                        var systemMsgs  = messages.Where(m => m.Role == "system").ToList();
+                        var recentMsgs  = messages.Where(m => m.Role != "system").Skip(messages.Count - 10).ToList();
+                        messages = systemMsgs.Concat(new[] { summaryMsg }).Concat(recentMsgs).ToList();
+                    }
+                }
+                catch (Exception compEx)
+                {
+                    _logger.LogWarning(compEx, "Context compression failed, continuing without compression");
+                }
+            }
+
             if (!string.IsNullOrEmpty(request.ArticleContent))
             {
                 var articlePrompt = $"【参考文章内容】\n标题：{request.ArticleTitle ?? "未知"}\n内容：{request.ArticleContent}\n\n";
@@ -203,6 +239,57 @@ public class AiChatController : ControllerBase
                 else
                 {
                     messages.Insert(0, new AiChatMessage { Role = "system", Content = articlePrompt });
+                }
+            }
+
+            // ── RAG 知识库检索增强 ──
+            if (request.KbId.HasValue && request.KbId.Value > 0)
+            {
+                try
+                {
+                    var userQuery = messages.LastOrDefault(m => m.Role == "user")?.Content ?? "";
+                    if (!string.IsNullOrEmpty(userQuery))
+                    {
+                        var retrieved = await _ragService.RetrieveAsync(request.KbId.Value, userQuery, topK: 5);
+                        // 向量检索：余弦相似度>=0.3；关键词检索：score 为命中词数，>=1 表示命中
+                        var relevantChunks = retrieved.Where(c =>
+                            c.Score >= 1f ||    // 关键词检索
+                            c.Score >= 0.3f     // 向量检索
+                        ).ToList();
+
+                        if (relevantChunks.Count > 0)
+                        {
+                            var ragContext = new StringBuilder();
+                            ragContext.AppendLine("【知识库参考内容】");
+                            ragContext.AppendLine("你是一个只基于以下提供的知识库内容进行回答的助手。");
+                            ragContext.AppendLine("规则：");
+                            ragContext.AppendLine("1. 只根据下面的知识库内容回答，不要使用你自己的训练知识");
+                            ragContext.AppendLine("2. 如果知识库内容中没有问题的答案，请直接说明：没有找到相关信息");
+                            ragContext.AppendLine("3. 不要编造或推测知识库中没有的内容");
+                            ragContext.AppendLine();
+                            ragContext.AppendLine("知识库内容如下：");
+                            ragContext.AppendLine();
+                            for (var i = 0; i < relevantChunks.Count; i++)
+                            {
+                                ragContext.AppendLine($"[{i + 1}] 来源：{relevantChunks[i].DocumentTitle}");
+                                ragContext.AppendLine(relevantChunks[i].Content);
+                                ragContext.AppendLine();
+                            }
+
+                            if (messages.First().Role == "system")
+                            {
+                                messages[0].Content = ragContext.ToString() + "\n\n" + messages[0].Content;
+                            }
+                            else
+                            {
+                                messages.Insert(0, new AiChatMessage { Role = "system", Content = ragContext.ToString() });
+                            }
+                        }
+                    }
+                }
+                catch (Exception ragEx)
+                {
+                    _logger.LogWarning(ragEx, "RAG retrieval failed for kb {KbId}, continuing without RAG", request.KbId);
                 }
             }
 
@@ -518,6 +605,44 @@ public class AiChatController : ControllerBase
         }
     }
 
+    [HttpGet("session/{sessionId}/export")]
+    public async Task<IActionResult> ExportSession(string sessionId, [FromQuery] string? clientId = null)
+    {
+        var userId = User.Claims.FirstOrDefault(c => c.Type == "userId")?.Value
+                     ?? clientId
+                     ?? "anonymous";
+        try
+        {
+            var session = await _db.Queryable<AiConversation>()
+                .FirstAsync(c => c.SessionId == sessionId && c.UserId == userId);
+            if (session == null) return NotFound("会话不存在");
+
+            List<PortalChatMessageItem> msgs = new();
+            try { msgs = System.Text.Json.JsonSerializer.Deserialize<List<PortalChatMessageItem>>(session.Messages ?? "[]") ?? new(); } catch { }
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"# 对话记录\n");
+            sb.AppendLine($"- 会话ID：{sessionId}");
+            sb.AppendLine($"- 模型：{session.Model}");
+            sb.AppendLine($"- 时间：{session.CreatedAt:yyyy-MM-dd HH:mm:ss}\n");
+            sb.AppendLine("---\n");
+            foreach (var m in msgs.Where(m => m.Role != "system"))
+            {
+                var role = m.Role == "user" ? "**用户**" : "**AI**";
+                sb.AppendLine($"{role}\n\n{m.Content}\n\n---\n");
+            }
+
+            var bytes = System.Text.Encoding.UTF8.GetBytes(sb.ToString());
+            var fileName = $"chat-{sessionId[..Math.Min(8, sessionId.Length)]}.md";
+            return File(bytes, "text/markdown; charset=utf-8", fileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "ExportSession failed: {SessionId}", sessionId);
+            return StatusCode(500, ex.Message);
+        }
+    }
+
     private static string GetSessionTitle(string messagesJson)
     {
         try
@@ -596,6 +721,10 @@ public class PortalChatRequest
     public string? Model { get; set; }
     public string? ArticleContent { get; set; }
     public string? ArticleTitle { get; set; }
+    /// <summary>可选：指定知识库 ID，传入后自动检索并注入上下文（RAG）</summary>
+    public long? KbId { get; set; }
+    /// <summary>当消息超过20条时，自动压缩早期消息以节省 Token</summary>
+    public bool CompressContext { get; set; } = false;
 }
 
 public class PortalChatMessageItem

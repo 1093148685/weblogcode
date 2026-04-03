@@ -1,20 +1,20 @@
 <template>
     <!-- 外层容器 -->
-    <el-container class="bg-slate-50/50">
-    
+    <el-container class="admin-layout">
+
         <!-- 左边侧边栏 -->
-        <el-aside :width='menuStore.menuWidth' class="transition-all duration-300">
+        <el-aside :width='menuStore.menuWidth' class="transition-all duration-300 flex-shrink-0 fixed left-0 top-0 h-screen z-50">
             <AdminMenu></AdminMenu>
         </el-aside>
-        
+
         <!-- 右边主内容区域 -->
-        <el-container>
+        <el-container class="right-container" :style="{ paddingLeft: menuStore.menuWidth }">
             <!-- 顶栏容器 -->
             <el-header>
                 <AdminHeader></AdminHeader>
             </el-header>
-            
-            <el-main class="bg-slate-100/80">
+
+            <el-main class="admin-main">
                 <!-- 标签导航栏 -->
                 <AdminTagList></AdminTagList>
 
@@ -27,7 +27,7 @@
                     </Transition>
                 </router-view>
             </el-main>
-            
+
             <!-- 底栏容器 -->
             <el-footer>
                 <AdminFooter></AdminFooter>
@@ -37,16 +37,16 @@
 </template>
 
 <script setup>
-// 引入组件
 import AdminFooter from './components/AdminFooter.vue';
 import AdminHeader from './components/AdminHeader.vue';
 import AdminMenu from './components/AdminMenu.vue';
 import AdminTagList from './components/AdminTagList.vue';
 import { onMounted, computed } from 'vue';
-
 import { useMenuStore } from '@/stores/menu'
+import { useThemeStore } from '@/stores/theme'
 
 const menuStore = useMenuStore()
+const themeStore = useThemeStore()
 
 const cachedViews = computed(() => {
     return [
@@ -65,21 +65,41 @@ const cachedViews = computed(() => {
 })
 
 onMounted(() => {
-    // 移除 html 标签中的 class="dark"
-    document.documentElement.classList.remove('dark');
+    // 恢复持久化的主题设置
+    themeStore.init()
 })
 </script>
 
 <style scoped>
+.admin-layout {
+    min-height: 100vh;
+    background: var(--admin-bg-page);
+}
+
+.right-container {
+    min-height: 100vh;
+    background: var(--admin-bg-page);
+}
+
 .el-header {
-    padding: 0!important;
+    padding: 0 !important;
+    height: 64px;
 }
 
 .el-footer {
-    padding: 0!important;
+    padding: 0 !important;
+    height: auto;
 }
 
-/* 内容区域过渡动画：淡入淡出 + 微移效果 */
+.admin-main {
+    padding: 0;
+    background: var(--admin-bg-page);
+    min-height: calc(100vh - 64px - 44px - 50px);
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+}
+
+/* 内容区域过渡动画 */
 .fade-enter-active {
     transition: all 0.25s ease-out;
 }
@@ -95,10 +115,5 @@ onMounted(() => {
 
 .fade-leave-to {
     opacity: 0;
-}
-
-/* 防止切换页面时白屏 */
-.el-main {
-    min-height: calc(100vh - 64px - 44px - 50px);
 }
 </style>

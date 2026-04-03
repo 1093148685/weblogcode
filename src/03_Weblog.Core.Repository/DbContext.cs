@@ -38,4 +38,9 @@ public class DbContext
     public ISugarQueryable<AiConversation> AiConversationDb => _db.Queryable<AiConversation>();
     public ISugarQueryable<AiAgentLog> AiAgentLogDb => _db.Queryable<AiAgentLog>();
     public ISugarQueryable<AiAgentConfig> AiAgentConfigDb => _db.Queryable<AiAgentConfig>();
+
+    // RAG 知识库
+    public ISugarQueryable<KnowledgeBase> KnowledgeBaseDb => _db.Queryable<KnowledgeBase>();
+    public ISugarQueryable<KbDocument> KbDocumentDb => _db.Queryable<KbDocument>();
+    public ISugarQueryable<KbChunk> KbChunkDb => _db.Queryable<KbChunk>();
 }

@@ -18,6 +18,16 @@ public interface IAiProvider
     Task<bool> TestConnectionAsync(string apiUrl, string apiKey, CancellationToken ct = default);
 }
 
+/// <summary>支持 Embedding 向量化的 Provider 扩展接口</summary>
+public interface IEmbeddingProvider
+{
+    /// <summary>对单条文本生成向量</summary>
+    Task<float[]> EmbedAsync(string text, string apiKey, string? model = null, CancellationToken ct = default);
+
+    /// <summary>批量生成向量（按 20 条/批自动分批）</summary>
+    Task<List<float[]>> EmbedBatchAsync(List<string> texts, string apiKey, string? model = null, CancellationToken ct = default);
+}
+
 public abstract class BaseAiProvider : IAiProvider
 {
     public abstract string Name { get; }

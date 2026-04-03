@@ -1,30 +1,35 @@
 <template>
-    <!-- text-sm/[30px] 表示文字小号，行高为 30px -->
     <div v-if="titles && titles.length > 0"
-        class="sticky top-[5.5rem] text-sm/[30px] w-full p-5 mb-3 bg-white border border-gray-200 rounded-lg dark:bg-gray-800 dark:border-gray-700">
+        class="bg-[var(--bg-card)] border border-[var(--border-base)] rounded-card shadow-card p-4">
         <!-- 目录标题 -->
-        <h2 class="flex items-center mb-2 font-bold text-gray-900 uppercase dark:text-white">
-            <!-- 目录图标 -->
-            <svg t="1699441758495" class="icon w-3.5 h-3.5 mr-2" viewBox="0 0 1024 1024" version="1.1"
-                xmlns="http://www.w3.org/2000/svg" p-id="4043" width="200" height="200">
-                <path
-                    d="M857.6 25.6a76.8 76.8 0 0 1 76.8 76.8v819.2a76.8 76.8 0 0 1-76.8 76.8H166.4a76.8 76.8 0 0 1-76.8-76.8V102.4a76.8 76.8 0 0 1 76.8-76.8h691.2z m-102.4 678.4H473.6l-2.2528 0.064a38.4 38.4 0 0 0 0 76.672L473.6 780.8h281.6l2.2528-0.064a38.4 38.4 0 0 0 0-76.672L755.2 704z m0-230.4H473.6l-2.2528 0.064a38.4 38.4 0 0 0 0 76.672L473.6 550.4h281.6l2.2528-0.064a38.4 38.4 0 0 0 0-76.672L755.2 473.6z m0-230.4H473.6l-2.2528 0.064a38.4 38.4 0 0 0 0 76.672L473.6 320h281.6l2.2528-0.064a38.4 38.4 0 0 0 0-76.672L755.2 243.2z"
-                    fill="#6B57FE" p-id="4044"></path>
-                <path
-                    d="M281.6 691.2a51.2 51.2 0 1 1 0 102.4 51.2 51.2 0 0 1 0-102.4z m0-230.4a51.2 51.2 0 1 1 0 102.4 51.2 51.2 0 0 1 0-102.4z m0-230.4a51.2 51.2 0 1 1 0 102.4 51.2 51.2 0 0 1 0-102.4z"
-                    fill="#FFBA00" p-id="4045"></path>
+        <h2 class="flex items-center gap-1.5 mb-3 text-sm font-semibold text-[var(--text-heading)] uppercase tracking-wide">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 20 20">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                    d="M5 5h1.5M5 8h1.5m-1.5 3h1.5M9 5h6m-6 3h6M9 11h6M3 3h14a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/>
             </svg>
-            文章目录
+            目录
         </h2>
         <div class="toc-wrapper" :class="[isDark ? 'dark' : '']">
-			<ul class="toc">
+            <ul class="toc">
                 <!-- 二级标题 -->
                 <li v-for="(h2, index) in titles" :key="index">
-                    <span @click="scrollToView(h2.offsetTop)" class="pl-5 hover:text-sky-600" :class="[h2.index == activeHeadingIndex ? 'active py-1 text-sky-600 border-l-2 border-sky-600 font-bold' : 'text-gray-500 font-normal']">{{ h2.text }}</span>
+                    <span @click="scrollToView(h2.offsetTop)"
+                        class="block cursor-pointer py-0.5 text-xs leading-5 truncate transition-colors"
+                        :class="[h2.index == activeHeadingIndex
+                            ? 'text-[var(--color-primary)] border-l-2 border-[var(--color-primary)] font-semibold pl-3'
+                            : 'text-[var(--text-secondary)] hover:text-[var(--color-primary)] pl-4']">
+                        {{ h2.text }}
+                    </span>
                     <!-- 三级标题 -->
                     <ul v-if="h2.children && h2.children.length > 0">
                         <li v-for="(h3, index2) in h2.children" :key="index2">
-                            <span @click="scrollToView(h3.offsetTop)" class="pl-10 hover:text-sky-600" :class="[h3.index == activeHeadingIndex ? 'active py-1 text-sky-600 border-l-2 border-sky-600 font-bold' : 'text-gray-500 font-normal']">{{ h3.text }}</span>
+                            <span @click="scrollToView(h3.offsetTop)"
+                                class="block cursor-pointer py-0.5 text-xs leading-5 truncate transition-colors"
+                                :class="[h3.index == activeHeadingIndex
+                                    ? 'text-[var(--color-primary)] border-l-2 border-[var(--color-primary)] font-semibold pl-7'
+                                    : 'text-[var(--text-muted)] hover:text-[var(--color-primary)] pl-8']">
+                                {{ h3.text }}
+                            </span>
                         </li>
                     </ul>
                 </li>
@@ -35,14 +40,17 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
-import { useDark } from '@vueuse/core'
 
-// 是否是暗黑模式
-const isDark = useDark()
+// 是否是暗黑模式（通过 html.dark class 判断）
+const isDark = ref(document.documentElement.classList.contains('dark'))
+const darkObserver = new MutationObserver(() => {
+    isDark.value = document.documentElement.classList.contains('dark')
+})
 
 // 响应式的目录数据
 const titles = ref([])
 onMounted(() => {
+    darkObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
     // 通过 .artilce-content 样式来获取父级 div
     const container = document.querySelector('.article-content')
 
@@ -105,7 +113,10 @@ function handleContentScroll() {
 }
 
 // 移除滚动监听
-onBeforeUnmount(() => window.removeEventListener('scroll', handleContentScroll))
+onBeforeUnmount(() => {
+    window.removeEventListener('scroll', handleContentScroll)
+    darkObserver.disconnect()
+})
 
 // 滚动到指定的位置
 function scrollToView(offsetTop) {
@@ -164,7 +175,7 @@ function initTocData(container) {
     position: relative;
     overflow-x: hidden;
     overflow-y: auto;
-    max-height: 75vh;
+    max-height: 60vh;
     text-overflow: ellipsis;
     white-space: nowrap;
     scroll-behavior: smooth;
@@ -178,29 +189,18 @@ function initTocData(container) {
     left: 0;
     z-index: -1;
     width: 2px;
-    background: #eaecef;
+    background: var(--border-base);
 }
 
 ::v-deep(.dark .toc:before) {
-    content: " ";
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    z-index: -1;
-    width: 2px;
-    background: #30363d;
+    background: var(--border-base);
 }
 
 ::v-deep(.dark .toc li span) {
-    color: #9e9e9e;
+    color: var(--text-secondary);
 }
 
 ::v-deep(.dark .toc li .active) {
-    color: rgb(2 132 199 / 1);
-}
-
-::v-deep(.dark .toc li span:hover) {
-    color: rgb(2 132 199 / 1);
+    color: var(--color-primary);
 }
 </style>

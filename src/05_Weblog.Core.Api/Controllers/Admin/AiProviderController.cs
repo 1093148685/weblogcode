@@ -4,6 +4,8 @@ using Weblog.Core.Api.Filters;
 using Weblog.Core.Common.Result;
 using Weblog.Core.Model.DTOs;
 using Weblog.Core.Service.AI;
+using Weblog.Core.Service.AI.Core;
+using Weblog.Core.Service.AI.Providers;
 
 namespace Weblog.Core.Api.Controllers.Admin;
 
@@ -15,11 +17,15 @@ public class AiProviderController : ControllerBase
 {
     private readonly IAiProviderService _providerService;
     private readonly ILogger<AiProviderController> _logger;
+    private readonly AiProviderSelector _selector;
+    private readonly ProviderRegistry _registry;
 
-    public AiProviderController(IAiProviderService providerService, ILogger<AiProviderController> logger)
+    public AiProviderController(IAiProviderService providerService, ILogger<AiProviderController> logger, AiProviderSelector selector, ProviderRegistry registry)
     {
         _providerService = providerService;
         _logger = logger;
+        _selector = selector;
+        _registry = registry;
     }
 
     [HttpGet("list")]
@@ -188,10 +194,68 @@ public class AiProviderController : ControllerBase
             return Result<List<object>>.Fail($"获取模型列表失败: {ex.Message}");
         }
     }
+
+    // ──────── Provider 健康检查 ────────
+
+    [HttpGet("health")]
+    public async Task<Result<List<ProviderHealthDto>>> GetHealth(CancellationToken ct)
+    {
+        var configs = _selector.GetEnabledProviderConfigs();
+        var results = new System.Collections.Concurrent.ConcurrentBag<ProviderHealthDto>();
+
+        await Parallel.ForEachAsync(configs, new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = ct }, async (cfg, token) =>
+        {
+            var provider = _registry.Get(cfg.Name);
+            if (provider == null) return;
+
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            string status = "unknown"; string? error = null;
+            try
+            {
+                var ok = await provider.TestConnectionAsync(cfg.ApiUrl, cfg.ApiKey ?? "", token);
+                status = ok ? "healthy" : "unhealthy";
+            }
+            catch (Exception ex) { status = "error"; error = ex.Message; }
+            sw.Stop();
+
+            results.Add(new ProviderHealthDto
+            {
+                Name        = cfg.Name,
+                Status      = status,
+                LatencyMs   = sw.ElapsedMilliseconds,
+                LastChecked = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                Error       = error
+            });
+        });
+
+        return Result<List<ProviderHealthDto>>.Ok(results.OrderBy(r => r.Name).ToList());
+    }
+
+    [HttpGet("key-pool-status")]
+    public Result<List<ProviderKeyPoolStatus>> GetKeyPoolStatus()
+    {
+        return Result<List<ProviderKeyPoolStatus>>.Ok(_selector.GetKeyPoolStatus());
+    }
+
+    [HttpPost("{name}/reset-keys")]
+    public Result<bool> ResetKeys(string name)
+    {
+        _selector.ResetKeyHealth(name);
+        return Result<bool>.Ok(true);
+    }
 }
 
 public class FetchModelsRequest
 {
     public string ApiUrl { get; set; } = string.Empty;
     public string ApiKey { get; set; } = string.Empty;
+}
+
+public class ProviderHealthDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public long LatencyMs { get; set; }
+    public string LastChecked { get; set; } = string.Empty;
+    public string? Error { get; set; }
 }

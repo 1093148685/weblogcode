@@ -4,22 +4,22 @@
         <div class="panel-header mb-4">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600"></span>
-                    <span class="text-sm font-medium text-gray-600 dark:text-gray-300">{{ comments.length }} 条留言</span>
+                    <span class="w-2 h-2 rounded-full bg-[var(--bg-active)]"></span>
+                    <span class="text-sm font-medium text-[var(--text-secondary)]">{{ comments.length }} 条留言</span>
                 </div>
                 <div class="flex items-center gap-2">
                     <!-- 排序按钮 -->
                     <button v-for="option in sortOptions" :key="option.value"
                         @click="currentSort = option.value"
                         :class="['px-2 py-1 text-xs rounded transition-colors',
-                            currentSort === option.value 
-                                ? 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200' 
-                                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300']">
+                            currentSort === option.value
+                                ? 'bg-[var(--bg-hover)] text-[var(--text-body)]'
+                                : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]']">
                         {{ option.label }}
                     </button>
                     <!-- 刷新按钮 -->
                     <button @click="handleRefresh" :disabled="loading"
-                        class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-50">
+                        class="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors disabled:opacity-50">
                         <i class="fas fa-sync-alt text-xs" :class="{ 'animate-spin': loading }"></i>
                     </button>
                 </div>
@@ -28,9 +28,9 @@
         
         <!-- 加载状态 -->
         <div v-if="loading" class="flex justify-center items-center py-12">
-            <div class="w-5 h-5 border-2 border-gray-200 border-t-gray-600 rounded-full animate-spin"></div>
+            <div class="w-5 h-5 border-2 border-[var(--border-base)] border-t-[var(--text-secondary)] rounded-full animate-spin"></div>
         </div>
-        
+
         <!-- 留言列表 -->
         <div v-else-if="sortedComments && sortedComments.length > 0" class="comments-container">
             <div v-for="(comment, index) in visibleComments" :key="comment.id" 
@@ -46,15 +46,15 @@
             
             <!-- 加载更多indicator -->
             <div v-if="hasMoreComments" class="flex justify-center items-center py-6">
-                <div class="w-5 h-5 border-2 border-gray-200 border-t-gray-600 rounded-full animate-spin"></div>
+                <div class="w-5 h-5 border-2 border-[var(--border-base)] border-t-[var(--text-secondary)] rounded-full animate-spin"></div>
             </div>
         </div>
         
         <!-- 空状态 -->
         <div v-else class="text-center py-12">
             <div class="text-3xl mb-3">📝</div>
-            <p class="text-gray-400 text-sm mb-1">暂无留言</p>
-            <p class="text-gray-400 text-xs">快来发表第一条留言吧</p>
+            <p class="text-[var(--text-muted)] text-sm mb-1">暂无留言</p>
+            <p class="text-[var(--text-muted)] text-xs">快来发表第一条留言吧</p>
         </div>
     </div>
 </template>

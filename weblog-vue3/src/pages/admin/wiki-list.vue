@@ -262,10 +262,6 @@ const dataLoaded = ref(false)
 
 // 获取分页数据
 function getTableData() {
-    // 如果数据已加载且有数据，不重复加载
-    if (dataLoaded.value && tableData.value.length > 0) {
-        return
-    }
     // 显示表格 loading
     tableLoading.value = true
     // 调用后台分页接口，并传入所需参数

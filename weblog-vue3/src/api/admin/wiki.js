@@ -49,3 +49,8 @@ export function updateWikiCatalogs(data) {
 export function deleteWikiCatalog(id) {
     return axios.post("/admin/wiki/catalog/delete", {id})
 }
+
+// 获取全部 Wiki（供知识库导入用）
+export function getWikiList() {
+    return axios.post("/admin/wiki/list", { pageNum: 1, pageSize: 200 })
+}

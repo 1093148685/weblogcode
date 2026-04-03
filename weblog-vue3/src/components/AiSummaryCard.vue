@@ -2,11 +2,11 @@
     <div class="ai-summary-card rounded-lg p-4 border-2 transition-all duration-300" 
          :class="isTyping ? 'loading' : ''">
         <div class="flex items-center gap-2 mb-3">
-            <svg class="w-5 h-5 text-sky-600 dark:text-sky-400" fill="currentColor" viewBox="0 0 20 20">
+            <svg class="w-5 h-5 text-[var(--color-primary)]" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
             </svg>
-            <span class="font-semibold text-sky-800 dark:text-sky-300">AI 摘要</span>
-            <span v-if="isTyping" class="text-xs text-sky-500 dark:text-sky-400 animate-pulse">生成中...</span>
+            <span class="font-semibold text-[var(--color-primary)]">AI 摘要</span>
+            <span v-if="isTyping" class="text-xs text-[var(--color-primary)] animate-pulse">生成中...</span>
         </div>
         
         <transition name="fade">
@@ -15,12 +15,12 @@
                 <div class="h-4 rounded loading-shimmer" style="width: 60%"></div>
                 <div class="h-4 rounded loading-shimmer" style="width: 70%"></div>
             </div>
-            <div v-else-if="isTyping" id="ai-summary-typing" class="text-gray-700 dark:text-gray-300 text-sm leading-relaxed"></div>
-            <div v-else-if="showMarkdown && displayContent" class="text-gray-700 dark:text-gray-300 text-sm leading-relaxed markdown-body" v-html="renderedContent"></div>
-            <div v-else-if="hasError" class="text-gray-500 dark:text-gray-400 text-sm">
+            <div v-else-if="isTyping" id="ai-summary-typing" class="text-[var(--text-body)] text-sm leading-relaxed"></div>
+            <div v-else-if="showMarkdown && displayContent" class="text-[var(--text-body)] text-sm leading-relaxed markdown-body" v-html="renderedContent"></div>
+            <div v-else-if="hasError" class="text-[var(--text-secondary)] text-sm">
                 暂时没有摘要
             </div>
-            <div v-else class="text-gray-500 dark:text-gray-400 text-sm">
+            <div v-else class="text-[var(--text-secondary)] text-sm">
                 暂时没有摘要
             </div>
         </transition>

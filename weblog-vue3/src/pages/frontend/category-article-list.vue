@@ -2,15 +2,14 @@
     <Header></Header>
 
     <!-- 主内容区域 -->
-    <main class="container max-w-screen-xl mx-auto px-4 md:px-6 py-4">
-        <!-- grid 表格布局，分为 4 列 -->
-        <div class="grid grid-cols-4 gap-7">
-            <!-- 左边栏，占用 3 列 -->
-            <div class="col-span-4 md:col-span-3 mb-3">
+    <main class="max-w-content mx-auto px-4 md:px-6 py-4">
+        <div class="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
+            <!-- 左边内容 -->
+            <div class="min-w-0">
                 <!-- 分类列表 -->
-                <div class="w-full p-5 pb-7 mb-3 bg-white border border-gray-200 rounded-lg dark:bg-gray-800 dark:border-gray-700">
+                <div class="w-full p-5 pb-7 mb-3 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-lg shadow-card">
                     <!-- 分类标题 -->
-                    <h2 class="flex items-center mb-5 font-bold text-gray-900 uppercase dark:text-white">
+                    <h2 class="flex items-center mb-5 font-bold text-[var(--text-heading)] uppercase">
                         <!-- 文件夹图标 -->
                         <svg t="1698998570037" class="inline icon w-5 h-5 mr-2" viewBox="0 0 1024 1024" version="1.1"
                             xmlns="http://www.w3.org/2000/svg" p-id="21572" width="200" height="200">
@@ -32,21 +31,20 @@
                         </svg>
                         分类
                         <span v-if="categories && categories.length > 0"
-                            class="ml-2 text-gray-600 font-normal dark:text-gray-300">
+                            class="ml-2 text-[var(--text-secondary)] font-normal">
                             ( {{ categories.length }} )
                         </span>
                     </h2>
                     <!-- 分类列表 -->
-                    <div class="text-sm flex flex-wrap gap-3 font-medium text-gray-600 rounded-lg dark:border-gray-600 dark:text-white">
+                    <div class="text-sm flex flex-wrap gap-3 font-medium text-[var(--text-secondary)] rounded-lg">
                         <a @click="goCategoryArticleListPage(category.id, category.name)"
                             v-for="(category, index) in categories" :key="index"
-                            :class="[route.query.name == category.name ? 'bg-sky-100 hover:bg-sky-200' : 'hover:bg-gray-100']"
-                            class="inline-flex cursor-pointer items-center px-4 py-2 text-sm font-medium text-center border rounded-lg 
-             focus:ring-4 focus:outline-none focus:ring-gray-300 
-            dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:focus:ring-gray-800 dark:border-gray-700 dark:hover:text-white">
+                            :class="[route.query.name == category.name ? 'bg-[var(--bg-hover)] hover:bg-[var(--bg-active)]' : 'hover:bg-[var(--bg-hover)]']"
+                            class="inline-flex cursor-pointer items-center px-4 py-2 text-sm font-medium text-center border rounded-lg
+             focus:ring-4 focus:outline-none focus:ring-[var(--focus-ring)]">
                             {{ category.name }}
                             <span
-                                class="inline-flex items-center justify-center w-4 h-4 ms-2 text-xs font-semibold text-sky-800 bg-sky-200 rounded-full">
+                                class="inline-flex items-center justify-center w-4 h-4 ms-2 text-xs font-semibold text-[var(--text-body)] bg-[var(--bg-active)] rounded-full">
                                 {{ category.articlesTotal }}
                             </span>
                         </a>
@@ -54,26 +52,48 @@
                 </div>
 
                 <!-- 分类文章列表 -->
-                <div class="p-5 mb-4 border border-gray-200 rounded-lg bg-white dark:bg-gray-800 dark:border-gray-700">
-                    <ol v-if="articles && articles.length > 0" class="divide-y divider-gray-200 dark:divide-gray-700">
+                <div class="p-5 mb-4 border border-[var(--border-base)] rounded-lg bg-[var(--bg-card)] shadow-card">
+                    <ol v-if="articles && articles.length > 0" class="divide-y divide-[var(--border-base)]">
                         <li v-for="(article, index) in articles" :key="index">
-                            <a @click="goArticleDetailPage(article.id)" class="cursor-pointer items-center block p-3 sm:flex hover:bg-gray-100 hover:rounded-lg dark:hover:bg-gray-700">
-                                <img class="w-24 h-12 mb-3 mr-3 rounded-lg sm:mb-0" :src="article.cover" />
-                                <div class="text-gray-600 dark:text-gray-400">
-                                    <h2 class="text-base font-normal text-gray-900 dark:text-white">
+                            <a @click="goArticleDetailPage(article.id)" class="cursor-pointer items-center block p-3 sm:flex hover:bg-[var(--bg-hover)] hover:rounded-lg transition-colors">
+                                <img class="w-24 h-16 mb-3 mr-4 rounded-lg sm:mb-0 object-cover flex-shrink-0" :src="article.cover" />
+                                <div class="text-[var(--text-secondary)] flex-1 min-w-0">
+                                    <h2 class="text-base font-medium text-[var(--text-heading)] mb-2 truncate">
                                         {{ article.title }}
                                     </h2>
-                                    <span
-                                        class="inline-flex items-center text-xs font-normal text-gray-500 dark:text-gray-400">
-                                        <svg class="inline w-2.5 h-2.5 mr-2 text-gray-400"
-                                            aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
-                                            viewBox="0 0 20 20">
-                                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M5 1v3m5-3v3m5-3v3M1 7h18M5 11h10M2 3h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
-                                        </svg>
-                                        {{ article.createDate }}
-                                    </span>
+                                    <div class="flex items-center gap-4 text-xs text-[var(--text-muted)] flex-wrap">
+                                        <span class="flex items-center">
+                                            <svg class="inline w-3 h-3 mr-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+                                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 1v3m5-3v3m5-3v3M1 7h18M5 11h10M2 3h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
+                                            </svg>
+                                            {{ article.createDate }}
+                                        </span>
+                                        <span class="hidden sm:flex items-center" title="阅读量">
+                                            <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24">
+                                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7Z"/>
+                                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                                            </svg>
+                                            {{ article.readNum }}
+                                        </span>
+                                        <span class="hidden sm:flex items-center" title="评论数">
+                                            <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24">
+                                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 0 1-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z"/>
+                                            </svg>
+                                            {{ article.commentNum }}
+                                        </span>
+                                        <span class="hidden sm:flex items-center" title="字数">
+                                            <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24">
+                                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2Z"/>
+                                            </svg>
+                                            {{ article.totalWords }}
+                                        </span>
+                                        <span class="hidden sm:flex items-center" title="阅读时长">
+                                            <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24">
+                                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                                            </svg>
+                                            {{ article.readTime }} min
+                                        </span>
+                                    </div>
                                 </div>
                             </a>
                         </li>
@@ -251,7 +271,7 @@
                                 fill="#c0c7d2" fill-rule="evenodd" group-id="4" id="矩形" node-id="56" stroke="none"
                                 target-height="46" target-width="33.334473" target-x="380.8566" target-y="423" />
                         </svg>
-                        <p class="mt-2 mb-16 text-gray-400">此分类下还未发布文章哟~</p>
+                        <p class="mt-2 mb-16 text-[var(--text-muted)]">此分类下还未发布文章哟~</p>
                     </div>
                 </div>
 
@@ -261,7 +281,7 @@
                         <!-- 上一页 -->
                         <li>
                             <a @click="getCategoryArticles(current - 1)"
-                                class="flex items-center justify-center px-4 h-10 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                                class="flex items-center justify-center px-4 h-10 ml-0 leading-tight text-[var(--text-muted)] bg-[var(--bg-card)] border border-[var(--border-base)] rounded-btn hover:bg-[var(--bg-hover)] hover:text-[var(--text-heading)]"
                                 :class="[current > 1 ? '' : 'cursor-not-allowed']">
 
                                 <span class="sr-only">上一页</span>
@@ -275,15 +295,15 @@
                         <!-- 页码 -->
                         <li v-for="(pageNo, index) in pages" :key="index">
                             <a @click="getCategoryArticles(pageNo)"
-                                class="flex items-center justify-center px-4 h-10 leading-tight border  dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-                                :class="[pageNo == current ? 'text-sky-600  bg-sky-50 border-sky-500 hover:bg-sky-100 hover:text-sky-700' : 'text-gray-500 border-gray-300 bg-white hover:bg-gray-100 hover:text-gray-700']">
+                                class="flex items-center justify-center px-4 h-10 leading-tight border"
+                                :class="[pageNo == current ? 'text-[var(--color-primary)] bg-[var(--bg-hover)] border-[var(--border-base)] hover:bg-[var(--bg-active)] hover:text-[var(--text-heading)]' : 'text-[var(--text-muted)] border-[var(--border-base)] bg-[var(--bg-card)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-heading)]']">
                                 {{ index + 1 }}
                             </a>
                         </li>
                         <!-- 下一页 -->
                         <li>
                             <a @click="getCategoryArticles(current + 1)"
-                                class="flex items-center justify-center px-4 h-10 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                                class="flex items-center justify-center px-4 h-10 leading-tight text-[var(--text-muted)] bg-[var(--bg-card)] border border-[var(--border-base)] rounded-btn hover:bg-[var(--bg-hover)] hover:text-[var(--text-heading)]"
                                 :class="[current < pages ? '' : 'cursor-not-allowed']">
                                 <span class="sr-only">下一页</span>
                                 <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
@@ -297,9 +317,9 @@
                 </nav>
             </div>
 
-            <!-- 右边侧边栏，占用一列 -->
-            <aside class="col-span-4 md:col-span-1">
-                <div class="sticky top-[5.5rem]">
+            <!-- 右边侧边栏 -->
+            <aside class="hidden lg:block w-[280px] flex-shrink-0">
+                <div class="sticky top-24 space-y-4">
                     <!-- 博主信息 -->
                     <UserInfoCard></UserInfoCard>
 

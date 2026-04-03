@@ -4,6 +4,7 @@ using SqlSugar;
 using Weblog.Core.Api.Filters;
 using Weblog.Core.Common.Result;
 using Weblog.Core.Model.Entities;
+using Weblog.Core.Service.AI;
 
 namespace Weblog.Core.Api.Controllers.Admin;
 
@@ -15,11 +16,13 @@ public class AiAssistantController : ControllerBase
 {
     private readonly ISqlSugarClient _db;
     private readonly ILogger<AiAssistantController> _logger;
+    private readonly IAiKernel _aiKernel;
 
-    public AiAssistantController(ISqlSugarClient db, ILogger<AiAssistantController> logger)
+    public AiAssistantController(ISqlSugarClient db, ILogger<AiAssistantController> logger, IAiKernel aiKernel)
     {
         _db = db;
         _logger = logger;
+        _aiKernel = aiKernel;
     }
 
     [HttpGet("usage")]
@@ -224,6 +227,87 @@ public class AiAssistantController : ControllerBase
             return 0;
         }
     }
+
+    // ──────────────────── 写作 Plugin API ────────────────────
+
+    [HttpPost("generate-article")]
+    public async Task<Result<string>> GenerateArticle([FromBody] GenerateArticleRequest request)
+    {
+        try
+        {
+            var result = await _aiKernel.GenerateArticleAsync(
+                request.Title, request.Outline, request.Style ?? "技术", request.WordCount > 0 ? request.WordCount : 800);
+            return Result<string>.Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "GenerateArticle failed");
+            return Result<string>.Fail(ex.Message);
+        }
+    }
+
+    [HttpPost("seo-optimize")]
+    public async Task<Result<string>> SeoOptimize([FromBody] SeoOptimizeRequest request)
+    {
+        try
+        {
+            var result = await _aiKernel.OptimizeSeoAsync(request.Title, request.Content, request.Keywords);
+            return Result<string>.Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "SeoOptimize failed");
+            return Result<string>.Fail(ex.Message);
+        }
+    }
+
+    [HttpPost("moderate")]
+    public async Task<Result<string>> ModerateContent([FromBody] ModerateRequest request)
+    {
+        try
+        {
+            var result = await _aiKernel.ModerateContentAsync(request.Content);
+            return Result<string>.Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "ModerateContent failed");
+            return Result<string>.Fail(ex.Message);
+        }
+    }
+
+    // ──────────────────── Token 统计 ────────────────────
+
+    [HttpGet("token-stats")]
+    public async Task<Result<List<TokenStatDto>>> GetTokenStats([FromQuery] int days = 7)
+    {
+        try
+        {
+            var since = DateTime.Now.Date.AddDays(-days + 1);
+            var logs = await _db.Queryable<AiUsageLog>()
+                .Where(l => l.UsageDate >= since && l.TokensUsed != null)
+                .ToListAsync();
+
+            var stats = logs
+                .GroupBy(l => new { Date = l.UsageDate.ToString("yyyy-MM-dd"), Provider = l.Provider ?? "unknown" })
+                .Select(g => new TokenStatDto
+                {
+                    Date          = g.Key.Date,
+                    Provider      = g.Key.Provider,
+                    TotalTokens   = g.Sum(l => l.TokensUsed ?? 0),
+                    TotalRequests = g.Sum(l => l.UsageCount)
+                })
+                .OrderByDescending(s => s.Date)
+                .ToList();
+
+            return Result<List<TokenStatDto>>.Ok(stats);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "GetTokenStats failed");
+            return Result<List<TokenStatDto>>.Fail(ex.Message);
+        }
+    }
 }
 
 public class AiUsageStatDto
@@ -258,4 +342,32 @@ public class ChatMessage
 {
     public string Role { get; set; } = "";
     public string Content { get; set; } = "";
+}
+
+public class GenerateArticleRequest
+{
+    public string Title { get; set; } = string.Empty;
+    public string? Outline { get; set; }
+    public string? Style { get; set; } = "技术";
+    public int WordCount { get; set; } = 800;
+}
+
+public class SeoOptimizeRequest
+{
+    public string Title { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+    public string? Keywords { get; set; }
+}
+
+public class ModerateRequest
+{
+    public string Content { get; set; } = string.Empty;
+}
+
+public class TokenStatDto
+{
+    public string Date { get; set; } = string.Empty;
+    public string Provider { get; set; } = string.Empty;
+    public int TotalTokens { get; set; }
+    public int TotalRequests { get; set; }
 }

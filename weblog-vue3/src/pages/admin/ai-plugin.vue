@@ -1,51 +1,35 @@
 <template>
-    <div class="p-6 min-h-full bg-gray-50 dark:bg-gray-900">
+    <div class="p-5 min-h-full">
 
-        <!-- ── 顶部标题栏 ── -->
-        <div class="flex items-center justify-between mb-6">
-            <div>
-                <h1 class="text-xl font-bold text-gray-800 dark:text-gray-100">AI 插件市场</h1>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">管理并配置博客的 AI 能力插件</p>
+        <!-- 页头 -->
+        <div class="flex items-center justify-between mb-5">
+            <div class="flex items-center gap-3">
+                <div class="page-header__icon">
+                    <el-icon :size="20"><Grid /></el-icon>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-800">AI 插件市场</h1>
+                    <p class="text-sm text-slate-400 mt-0.5">管理并配置博客的 AI 能力插件</p>
+                </div>
             </div>
-            <el-button :icon="Refresh" @click="loadData" :loading="loading" circle />
+            <el-button :icon="Refresh" @click="loadData" :loading="loading" circle plain />
         </div>
 
-        <!-- ── 统计概览 ── -->
-        <el-row :gutter="16" class="mb-6">
-            <el-col :xs="24" :sm="8">
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 flex items-center gap-4">
-                    <div class="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
-                        <el-icon :size="20" class="text-blue-500"><Cpu /></el-icon>
-                    </div>
-                    <div>
-                        <div class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ tableData.length }}</div>
-                        <div class="text-xs text-gray-500">已安装插件</div>
-                    </div>
-                </div>
-            </el-col>
-            <el-col :xs="24" :sm="8">
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 flex items-center gap-4">
-                    <div class="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
-                        <el-icon :size="20" class="text-green-500"><CircleCheck /></el-icon>
-                    </div>
-                    <div>
-                        <div class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ enabledCount }}</div>
-                        <div class="text-xs text-gray-500">已启用插件</div>
-                    </div>
-                </div>
-            </el-col>
-            <el-col :xs="24" :sm="8">
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 flex items-center gap-4">
-                    <div class="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
-                        <el-icon :size="20" class="text-purple-500"><DataBoard /></el-icon>
-                    </div>
-                    <div>
-                        <div class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ enabledProviders.length }}</div>
-                        <div class="text-xs text-gray-500">可用 Provider</div>
-                    </div>
-                </div>
-            </el-col>
-        </el-row>
+        <!-- 统计卡片 -->
+        <div class="grid grid-cols-3 gap-4 mb-5">
+            <div class="mini-stat mini-stat--blue">
+                <div class="mini-stat__num">{{ tableData.length }}</div>
+                <div class="mini-stat__label">已安装插件</div>
+            </div>
+            <div class="mini-stat mini-stat--green">
+                <div class="mini-stat__num">{{ enabledCount }}</div>
+                <div class="mini-stat__label">已启用插件</div>
+            </div>
+            <div class="mini-stat mini-stat--violet">
+                <div class="mini-stat__num">{{ enabledProviders.length }}</div>
+                <div class="mini-stat__label">可用 Provider</div>
+            </div>
+        </div>
 
         <!-- ── 搜索 & 筛选栏 ── -->
         <div class="flex flex-wrap items-center gap-3 mb-5">
@@ -517,7 +501,7 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import {
     Refresh, Cpu, CircleCheck, DataBoard, ArrowRight,
-    VideoPlay, Check, Search
+    VideoPlay, Check, Search, Grid
 } from '@element-plus/icons-vue'
 import { getAiPlugins, updateAiPlugin, toggleAiPlugin, testAiPlugin } from '@/api/admin/ai-plugin'
 import { getEnabledAiProviders } from '@/api/admin/ai-provider'
@@ -863,4 +847,24 @@ onMounted(loadData)
 .el-fade-in-leave-to {
     opacity: 0;
 }
+
+/* 页头图标 */
+.page-header__icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    display: flex; align-items: center; justify-content: center;
+    color: white; flex-shrink: 0;
+}
+
+/* 迷你统计卡 */
+.mini-stat {
+    border-radius: 12px; padding: 16px 20px;
+    display: flex; flex-direction: column; gap: 4px;
+    border: 1px solid transparent;
+}
+.mini-stat__num  { font-size: 28px; font-weight: 700; line-height: 1; }
+.mini-stat__label { font-size: 12px; opacity: 0.75; }
+.mini-stat--blue   { background: linear-gradient(135deg,#eef2ff,#e0e7ff); color:#4338ca; border-color:#c7d2fe; }
+.mini-stat--green  { background: linear-gradient(135deg,#f0fdf4,#dcfce7); color:#16a34a; border-color:#bbf7d0; }
+.mini-stat--violet { background: linear-gradient(135deg,#fdf4ff,#f3e8ff); color:#9333ea; border-color:#e9d5ff; }
 </style>

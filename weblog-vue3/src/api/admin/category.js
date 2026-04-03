@@ -4,10 +4,14 @@ import { getCache, setCache, clearCache } from '@/composables/useCache'
 const CACHE_TTL = 5 * 60 * 1000
 
 // 获取分类分页数据
-export function getCategoryPageList(data) {
+export function getCategoryPageList(data, noCache = false) {
     const cacheKey = `admin_category_list_${JSON.stringify(data)}`
-    const cached = getCache(cacheKey)
-    if (cached) return Promise.resolve(cached)
+    if (!noCache) {
+        const cached = getCache(cacheKey)
+        if (cached) return Promise.resolve(cached)
+    } else {
+        clearCache(cacheKey)
+    }
 
     return axios.post("/admin/category/list", data).then(res => {
         if (res.success) setCache(cacheKey, res, CACHE_TTL)

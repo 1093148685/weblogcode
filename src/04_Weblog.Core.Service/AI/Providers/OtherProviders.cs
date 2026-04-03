@@ -30,7 +30,7 @@ public class AzureOpenAiProvider : BaseAiProvider
 
     public override async Task<AiChatResponse> ChatAsync(AiChatRequest request, string apiKey, CancellationToken ct = default)
     {
-        using var client = new HttpClient();
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
         client.DefaultRequestHeaders.Add("api-key", apiKey);
 
         var payload = new
@@ -64,7 +64,7 @@ public class AzureOpenAiProvider : BaseAiProvider
 
     public override async IAsyncEnumerable<string> ChatStreamAsync(AiChatRequest request, string apiKey, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
     {
-        using var client = new HttpClient();
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
         client.DefaultRequestHeaders.Add("api-key", apiKey);
 
         var payload = new
@@ -119,7 +119,7 @@ public class AzureOpenAiProvider : BaseAiProvider
     {
         try
         {
-            using var client = new HttpClient();
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
             client.DefaultRequestHeaders.Add("api-key", apiKey);
             var payload = new { model = DefaultModel, messages = new[] { new { role = "user", content = "Hi" } }, max_tokens = 5 };
             var url = string.IsNullOrEmpty(apiUrl)
@@ -174,7 +174,7 @@ public class GeminiProvider : BaseAiProvider
 
     public override async Task<AiChatResponse> ChatAsync(AiChatRequest request, string apiKey, CancellationToken ct = default)
     {
-        using var client = new HttpClient();
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
 
         var contents = BuildContents(request.Messages);
 
@@ -215,7 +215,7 @@ public class GeminiProvider : BaseAiProvider
 
     public override async IAsyncEnumerable<string> ChatStreamAsync(AiChatRequest request, string apiKey, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
     {
-        using var client = new HttpClient();
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
         client.Timeout = TimeSpan.FromMinutes(5);
 
         var contents = BuildContents(request.Messages);
@@ -272,7 +272,7 @@ public class GeminiProvider : BaseAiProvider
     {
         try
         {
-            using var client = new HttpClient();
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
             var payload = new { contents = new[] { new { role = "user", parts = new[] { new { text = "Hi" } } } }, generationConfig = new { maxOutputTokens = 5 } };
             var response = await client.PostAsync(
                 $"https://generativelanguage.googleapis.com/v1beta/models/{DefaultModel}:generateContent?key={apiKey}",
@@ -283,7 +283,7 @@ public class GeminiProvider : BaseAiProvider
     }
 }
 
-public class ZhipuProvider : BaseAiProvider
+public class ZhipuProvider : BaseAiProvider, IEmbeddingProvider
 {
     public override string Name => "zhipu";
     public override string DisplayName => "智谱 AI (GLM)";
@@ -293,9 +293,46 @@ public class ZhipuProvider : BaseAiProvider
     public override bool SupportsFunctionCalling => false;
     public override string? DefaultModel => "glm-4-flash";
 
+    private const string EmbeddingUrl = "https://open.bigmodel.cn/api/paas/v4/embeddings";
+    private const string DefaultEmbeddingModel = "embedding-3";
+
+    public async Task<float[]> EmbedAsync(string text, string apiKey, string? model = null, CancellationToken ct = default)
+    {
+        var results = await EmbedBatchAsync(new List<string> { text }, apiKey, model, ct);
+        return results[0];
+    }
+
+    public async Task<List<float[]>> EmbedBatchAsync(List<string> texts, string apiKey, string? model = null, CancellationToken ct = default)
+    {
+        var embModel = string.IsNullOrWhiteSpace(model) ? DefaultEmbeddingModel : model;
+        var results = new List<float[]>();
+
+        // 智谱 embedding 每次只支持单条，逐条调用
+        foreach (var text in texts)
+        {
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
+            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+
+            var payload = new { model = embModel, input = text };
+            var json = System.Text.Json.JsonSerializer.Serialize(payload);
+            var responseBody = await PostAsync(client, EmbeddingUrl, json, ct);
+
+            var doc = System.Text.Json.JsonDocument.Parse(responseBody);
+            var embedding = doc.RootElement
+                .GetProperty("data")[0]
+                .GetProperty("embedding")
+                .EnumerateArray()
+                .Select(e => e.GetSingle())
+                .ToArray();
+            results.Add(embedding);
+        }
+
+        return results;
+    }
+
     public override async Task<AiChatResponse> ChatAsync(AiChatRequest request, string apiKey, CancellationToken ct = default)
     {
-        using var client = new HttpClient();
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
         client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
 
         var payload = new
@@ -328,7 +365,7 @@ public class ZhipuProvider : BaseAiProvider
 
     public override async IAsyncEnumerable<string> ChatStreamAsync(AiChatRequest request, string apiKey, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
     {
-        using var httpClient = new HttpClient();
+        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
         httpClient.Timeout = TimeSpan.FromMinutes(5);
 
         var payload = new
@@ -384,7 +421,7 @@ public class ZhipuProvider : BaseAiProvider
     {
         try
         {
-            using var client = new HttpClient();
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
             client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
             var payload = new { model = DefaultModel, messages = new[] { new { role = "user", content = "Hi" } }, max_tokens = 5 };
             var response = await client.PostAsync("https://open.bigmodel.cn/api/paas/v4/chat/completions",
@@ -407,7 +444,7 @@ public class QianfanProvider : BaseAiProvider
 
     public override async Task<AiChatResponse> ChatAsync(AiChatRequest request, string apiKey, CancellationToken ct = default)
     {
-        using var client = new HttpClient();
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
         client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
 
         // 千帆 V2 API 兼容 OpenAI 格式
@@ -448,7 +485,7 @@ public class QianfanProvider : BaseAiProvider
 
     public override async IAsyncEnumerable<string> ChatStreamAsync(AiChatRequest request, string apiKey, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
     {
-        using var httpClient = new HttpClient();
+        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
         httpClient.Timeout = TimeSpan.FromMinutes(5);
 
         var payload = new
@@ -510,7 +547,7 @@ public class QianfanProvider : BaseAiProvider
     {
         try
         {
-            using var client = new HttpClient();
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
             client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
             var payload = new { model = DefaultModel, messages = new[] { new { role = "user", content = "Hi" } }, max_output_tokens = 5 };
             var url = string.IsNullOrEmpty(apiUrl)
@@ -536,7 +573,7 @@ public class MiniMaxProvider : BaseAiProvider
 
     public override async Task<AiChatResponse> ChatAsync(AiChatRequest request, string apiKey, CancellationToken ct = default)
     {
-        using var client = new HttpClient();
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
         client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
 
         var payload = new Dictionary<string, object>
@@ -611,7 +648,7 @@ public class MiniMaxProvider : BaseAiProvider
 
     public override async IAsyncEnumerable<string> ChatStreamAsync(AiChatRequest request, string apiKey, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
     {
-        using var httpClient = new HttpClient();
+        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
         httpClient.Timeout = TimeSpan.FromMinutes(5);
 
         var payload = new Dictionary<string, object>
@@ -672,7 +709,7 @@ public class MiniMaxProvider : BaseAiProvider
     {
         try
         {
-            using var client = new HttpClient();
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
             client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
             var payload = new { model = DefaultModel, messages = new[] { new { role = "user", content = "Hi" } }, max_tokens = 10 };
 

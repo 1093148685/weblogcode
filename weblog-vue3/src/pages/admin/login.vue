@@ -63,7 +63,6 @@ import { useRouter } from 'vue-router'
 import { showMessage} from '@/composables/util'
 import { setToken } from '@/composables/cookie'
 import { useUserStore } from '@/stores/user'
-import { useDark, useToggle } from '@vueuse/core'
 
 const userStore = useUserStore()
 
@@ -159,40 +158,35 @@ onBeforeUnmount(() => {
 })
 
 // 是否是白天
-const isLight = ref(true)
-const isDark = useDark({
-  onChanged(dark) {
-    // update the dom, call the API or something
-    console.log('onchange:' + dark)
-    if (dark) {
-        // 给 body 添加 class="dark"
-        document.documentElement.classList.add('dark');
-        // 设置 switch 的值
-        isLight.value = false
+const isLight = ref(!document.documentElement.classList.contains('dark'))
+const isDark = ref(document.documentElement.classList.contains('dark'))
+const toggleDark = () => {
+    isDark.value = !isDark.value
+    isLight.value = !isDark.value
+    if (isDark.value) {
+        document.documentElement.classList.add('dark')
+        localStorage.setItem('color-scheme', 'dark')
     } else {
-        // 移除 body 中添加 class="dark"
-        document.documentElement.classList.remove('dark');
-        isLight.value = true
+        document.documentElement.classList.remove('dark')
+        localStorage.setItem('color-scheme', 'light')
     }
-  },
-})
-const toggleDark = useToggle(isDark)
+}
 </script>
 
 <style scoped>
 /* The switch - the box around the slider */
 /* 使用CSS自定义属性 <!-- 在 Vue 单文件组件中，配合 scoped 使用 -->*/
 :deep(.el-button--primary) {
-  --el-button-bg-color: #373435;
-  --el-button-border-color: #373435;
-  --el-button-hover-bg-color: #757071;
-  --el-button-hover-border-color: #757071;
-  --el-button-active-bg-color: #9fa0a2;
-  --el-button-active-border-color: #9fa0a2;
+  --el-button-bg-color: #6366f1;
+  --el-button-border-color: #6366f1;
+  --el-button-hover-bg-color: #818cf8;
+  --el-button-hover-border-color: #818cf8;
+  --el-button-active-bg-color: #4f46e5;
+  --el-button-active-border-color: #4f46e5;
 }
 .el-input {
-  --el-input-focus-border-color: #000000 !important;
-  --el-input-hover-border-color: #c1baba !important;
+  --el-input-focus-border-color: #6366f1 !important;
+  --el-input-hover-border-color: #a5b4fc !important;
 }
 .switch {
   font-size: 14px;

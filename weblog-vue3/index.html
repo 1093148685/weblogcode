@@ -6,6 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="./src/assets/loading.css" type="text/css"/>
     <title>Weblog 前后端分离博客</title>
+    <!-- 主题初始化：防止首屏闪烁 -->
+    <script>
+      (function() {
+        var saved = localStorage.getItem('color-scheme');
+        var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (saved === 'dark' || (!saved && prefersDark)) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="app">

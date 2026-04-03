@@ -1,13 +1,17 @@
 import axios from "@/axios";
-import { getCache, setCache } from '@/composables/useCache'
+import { getCache, setCache, clearCache } from '@/composables/useCache'
 
 const CACHE_TTL = 5 * 60 * 1000
 
 // 获取标签分页数据
-export function getTagPageList(data) {
+export function getTagPageList(data, noCache = false) {
     const cacheKey = `admin_tag_list_${JSON.stringify(data)}`
-    const cached = getCache(cacheKey)
-    if (cached) return Promise.resolve(cached)
+    if (!noCache) {
+        const cached = getCache(cacheKey)
+        if (cached) return Promise.resolve(cached)
+    } else {
+        clearCache(cacheKey)
+    }
 
     return axios.post("/admin/tag/list", data).then(res => {
         if (res.success) setCache(cacheKey, res, CACHE_TTL)

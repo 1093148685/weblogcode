@@ -19,11 +19,15 @@ import AdminAnnouncement from '@/pages/admin/announcement.vue'
 import AdminAiModel from '@/pages/admin/ai-model.vue'
 import AdminAiProvider from '@/pages/admin/ai-provider.vue'
 import AdminAiPlugin from '@/pages/admin/ai-plugin.vue'
+import AdminKnowledgeBase from '@/pages/admin/knowledge-base.vue'
 import AdminAgent from '@/pages/admin/admin-agent.vue'
+import AdminAiAssistant from '@/pages/admin/ai-assistant.vue'
 import AdminWikiList from '@/pages/admin/wiki-list.vue'
 import AdminCommentList from '@/pages/admin/comment-list.vue'
 import AdminSecretComment from '@/pages/admin/secret-comment.vue'
 import AdminStickerManager from '@/pages/admin/sticker-manager.vue'
+import AdminAiPromptList from '@/pages/admin/ai/prompt-list.vue'
+import AdminAiPromptEdit from '@/pages/admin/ai/prompt-edit.vue'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import Admin from '@/layouts/admin/admin.vue'
 
@@ -183,10 +187,38 @@ const routes = [
                 }
             },
             {
+                path: "/admin/knowledge-base",
+                component: AdminKnowledgeBase,
+                meta: {
+                    title: 'RAG 知识库'
+                }
+            },
+            {
+                path: "/admin/ai/prompt-list",
+                component: AdminAiPromptList,
+                meta: {
+                    title: 'Prompt 模板管理'
+                }
+            },
+            {
+                path: "/admin/ai/prompt/edit/:id",
+                component: AdminAiPromptEdit,
+                meta: {
+                    title: '编辑 Prompt 模板'
+                }
+            },
+            {
                 path: "/admin/agent",
                 component: AdminAgent,
                 meta: {
                     title: '博客智能 Agent'
+                }
+            },
+            {
+                path: "/admin/ai-assistant",
+                component: AdminAiAssistant,
+                meta: {
+                    title: 'AI 写作助手'
                 }
             },
             {

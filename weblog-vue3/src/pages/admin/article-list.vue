@@ -1,25 +1,25 @@
 <template>
     <div>
-        <!-- 表头分页查询条件， shadow="never" 指定 card 卡片组件没有阴影 -->
-        <el-card shadow="never" class="mb-5">
+        <!-- 表头分页查询条件 -->
+        <el-card class="mb-5">
             <!-- flex 布局，内容垂直居中 -->
-            <div class="flex items-center">
-                <el-text>文章标题</el-text>
-                <div class="ml-3 w-52 mr-5"><el-input v-model="searchArticleTitle" placeholder="请输入（模糊查询）" /></div>
+            <div class="flex items-center flex-wrap gap-3">
+                <span class="text-sm text-[var(--admin-text)] font-medium">文章标题</span>
+                <div class="w-52"><el-input v-model="searchArticleTitle" placeholder="请输入（模糊查询）" size="default" /></div>
 
-                <el-text>创建日期</el-text>
-                <div class="ml-3 w-30 mr-5">
+                <span class="text-sm text-[var(--admin-text)] font-medium">创建日期</span>
+                <div class="w-72">
                     <!-- 日期选择组件（区间选择） -->
                     <el-date-picker v-model="pickDate" type="daterange" range-separator="至" start-placeholder="开始时间"
-                        end-placeholder="结束时间" size="default" :shortcuts="shortcuts" @change="datepickerChange" />
+                        end-placeholder="结束时间" size="default" :shortcuts="shortcuts" @change="datepickerChange" style="width: 100%" />
                 </div>
 
-                <el-button type="primary" class="ml-3" :icon="Search" @click="getTableData">查询</el-button>
-                <el-button class="ml-3" :icon="RefreshRight" @click="reset">重置</el-button>
+                <el-button type="primary" class="ml-auto" :icon="Search" @click="getTableData">查询</el-button>
+                <el-button :icon="RefreshRight" @click="reset">重置</el-button>
             </div>
         </el-card>
 
-        <el-card shadow="never">
+        <el-card>
             <!-- 写文章按钮 -->
             <div class="mb-5">
                 <el-button type="primary" @click="isArticlePublishEditorShow = true">
@@ -32,13 +32,13 @@
             <!-- 分页列表 -->
             <el-table :data="tableData" border stripe style="width: 100%" v-loading="tableLoading">
                 <el-table-column prop="id" label="ID" width="50" />
-                <el-table-column prop="title" label="标题" width="380" />
-                <el-table-column prop="cover" label="封面" width="180">
+                <el-table-column prop="title" label="标题" width="300" />
+                <el-table-column prop="cover" label="封面" width="120">
                     <template #default="scope">
                         <el-image style="width: 100px;" :src="scope.row.cover" />
                     </template>
                 </el-table-column>
-                <el-table-column prop="isTop" label="是否置顶" width="100">
+                <el-table-column prop="isTop" label="置顶" width="100" align="center">
                     <template #default="scope">
                         <el-switch
                             @change="handleIsTopChange(scope.row)"
@@ -50,17 +50,17 @@
                     </template>
                 </el-table-column>
                 <el-table-column prop="createTime" label="发布时间" width="180" />
-                <el-table-column label="AI摘要" width="120">
+                <el-table-column label="AI摘要" width="110" align="center">
                     <template #default="scope">
-                        <el-tag v-if="aiSummaryStatus[scope.row.id]?.hasSummary" type="success" size="small">
+                        <el-tag v-if="aiSummaryStatus[scope.row.id]?.hasSummary" type="success" size="small" effect="plain">
                             <el-icon class="mr-1"><CircleCheck /></el-icon>
-                            有摘要
+                            有
                         </el-tag>
-                        <el-tag v-else-if="aiSummaryStatus[scope.row.id]?.loading" type="warning" size="small">
+                        <el-tag v-else-if="aiSummaryStatus[scope.row.id]?.loading" type="warning" size="small" effect="plain">
                             <el-icon class="is-loading"><Loading /></el-icon>
                             生成中
                         </el-tag>
-                        <el-tag v-else type="info" size="small">
+                        <el-tag v-else type="info" size="small" effect="plain">
                             <el-icon class="mr-1"><CircleClose /></el-icon>
                             无
                         </el-tag>
@@ -69,29 +69,25 @@
                 <el-table-column label="操作">
                     <template #default="scope">
                         <el-button size="small" @click="showArticleUpdateEditor(scope.row)">
-                            <el-icon class="mr-1">
-                                <Edit />
-                            </el-icon>
-                            编辑</el-button>
-                            <el-button size="small" @click="goArticleDetailPage(scope.row.id)">
-                            <el-icon class="mr-1">
-                                <View />
-                            </el-icon>
-                            预览</el-button>
-                        <el-button type="danger" size="small" @click="deleteArticleSubmit(scope.row)">
-                            <el-icon class="mr-1">
-                                <Delete />
-                            </el-icon>
-                            删除
+                            <el-icon class="mr-1"><Edit /></el-icon>
+                            编辑
                         </el-button>
-                        <el-button 
-                            type="warning" 
-                            size="small" 
+                        <el-button size="small" @click="goArticleDetailPage(scope.row.id)">
+                            <el-icon class="mr-1"><View /></el-icon>
+                            预览
+                        </el-button>
+                        <el-button
+                            type="warning"
+                            size="small"
                             @click="generateAiSummary(scope.row)"
                             :disabled="aiSummaryStatus[scope.row.id]?.loading"
                         >
                             <el-icon class="mr-1"><MagicStick /></el-icon>
                             {{ aiSummaryStatus[scope.row.id]?.loading ? '生成中' : 'AI摘要' }}
+                        </el-button>
+                        <el-button type="danger" size="small" @click="deleteArticleSubmit(scope.row)">
+                            <el-icon class="mr-1"><Delete /></el-icon>
+                            删除
                         </el-button>
                     </template>
                 </el-table-column>
@@ -167,6 +163,9 @@
                         </el-select>
                     </span>
                 </el-form-item>
+                <el-form-item label="是否发布">
+                    <el-switch v-model="form.isPublish" inline-prompt active-text="发布" inactive-text="草稿" />
+                </el-form-item>
             </el-form>
         </el-dialog>
 
@@ -231,7 +230,10 @@
                             <el-option v-for="item in tags" :key="item.id" :label="item.name" :value="item.id" />
                         </el-select>
                     </span>
-</el-form-item>
+                </el-form-item>
+                <el-form-item label="是否发布">
+                    <el-switch v-model="updateArticleForm.isPublish" inline-prompt active-text="发布" inactive-text="草稿" />
+                </el-form-item>
             </el-form>
         </el-dialog>
 
@@ -452,7 +454,7 @@ function getTableData() {
     // 显示表格 loading
     tableLoading.value = true
     // 调用后台分页接口，并传入所需参数
-    getArticlePageList({ pageNum: current.value, pageSize: size.value, startDate: startDate.value, endDate: endDate.value, title: searchArticleTitle.value })
+    getArticlePageList({ pageNum: current.value, pageSize: size.value, startDate: startDate.value, endDate: endDate.value, title: searchArticleTitle.value }, true)
         .then((res) => {
             if (res.success == true) {
                 tableData.value = res.data.list
@@ -513,7 +515,8 @@ const form = reactive({
     cover: '',
     categoryId: null,
     tags: [],
-    summary: ""
+    summary: "",
+    isPublish: true
 })
 
 // 修改文章表单对象
@@ -524,7 +527,8 @@ const updateArticleForm = reactive({
     cover: '',
     categoryId: null,
     tags: [],
-    summary: ""
+    summary: "",
+    isPublish: true
 })
 
 // 表单校验规则
@@ -640,7 +644,6 @@ const remoteMethod = (query) => {
 
 // 发布文章
 const publishArticleSubmit = () => {
-    // isArticlePublishEditorShow.value = true
     console.log('提交 md 内容：' + form.content)
     // 校验表单
     publishArticleFormRef.value.validate((valid) => {
@@ -648,7 +651,8 @@ const publishArticleSubmit = () => {
             return false
         }
 
-        publishArticle(form).then((res) => {
+        const payload = { ...form, status: form.isPublish ? 1 : 0 }
+        publishArticle(payload).then((res) => {
             if (res.success == false) {
                 // 获取服务端返回的错误消息
                 let message = res.message
@@ -667,6 +671,7 @@ const publishArticleSubmit = () => {
             form.summary = ''
             form.categoryId = null
             form.tags = []
+            form.isPublish = true
             // 重新请求分页接口，渲染列表数据
             getTableData()
         })
@@ -694,6 +699,7 @@ const showArticleUpdateEditor = (row) => {
             updateArticleForm.categoryId = res.data.categoryId
             updateArticleForm.tags = res.data.tagIds
             updateArticleForm.summary = res.data.summary
+            updateArticleForm.isPublish = res.data.status !== 0
         }
     })
 }
@@ -708,7 +714,8 @@ const updateSubmit = () => {
         }
 
         // 请求更新文章接口
-        updateArticle(updateArticleForm).then((res) => {
+        const payload = { ...updateArticleForm, status: updateArticleForm.isPublish ? 1 : 0 }
+        updateArticle(payload).then((res) => {
             if (res.success == false) {
                 // 获取服务端返回的错误消息
                 let message = res.message
@@ -788,5 +795,27 @@ const handleIsTopChange = (row) => {
 <style>
 .md-editor-footer {
     height: 40px;
+}
+
+/* 表格悬停效果 */
+.admin-table {
+    --el-table-row-hover-bg-color: rgba(59, 130, 246, 0.08);
+    transition: all 0.2s ease;
+}
+
+.admin-table ::v-deep(.el-table__row) {
+    transition: all 0.2s ease;
+}
+
+.admin-table ::v-deep(.el-table__row:hover) {
+    transform: translateX(2px);
+}
+
+.admin-table ::v-deep(.el-table__row:hover > td) {
+    background: var(--el-table-row-hover-bg-color) !important;
+}
+
+.admin-table ::v-deep(.el-table__cell) {
+    transition: all 0.2s ease;
 }
 </style>

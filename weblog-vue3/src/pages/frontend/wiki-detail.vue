@@ -1,6 +1,6 @@
 <template>
     <div class="main min-h-screen flex flex-col">
-        <WikiHeader :catalogs="catalogs"></WikiHeader>
+        <WikiHeader :catalogs="catalogs" :wikiTitle="wikiTitle" :articleTitle="article.title" :showReadingTitle="showReadingTitle"></WikiHeader>
         <main class="grow container max-w-screen-3xl mx-auto px-4 sm:px-6 md:px-8 py-4">
             <!-- 左边栏 -->
             <div class="transition-all duration-300 hidden lg:block fixed inset-0 top-[5.5rem] 
@@ -11,20 +11,17 @@
                 <div class="flex">
                     <!-- 知识库目录 -->
                     <div class="grow transition-all duration-300" :class="[isExpand ? 'block' : 'hidden 2xl:block']">
-                        <div id="accordion-flush" data-accordion="collapse"
-                        data-active-classes="bg-white dark:bg-[#0d1117] dark:text-gray-300" data-inactive-classes=""
-                        class="last:pb-[170px]">
+                        <div class="last:pb-[170px]">
                         <div v-for="(catalog, index) in catalogs" :key="index">
-                            <h2 :id="'accordion-flush-heading-' + catalog.id">
-                                <button type="button" class="hover:bg-gray-100 flex items-center justify-between w-full py-3 px-3 rounded-lg 
-                            font-medium rtl:text-right text-gray-600 dark:text-gray-400 gap-3 dark:hover:bg-gray-800"
-                                    :data-accordion-target="'#accordion-flush-body-' + catalog.id"
-                                    :aria-expanded="[(catalog.children && catalog.children.some(item => item.articleId == route.query.articleId)) ? true : false]"
-                                    :aria-controls="'accordion-flush-body-' + catalog.id">
+                            <h2>
+                                <button type="button" class="hover:bg-[var(--bg-hover)] flex items-center justify-between w-full py-3 px-3 rounded-lg
+                            font-medium rtl:text-right text-[var(--text-secondary)] gap-3"
+                                    @click="toggleAccordion(catalog.id)">
                                     <!-- 一级目录标题 -->
                                     <span class="flex items-center" v-html="catalog.title"></span>
                                     <!-- 箭头 -->
-                                    <svg data-accordion-icon class="w-3 h-3 rotate-90 transition-all shrink-0"
+                                    <svg class="w-3 h-3 transition-transform duration-200 shrink-0"
+                                        :class="[expandedSections[catalog.id] ? 'rotate-180' : 'rotate-90']"
                                         aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
                                         viewBox="0 0 10 6">
                                         <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
@@ -33,12 +30,11 @@
                                 </button>
                             </h2>
                             <!-- 二级目录 -->
-                            <ul :id="'accordion-flush-body-' + catalog.id" class="hidden"
-                                :aria-labelledby="'accordion-flush-heading-' + catalog.id">
+                            <ul v-show="expandedSections[catalog.id]">
                                 <!-- 二级目录标题 -->
-                                <li v-for="(childCatalog, index2) in catalog.children" :key="index2" class="flex items-center ps-10 py-2 pe-3 rounded-lg cursor-pointer 
-                                    dark:text-gray-400"
-                                    :class="[childCatalog.articleId == route.query.articleId ? 'bg-sky-50 text-sky-600 dark:bg-sky-950 dark:text-sky-500' : 'hover:bg-gray-100 dark:hover:bg-gray-800']"
+                                <li v-for="(childCatalog, index2) in catalog.children" :key="index2" class="flex items-center ps-10 py-2 pe-3 rounded-lg cursor-pointer
+                                    text-[var(--text-secondary)]"
+                                    :class="[childCatalog.articleId == route.query.articleId ? 'bg-[var(--bg-active)] text-[var(--color-primary)]' : 'hover:bg-[var(--bg-hover)]']"
                                     @click="goWikiArticleDetailPage(childCatalog.articleId)" v-html="childCatalog.title">
                                 </li>
                             </ul>
@@ -63,9 +59,9 @@
                     <article>
                         <!-- 文章标题、Meta 信息 -->
                         <div class="mt-5">
-                            <h1 class="font-bold text-3xl md:text-4xl mb-5 dark:text-gray-400">{{ article.title }}</h1>
-                            <div class="flex gap-3 md:gap-6 text-gray-400 items-center text-sm pb-3 
-                                    border-b border-gray-100 dark:border-gray-800">
+                            <h1 class="font-bold text-3xl md:text-4xl mb-5 text-[var(--text-heading)]">{{ article.title }}</h1>
+                            <div class="flex gap-3 md:gap-6 text-[var(--text-muted)] items-center text-sm pb-3
+                                    border-b border-[var(--border-base)]">
                                 <!-- 字数 -->
                                 <div class="flex items-center" data-tooltip-target="word-tooltip-bottom"
                                     data-tooltip-placement="bottom">
@@ -78,7 +74,7 @@
                                     {{ article.totalWords }}
                                 </div>
                                 <div id="word-tooltip-bottom" role="tooltip"
-                                    class="absolute z-10 invisible inline-block px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded shadow-sm opacity-0 tooltip dark:bg-gray-700">
+                                    class="absolute z-10 invisible inline-block px-3 py-2 text-xs font-medium text-white bg-[var(--color-primary)] rounded shadow-sm opacity-0 tooltip">
                                     总字数
                                     <div class="tooltip-arrow" data-popper-arrow></div>
                                 </div>
@@ -97,7 +93,7 @@
                                         {{ article.readTime }}
                                     </div>
                                     <div id="read-time-tooltip-bottom" role="tooltip"
-                                        class="absolute z-10 invisible inline-block px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded shadow-sm opacity-0 tooltip dark:bg-gray-700">
+                                        class="absolute z-10 invisible inline-block px-3 py-2 text-xs font-medium text-white bg-[var(--color-primary)] rounded shadow-sm opacity-0 tooltip">
                                         阅读时长
                                         <div class="tooltip-arrow" data-popper-arrow></div>
                                     </div>
@@ -116,7 +112,7 @@
                                     {{ article.createTime }}
                                 </div>
                                 <div id="publish-time-tooltip-bottom" role="tooltip"
-                                    class="absolute z-10 invisible inline-block px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded shadow-sm opacity-0 tooltip dark:bg-gray-700">
+                                    class="absolute z-10 invisible inline-block px-3 py-2 text-xs font-medium text-white bg-[var(--color-primary)] rounded shadow-sm opacity-0 tooltip">
                                     发布时间
                                     <div class="tooltip-arrow" data-popper-arrow></div>
                                 </div>
@@ -137,7 +133,7 @@
                                         class="cursor-pointer mr-1 hover:underline">{{ article.categoryName }}</a>
                                 </div>
                                 <div id="category-tooltip-bottom" role="tooltip"
-                                    class="absolute z-10 invisible inline-block px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded shadow-sm opacity-0 tooltip dark:bg-gray-700">
+                                    class="absolute z-10 invisible inline-block px-3 py-2 text-xs font-medium text-white bg-[var(--color-primary)] rounded shadow-sm opacity-0 tooltip">
                                     分类
                                     <div class="tooltip-arrow" data-popper-arrow></div>
                                 </div>
@@ -155,7 +151,7 @@
                                     {{ article.readNum }}
                                 </div>
                                 <div id="read-num-tooltip-bottom" role="tooltip"
-                                    class="absolute z-10 invisible inline-block px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded shadow-sm opacity-0 tooltip dark:bg-gray-700">
+                                    class="absolute z-10 invisible inline-block px-3 py-2 text-xs font-medium text-white bg-[var(--color-primary)] rounded shadow-sm opacity-0 tooltip">
                                     阅读量
                                     <div class="tooltip-arrow" data-popper-arrow></div>
                                 </div>
@@ -187,7 +183,10 @@
                             <div class="basis-1/2">
                                 <!-- h-full 指定高度占满 -->
                                 <a v-if="preNext.preArticle" @click="goWikiArticleDetailPage(preNext.preArticle.articleId)"
-                                    class="cursor-pointer flex flex-col h-full p-4 mr-3 text-base font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:border-sky-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">
+                                    class="cursor-pointer flex flex-col h-full p-4 mr-3 text-sm font-medium
+                                           text-[var(--text-secondary)] bg-[var(--bg-hover)] border border-[var(--border-base)]
+                                           rounded-card hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]
+                                           hover:bg-[var(--bg-active)] transition-all duration-200">
                                     <div>
                                         <svg class="inline w-3.5 h-3.5 mr-2 mb-1" aria-hidden="true"
                                             xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
@@ -204,7 +203,10 @@
                                 <!-- text-right 指定文字居右显示 -->
                                 <a v-if="preNext.nextArticle"
                                     @click="goWikiArticleDetailPage(preNext.nextArticle.articleId)"
-                                    class="cursor-pointer flex flex-col h-full text-right p-4 text-base font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:border-sky-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">
+                                    class="cursor-pointer flex flex-col h-full text-right p-4 text-sm font-medium
+                                           text-[var(--text-secondary)] bg-[var(--bg-hover)] border border-[var(--border-base)]
+                                           rounded-card hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]
+                                           hover:bg-[var(--bg-active)] transition-all duration-200">
                                     <div>
                                         下一篇
                                         <svg class="inline w-3.5 h-3.5 ml-2 mb-1" aria-hidden="true"
@@ -238,38 +240,90 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, nextTick } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import WikiHeader from '@/layouts/frontend/components/WikiHeader.vue'
 import WikiFooter from '@/layouts/frontend/components/WikiFooter.vue'
 import WikiToc from '@/layouts/frontend/components/WikiToc.vue'
 import { getArticleDetail } from '@/api/frontend/article'
-import { getWikiArticlePreNext, getWikiCatalogs } from '@/api/frontend/wiki'
+import { getWikiArticlePreNext, getWikiCatalogs, getWikiList } from '@/api/frontend/wiki'
 import hljs from 'highlight.js/lib/common'
 import 'highlight.js/styles/tokyo-night-dark.css'
 import ScrollToTopButton from '@/layouts/frontend/components/ScrollToTopButton.vue'
-import {
-    initAccordions,
-} from 'flowbite'
 import Comment from '@/components/Comment.vue'
-
-onMounted(() => {
-    nextTick(() => initAccordions())
-})
+import { setCache, getCache } from '@/composables/useCache'
 
 const route = useRoute()
 const router = useRouter()
 
 const catalogs = ref([])
+const wikiTitle = ref('')
+const showReadingTitle = ref(false)
+let titleObserver = null
+
+// 手风琴展开状态
+const expandedSections = ref({})
+
+function toggleAccordion(catalogId) {
+    expandedSections.value[catalogId] = !expandedSections.value[catalogId]
+}
+
+// 初始化：展开包含当前文章的目录分组
+function initExpandedSections() {
+    catalogs.value.forEach(catalog => {
+        if (catalog.children && catalog.children.some(item => item.articleId == route.query.articleId)) {
+            expandedSections.value[catalog.id] = true
+        }
+    })
+}
+
+function setupTitleObserver() {
+    nextTick(() => {
+        const titleEl = document.querySelector('article h1')
+        if (titleEl) {
+            titleObserver?.disconnect()
+            titleObserver = new IntersectionObserver(
+                ([entry]) => { showReadingTitle.value = !entry.isIntersecting },
+                { rootMargin: '-72px 0px 0px 0px' }
+            )
+            titleObserver.observe(titleEl)
+        }
+    })
+}
+
+onMounted(() => {
+    // 监听文章标题是否滚出视口，控制阅读标题栏
+    setupTitleObserver()
+})
+
+onBeforeUnmount(() => {
+    titleObserver?.disconnect()
+})
 
 // 获取当前知识库的目录数据
 getWikiCatalogs(route.params.wikiId).then(res => {
     if (res.success) {
         catalogs.value = res.data
-        // 获取数据成功后，初始化 Accordions 组件
-        nextTick(() => initAccordions())
+        // 初始化展开包含当前文章的目录
+        initExpandedSections()
+        nextTick(() => {})
     }
 })
+
+// 获取知识库标题
+const cachedWikis = getCache('page_wikis')
+if (cachedWikis) {
+    const wiki = cachedWikis.find(w => w.id == route.params.wikiId)
+    if (wiki) wikiTitle.value = wiki.title
+} else {
+    getWikiList().then(res => {
+        if (res.success) {
+            const wiki = res.data.find(w => w.id == route.params.wikiId)
+            if (wiki) wikiTitle.value = wiki.title
+            setCache('page_wikis', res.data, 5 * 60 * 1000)
+        }
+    })
+}
 
 // 文章数据
 const article = ref({})
@@ -295,6 +349,9 @@ function refreshArticleDetail(articleId) {
         article.value = res.data
 
         nextTick(() => {
+            // 设置文章标题观察器
+            setupTitleObserver()
+
             // 获取所有 pre code 节点
             let highlight = document.querySelectorAll('pre code')
             // 循环高亮
@@ -375,6 +432,8 @@ const goWikiArticleDetailPage = (articleId) => {
 watch(route, (newRoute, oldRoute) => {
     // 重新渲染文章详情
     refreshArticleDetail(newRoute.query.articleId)
+    // 重新展开包含当前文章的目录
+    nextTick(() => initExpandedSections())
 })
 
 // 目录是否展开，默认为 true
@@ -386,14 +445,9 @@ const shrinkAndExpand = () => {
 </script>
 
 <style scoped>
-/* 背景色设置为白色 */
+/* 背景色跟随主题 */
 .main {
-    background-color: #fff;
-}
-
-/* 暗黑主题的背景色 */
-.dark .main {
-    background-color: #0d1117;
+    background-color: var(--bg-base, #fff);
 }
 
 /* h1, h2, h3, h4, h5, h6 标题样式 */

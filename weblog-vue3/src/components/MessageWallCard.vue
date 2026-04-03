@@ -3,11 +3,11 @@
         <!-- 一级评论内容 -->
         <div class="flex items-start gap-3">
             <!-- 头像 -->
-            <div class="flex-shrink-0">
+            <div class="flex-shrink-0 group">
                 <img v-if="comment.avatar && comment.avatar.length > 0"
                     :src="comment.avatar"
-                    class="w-10 h-10 rounded-full border border-gray-200 dark:border-gray-600">
-                <div v-else class="w-10 h-10 rounded-full border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 dark:text-gray-500">
+                    class="w-10 h-10 rounded-full border-2 border-[var(--border-base)] group-hover:border-blue-500 transition-all duration-200 group-hover:scale-110 shadow-sm">
+                <div v-else class="w-10 h-10 rounded-full border-2 border-[var(--border-base)] bg-[var(--bg-hover)] flex items-center justify-center text-[var(--text-muted)] group-hover:border-blue-500 transition-all duration-200">
                     <i class="fas fa-user"></i>
                 </div>
             </div>
@@ -16,12 +16,12 @@
             <div class="flex-1 min-w-0">
                 <!-- 元信息 -->
                 <div class="flex items-center flex-wrap gap-x-2 gap-y-1 mb-2">
-                    <span class="text-sm font-medium text-blue-600 dark:text-blue-400">{{ comment.nickname }}</span>
+                    <span class="text-sm font-medium text-blue-600">{{ comment.nickname }}</span>
                     <el-tag v-if="comment.isAdmin" size="small" type="warning" class="ml-1">
                         <i class="fas fa-crown mr-1"></i>管理员
                     </el-tag>
-                    <span class="text-xs text-gray-400 font-mono">{{ formatTime(comment.createTime) }}</span>
-                    <span v-if="comment.ipLocation || comment.deviceType || comment.browser" class="text-xs text-gray-400">
+                    <span class="text-xs text-[var(--text-muted)] font-mono">{{ formatTime(comment.createTime) }}</span>
+                    <span v-if="comment.ipLocation || comment.deviceType || comment.browser" class="text-xs text-[var(--text-muted)]">
                         <span v-if="comment.ipLocation">{{ comment.ipLocation }}</span>
                         <span v-if="comment.deviceType"> · {{ comment.deviceType }}</span>
                         <span v-if="comment.browser"> · {{ comment.browser }}</span>
@@ -29,7 +29,7 @@
                 </div>
                 
                 <!-- 内容 -->
-                <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                <p class="text-sm text-[var(--text-body)] leading-relaxed">
                     <ParsedContent :content="comment.content" :key="'parsed-' + comment.id"></ParsedContent>
                 </p>
                 
@@ -43,7 +43,7 @@
                         :key="'spoiler-' + comment.id"
                         @verify-start="openSecretModal(comment.id)"
                         @reveal-complete="handleRevealComplete">
-                        <div class="text-sm text-gray-700 dark:text-gray-300" v-html="renderEmoticonAndMarkdown(secretContent || '**************')"></div>
+                        <div class="text-sm text-[var(--text-body)]" v-html="renderEmoticonAndMarkdown(secretContent || '**************')"></div>
                     </SpoilerContent>
                 </div>
                 
@@ -51,7 +51,7 @@
                 <div v-if="commentImages && commentImages.length > 0" class="mt-2 flex flex-wrap gap-2">
                     <img v-for="(img, index) in commentImages" :key="index"
                         :src="img"
-                        class="max-w-[120px] max-h-[120px] object-cover rounded-md cursor-pointer hover:opacity-80 transition-opacity border border-gray-200 dark:border-gray-600"
+                        class="max-w-[120px] max-h-[120px] object-cover rounded-md cursor-pointer hover:opacity-80 transition-opacity border border-[var(--border-base)]"
                         @click="previewImage(img)">
                 </div>
                 
@@ -68,62 +68,62 @@
                 <!-- 操作按钮 -->
                 <div class="flex items-center gap-4 mt-3">
                     <button @click="toggleReply(comment)"
-                        class="text-xs text-gray-500 dark:text-gray-400 hover:text-blue-500 transition-colors flex items-center gap-1">
+                        class="text-xs text-[var(--text-secondary)] hover:text-blue-500 transition-colors flex items-center gap-1">
                         <i class="far fa-comment"></i>
                         回复
                     </button>
                     <button @click="toggleFlower"
                         :class="['text-xs flex items-center gap-1 transition-colors', 
-                            hasCurrentUserFlower 
-                                ? 'text-pink-500' 
-                                : 'text-gray-500 dark:text-gray-400 hover:text-pink-500']">
+                            hasCurrentUserFlower
+                                ? 'text-pink-500'
+                                : 'text-[var(--text-secondary)] hover:text-pink-500']">
                         <i :class="hasCurrentUserFlower ? 'fas fa-heart' : 'far fa-heart'"></i>
                         <span>{{ flowerCount }}</span>
                     </button>
                 </div>
                 
                 <!-- 回复表单 -->
-                <div v-if="showReplyForm" class="mt-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700">
-                    <div class="text-xs text-blue-600 dark:text-blue-400 mb-2">回复 @{{ replyTarget.nickname }}</div>
+                <div v-if="showReplyForm" class="mt-3 p-3 bg-[var(--bg-base)] rounded-md border border-[var(--border-base)]">
+                    <div class="text-xs text-blue-600 mb-2">回复 @{{ replyTarget.nickname }}</div>
                     <div class="relative">
                         <textarea v-model="replyContent" rows="2" :maxlength="MAX_CONTENT_LENGTH"
-                            class="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 resize-none"
+                            class="w-full bg-[var(--bg-card)] border border-[var(--border-base)] rounded-md px-3 py-2 text-sm text-[var(--text-heading)] placeholder-[var(--text-placeholder)] focus:outline-none focus:border-blue-500 resize-none"
                             :placeholder="`回复 @${replyTarget.nickname}...`"></textarea>
                         <button type="button" @click.stop="toggleReplyEmojiPicker"
-                            class="absolute bottom-2 right-2 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                            class="absolute bottom-2 right-2 p-1.5 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors">
                             <i class="far fa-laugh"></i>
                         </button>
-                        <div v-if="showReplyEmojiPicker" class="absolute bottom-10 right-0 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg w-64 shadow-sm">
-                            <div class="flex border-b border-gray-100 dark:border-gray-700">
+                        <div v-if="showReplyEmojiPicker" class="absolute bottom-10 right-0 z-20 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-lg w-64 shadow-sm">
+                            <div class="flex border-b border-[var(--border-base)]">
                                 <button v-for="(cat, key) in simpleEmojiCategories" :key="key"
                                     type="button"
                                     @click="activeReplyEmojiCategory = key"
-                                    :class="['flex-1 py-2 text-center text-xs hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors whitespace-nowrap',
-                                        activeReplyEmojiCategory === key ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-500']">
+                                    :class="['flex-1 py-2 text-center text-xs hover:bg-[var(--bg-base)] transition-colors whitespace-nowrap',
+                                        activeReplyEmojiCategory === key ? 'text-blue-500 border-b-2 border-blue-500' : 'text-[var(--text-secondary)]']">
                                     {{ cat.icon }} {{ cat.name }}
                                 </button>
                                 <button type="button" @click="openReplyStickerPicker"
-                                    :class="['flex-1 py-2 text-center text-xs hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors whitespace-nowrap',
-                                        (hasReplySticker || hasReplyGiphy) ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500']">
+                                    :class="['flex-1 py-2 text-center text-xs hover:bg-[var(--bg-base)] transition-colors whitespace-nowrap',
+                                        (hasReplySticker || hasReplyGiphy) ? 'text-gray-300 cursor-not-allowed' : 'text-[var(--text-secondary)]']">
                                     <i class="fas fa-image mr-1"></i>贴纸
                                 </button>
                                 <button type="button" @click="openReplyGiphyPicker"
-                                    :class="['flex-1 py-2 text-center text-xs hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors whitespace-nowrap',
-                                        (hasReplySticker || hasReplyGiphy) ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500']">
+                                    :class="['flex-1 py-2 text-center text-xs hover:bg-[var(--bg-base)] transition-colors whitespace-nowrap',
+                                        (hasReplySticker || hasReplyGiphy) ? 'text-gray-300 cursor-not-allowed' : 'text-[var(--text-secondary)]']">
                                     <i class="fas fa-gift mr-1"></i>GIF
                                 </button>
                             </div>
                             <div class="p-2 max-h-32 overflow-y-auto">
                                 <div v-if="simpleEmojiCategories[activeReplyEmojiCategory]?.type === 'emoji'" class="grid grid-cols-8 gap-1">
                                     <span v-for="(emoji, index) in simpleEmojiCategories[activeReplyEmojiCategory].emojis" :key="index"
-                                        class="hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer p-1 transition-colors text-center text-sm"
+                                        class="hover:bg-[var(--bg-hover)] rounded cursor-pointer p-1 transition-colors text-center text-sm"
                                         @click="addReplyEmoji(emoji)">{{ emoji }}</span>
                                 </div>
                                 <div v-else-if="simpleEmojiCategories[activeReplyEmojiCategory]?.type === 'image'" class="grid grid-cols-8 gap-1">
                                     <img v-for="(emoji, index) in simpleEmojiCategories[activeReplyEmojiCategory].emojis" :key="index"
                                         :src="emoji.icon"
                                         :alt="emoji.text"
-                                        class="w-7 h-7 object-contain hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer p-0.5 transition-colors"
+                                        class="w-7 h-7 object-contain hover:bg-[var(--bg-hover)] rounded cursor-pointer p-0.5 transition-colors"
                                         @click="addReplyEmoji(emoji)">
                                 </div>
                             </div>
@@ -133,17 +133,17 @@
                         <div class="flex items-center gap-2">
                             <button type="button" @click="triggerReplyImageUpload"
                                 :disabled="hasReplySticker || hasReplyGiphy"
-                                :class="['text-xs flex items-center gap-1 transition-colors', 
-                                    (hasReplySticker || hasReplyGiphy) ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-blue-500']">
+                                :class="['text-xs flex items-center gap-1 transition-colors',
+                                    (hasReplySticker || hasReplyGiphy) ? 'text-gray-300 cursor-not-allowed' : 'text-[var(--text-muted)] hover:text-blue-500']">
                                 <i class="far fa-image"></i>
                                 <span>图片{{ hasReplyImages ? `(${replySelectedMedia.filter(m => m.type === 'image').length}/${MAX_MEDIA_COUNT})` : '' }}</span>
                             </button>
                             <input type="file" ref="replyImageInputRef" @change="handleReplyImageChange" accept="image/*" multiple class="hidden">
                         </div>
                         <div class="flex items-center gap-2">
-                            <span :class="['text-xs', replyContent.length > 450 ? 'text-red-500' : 'text-gray-400']">{{ replyContent.length }}/{{ MAX_CONTENT_LENGTH }}</span>
+                            <span :class="['text-xs', replyContent.length > 450 ? 'text-red-500' : 'text-[var(--text-muted)]']">{{ replyContent.length }}/{{ MAX_CONTENT_LENGTH }}</span>
                             <button @click="cancelReply"
-                                class="px-3 py-1 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">取消</button>
+                                class="px-3 py-1 text-xs text-[var(--text-secondary)] hover:text-[var(--text-heading)] transition-colors">取消</button>
                             <button @click="submitReply"
                                 class="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-md transition-colors">发送</button>
                         </div>
@@ -153,13 +153,13 @@
                     <div v-if="replySelectedMedia.length > 0" class="mt-2">
                         <div class="flex flex-wrap gap-2">
                             <div v-for="(media, index) in replySelectedMedia" :key="index" class="relative group">
-                                <video v-if="isAnimatedUrl(media.url)" 
-                                    :src="media.url" 
-                                    class="w-12 h-12 object-cover rounded-md border border-gray-200 dark:border-gray-600"
+                                <video v-if="isAnimatedUrl(media.url)"
+                                    :src="media.url"
+                                    class="w-12 h-12 object-cover rounded-md border border-[var(--border-base)]"
                                     autoplay loop muted playsinline></video>
-                                <img v-else 
-                                    :src="media.url" 
-                                    class="w-12 h-12 object-cover rounded-md border border-gray-200 dark:border-gray-600">
+                                <img v-else
+                                    :src="media.url"
+                                    class="w-12 h-12 object-cover rounded-md border border-[var(--border-base)]">
                                 <button @click.stop="removeReplyMedia(index)" type="button"
                                     class="absolute -top-2 -right-2 w-4 h-4 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                     <i class="fas fa-times"></i>
@@ -214,7 +214,7 @@
                 <button 
                     v-else
                     @click="collapseChildComments"
-                    class="text-sm text-gray-500 hover:text-gray-600 transition-colors flex items-center gap-1 py-1">
+                    class="text-sm text-[var(--text-secondary)] hover:text-[var(--text-heading)] transition-colors flex items-center gap-1 py-1">
                     <i class="fas fa-angle-up"></i>
                     收起
                 </button>

@@ -18,6 +18,12 @@
                 <el-tag v-if="currentModelName" size="small" type="info">模型: {{ currentModelName }}</el-tag>
                 <el-tag v-else size="small" type="warning">未配置模型</el-tag>
                 <el-button-group>
+                    <el-button :type="showHistory ? 'primary' : 'default'" @click="showHistory = !showHistory; if(showHistory) loadSessions()" size="small" title="历史会话">
+                        <el-icon><Clock /></el-icon>
+                    </el-button>
+                    <el-button type="default" @click="newSession" size="small" title="新建会话">
+                        <el-icon><Plus /></el-icon>
+                    </el-button>
                     <el-button :type="activeTab === 'config' ? 'primary' : 'default'" @click="activeTab = activeTab === 'config' ? 'chat' : 'config'" size="small" title="配置文件">
                         <el-icon><Document /></el-icon>
                     </el-button>
@@ -27,7 +33,7 @@
                     <el-button :type="showSettings ? 'primary' : 'default'" @click="showSettings = !showSettings" size="small">
                         <el-icon><Setting /></el-icon>
                     </el-button>
-                    <el-button @click="clearChat" size="small" title="清空对话">
+                    <el-button @click="clearChat" size="small" title="新建会话">
                         <el-icon><Delete /></el-icon>
                     </el-button>
                 </el-button-group>
@@ -285,7 +291,29 @@
                 </div>
             </aside>
 
-            <!-- 配置文件面板 -->
+            <!-- 历史会话侧边栏 -->
+            <aside v-if="showHistory" class="w-[260px] bg-white border-l border-slate-200 flex flex-col z-20">
+                <div class="flex justify-between items-center p-4 border-b border-gray-200">
+                    <h3 class="text-sm font-semibold text-gray-800 m-0">历史会话</h3>
+                    <el-button text @click="showHistory = false"><el-icon><Close /></el-icon></el-button>
+                </div>
+                <div class="flex-1 overflow-y-auto" v-loading="sessionLoading">
+                    <div v-if="sessionList.length === 0" class="flex items-center justify-center h-full text-gray-400 text-sm">暂无历史会话</div>
+                    <div v-for="s in sessionList" :key="s.sessionId"
+                         class="flex items-start justify-between gap-2 px-4 py-3 cursor-pointer border-b border-gray-100 hover:bg-slate-50 transition-colors"
+                         :class="sessionId === s.sessionId ? 'bg-blue-50 border-l-2 border-l-blue-500' : ''"
+                         @click="loadSession(s.sessionId)">
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-medium text-gray-800 truncate">{{ s.title }}</div>
+                            <div class="text-xs text-gray-400 mt-0.5">{{ s.updatedAt }}</div>
+                        </div>
+                        <el-button text size="small" class="!text-gray-400 hover:!text-red-500 shrink-0"
+                                   @click.stop="removeSession(s.sessionId)">
+                            <el-icon><Delete /></el-icon>
+                        </el-button>
+                    </div>
+                </div>
+            </aside>
             <div v-if="activeTab === 'config'" class="absolute inset-0 bg-white z-10 flex flex-col overflow-hidden">
                 <div class="flex justify-between items-center px-5 py-3 border-b border-gray-200">
                     <h3 class="text-sm font-semibold text-gray-800 m-0">AI Agent 配置文件</h3>
@@ -413,11 +441,13 @@
 
 <script setup>
 import { ref, reactive, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
-import { MagicStick, UserFilled, Promotion, Delete, Setting, Tools, Close, Check, DataAnalysis, Document, FolderOpened, Message, Scissor, Warning, InfoFilled, CaretBottom, Tickets, RefreshRight, Loading } from '@element-plus/icons-vue'
+import { MagicStick, UserFilled, Promotion, Delete, Setting, Tools, Close, Check, DataAnalysis, Document, FolderOpened, Message, Scissor, Warning, InfoFilled, CaretBottom, Tickets, RefreshRight, Loading, Clock, Plus } from '@element-plus/icons-vue'
 import { marked } from 'marked'
-import { getToken } from '@/composables/cookie'
 import { ElMessage } from 'element-plus'
-import { getAvailableModels, getAgentConfigs, getAgentConfig, saveAgentConfig, resetAgentConfig, getAgentLogs, clearAgentLogs as clearLogsApi } from '@/api/admin/agent'
+import {
+    getAvailableModels, sendAgentMessage, getAgentConfigs, getAgentConfig, saveAgentConfig, resetAgentConfig,
+    getAgentLogs, clearAgentLogs as clearLogsApi, getAgentSessions, getAgentSession, deleteAgentSession
+} from '@/api/admin/agent'
 
 // ──────── 状态 ────────
 const inputText    = ref('')
@@ -433,6 +463,49 @@ const availableModels = ref([])
 
 // ──────── 标签页 ────────
 const activeTab = ref('chat') // chat, config, logs
+
+// ──────── 会话历史 ────────
+const sessionId = ref('')
+const showHistory = ref(false)
+const sessionList = ref([])
+const sessionLoading = ref(false)
+
+const newSession = () => {
+    sessionId.value = 'sess-' + Date.now()
+    messages.value = []
+    streamBuffer.value = ''
+    realtimeLogs.value = []
+}
+
+const loadSessions = async () => {
+    sessionLoading.value = true
+    try {
+        const res = await getAgentSessions()
+        if (res.code === 200) sessionList.value = res.data || []
+    } catch {}
+    finally { sessionLoading.value = false }
+}
+
+const loadSession = async (sid) => {
+    try {
+        const res = await getAgentSession(sid)
+        if (res.code === 200 && res.data) {
+            sessionId.value = sid
+            messages.value = (res.data.history || []).map(h => ({ role: h.role, content: h.content }))
+            showHistory.value = false
+            await scrollBottom()
+        }
+    } catch { ElMessage.error('加载会话失败') }
+}
+
+const removeSession = async (sid) => {
+    try {
+        await deleteAgentSession(sid)
+        sessionList.value = sessionList.value.filter(s => s.sessionId !== sid)
+        if (sessionId.value === sid) newSession()
+        ElMessage.success('已删除')
+    } catch { ElMessage.error('删除失败') }
+}
 
 // ──────── 配置文件 ────────
 const configFiles = ref([])
@@ -481,7 +554,7 @@ const quickActions = [
 
 // ──────── 工具函数 ────────
 const isDestructiveTool = (name) => {
-    const dangerousTools = ['delete_article', 'delete_category', 'delete_tag', 'delete_comment', 'create_category', 'create_tag', 'toggle_article_top', 'approve_comment', 'reject_comment']
+    const dangerousTools = ['delete_article', 'delete_category', 'delete_tag', 'delete_comment', 'create_category', 'create_tag', 'toggle_article_top', 'approve_comment', 'reject_comment', 'create_article', 'update_article', 'batch_delete_articles']
     return dangerousTools.includes(name)
 }
 
@@ -489,9 +562,14 @@ const translateToolName = (name) => {
     const map = {
         'get_dashboard': '查询仪表盘',
         'get_articles': '查询文章列表',
-        'get_article': '获取文章详情',
+        'search_articles': '搜索文章',
+        'get_article': '获取文章基本信息',
+        'get_article_content': '读取文章全文',
         'delete_article': '删除文章',
         'toggle_article_top': '设置置顶',
+        'create_article': '创建文章',
+        'update_article': '更新文章',
+        'batch_delete_articles': '批量删除文章',
         'get_categories': '获取分类',
         'create_category': '创建分类',
         'delete_category': '删除分类',
@@ -570,12 +648,13 @@ const send = async () => {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${getToken() || ''}`
+                'Authorization': `Bearer ${(await import('@/composables/cookie')).getToken() || ''}`
             },
             body: JSON.stringify({
                 message: text,
                 history,
                 model: settings.model,
+                sessionId: sessionId.value,
                 settings: {
                     temperature: settings.temperature,
                     maxTokens: settings.maxTokens,
@@ -714,10 +793,8 @@ const sendExample = (text) => {
 }
 
 const clearChat = () => {
-    messages.value = []
-    streamBuffer.value = ''
-    realtimeLogs.value = []
-    ElMessage.success('对话已清空')
+    newSession()
+    ElMessage.success('已开启新会话')
 }
 
 // 添加实时日志
@@ -861,15 +938,16 @@ onMounted(async () => {
     // 隐藏页脚，避免 Agent 页面出现外层滚动条
     const footer = document.querySelector('.el-footer')
     if (footer) footer.style.display = 'none'
-    // 同时隐藏 el-main 的 min-height 限制
     const elMain = document.querySelector('.el-main')
     if (elMain) elMain.style.minHeight = '0'
+
+    // 初始化会话 ID
+    newSession()
 
     try {
         const res = await getAvailableModels()
         if (res.code === 200 && res.data) {
             availableModels.value = res.data
-            // 动态设置默认模型为第一个可用模型
             if (availableModels.value.length > 0) {
                 settings.model = availableModels.value[0].id
             }
@@ -878,9 +956,9 @@ onMounted(async () => {
         console.error('Failed to fetch models:', e)
     }
 
-    // 预加载配置文件和日志
     loadConfigs()
     loadLogs()
+    loadSessions()
 })
 
 onUnmounted(() => {
@@ -945,6 +1023,48 @@ watch(activeTab, (tab) => {
 .animate-thinking-dot-3 {
     animation: thinking-bounce 1.4s infinite ease-in-out both;
     animation-delay: 0.32s;
+}
+
+/* 消息气泡样式优化 */
+.agent-page-root .flex.gap-3.max-w-\[85\%\].self-end > div:first-child {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+    border: none;
+}
+
+.agent-page-root .flex.gap-3.max-w-\[85\%\].self-start > div:last-child:not(.w-9) {
+    background: var(--bg-card);
+    border: 1px solid var(--border-base);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* 工具调用卡片样式 */
+.agent-page-root .bg-white.rounded-2xl.overflow-hidden.shadow-sm.border.border-slate-200 {
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.agent-page-root .bg-white.rounded-2xl.overflow-hidden.shadow-sm.border.border-slate-200:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* 工具头部渐变 */
+.agent-page-root .flex.justify-between.items-center.px-4.py-3.bg-amber-500 {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+/* 用户头像样式 */
+.agent-page-root .w-9.h-9.rounded-xl.flex.items-center.justify-center.shrink-0.bg-slate-700 {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+/* AI 头像样式 */
+.agent-page-root .w-9.h-9.rounded-xl.flex.items-center.justify-center.shrink-0.bg-slate-800 {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
 }
 
 /* 光标闪烁 */

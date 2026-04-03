@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git config:*)",
+      "Bash(findstr -i \"url\")",
+      "Bash(ls:*)",
+      "Bash(find \"C:\\\\Users\\\\卢泓锦\\\\Downloads\\\\Weblog.Core\\\\FeiTwnd-Website-master \\(1\\)\\\\FeiTwnd-Website-master\\\\Frontend-Blog\\\\src\" -type f -name \"*.vue\" -o -name \"*.js\" -o -name \"*.scss\" -o -name \"*.css\")",
+      "Bash(find \"C:\\\\Users\\\\卢泓锦\\\\Downloads\\\\Weblog.Core\\\\FeiTwnd-Website-master \\(1\\)\\\\FeiTwnd-Website-master\\\\Frontend-Home\\\\src\" -type f -name \"*.vue\" -o -name \"*.js\" -o -name \"*.scss\" -o -name \"*.css\")",
+      "Bash(find \"C:/Users/卢泓锦/Downloads/Weblog.Core/FeiTwnd-Website-master \\(1\\)/FeiTwnd-Website-master/Frontend-Blog/src\" -type f -name \"*.vue\" -o -name \"*.scss\" -o -name \"*.css\" -o -name \"*.js\")",
+      "Bash(grep:*)",
+      "Bash(for f:*)",
+      "Bash(do echo:*)",
+      "Read(//c/Users/卢泓锦/Downloads/Weblog.Core/weblog-vue3/**)",
+      "Bash(done)",
+      "Bash(powershell -Command \"Select-String -Path ''Comment.vue'',''AiSummaryCard.vue'',''MessageWallForm.vue'',''MessageWallPanel.vue'',''MessageWallCard.vue'' -Pattern ''dark:'' | Where-Object { $_LineNumber -lt 400 } | Select-Object Filename, LineNumber, Line | Format-Table -AutoSize -Wrap\")",
+      "Bash(cd:*)",
+      "Bash(dir:*)",
+      "Bash(pkill node:*)",
+      "Bash(kill:*)",
+      "Bash(dotnet build:*)",
+      "Bash(taskkill /PID 29060 /F)",
+      "Bash(/d/document-address/python3.7/python:*)",
+      "Bash(python3 -c ':*)",
+      "Bash(py --version)",
+      "Bash(python -c ':*)",
+      "Bash(python fix_retrieval.py)",
+      "Bash(python fix_wiki.py)",
+      "Bash(python fix_chat.py)",
+      "Bash(python enhance_model.py)",
+      "Bash(python enhance_kb.py)",
+      "Bash(python enhance_assistant.py)",
+      "Bash(npx vite:*)",
+      "Bash(npm run:*)",
+      "Bash(claude plugin:*)",
+      "Bash(set CLAUDE_CODE_GIT_BASH_PATH=D:\\\\bigdocument\\\\gitee\\\\Git\\\\bin\\\\bash.exe)",
+      "Bash(set CLAUDE_CODE_GIT_BASH_PATH=D:\\\\bigdocument\\\\gitee\\\\Git\\\\usr\\\\bin\\\\bash.exe)",
+      "Bash(export CLAUDE_CODE_GIT_BASH_PATH=\"D:\\\\\\\\bigdocument\\\\\\\\gitee\\\\\\\\Git\\\\\\\\usr\\\\\\\\bin\\\\\\\\bash.exe\")",
+      "Bash(claude skills:*)",
+      "Bash(CLAUDE_CODE_GIT_BASH_PATH=\"D:\\\\bigdocument\\\\gitee\\\\Git\\\\usr\\\\bin\\\\bash.exe\" claude plugin:*)"
+    ]
+  }
+}

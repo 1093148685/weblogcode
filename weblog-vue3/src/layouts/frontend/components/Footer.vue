@@ -1,9 +1,22 @@
 <template>
-    <footer class="bg-white mt-auto dark:bg-gray-800">
-        <div class="max-w-screen-xl w-full mx-auto py-6 px-4 text-center">
-            <span class="text-sm text-gray-500 sm:text-center dark:text-gray-400">
-                © 2026 qianjinge. All Rights Reserved. 备案号：桂ICP备2025052831号
-            </span>
+    <footer class="mt-auto border-t border-[var(--border-base)] bg-[var(--bg-card)]">
+        <div class="max-w-content mx-auto px-6 py-5">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-[var(--text-muted)]">
+                <span>© {{ currentYear }} {{ blogSettingsStore.blogSettings.name || 'Weblog' }}. All Rights Reserved.</span>
+                <span class="flex items-center gap-1.5">
+                    <a href="https://beian.miit.gov.cn/" target="_blank"
+                        class="hover:text-[var(--color-primary)] transition-colors">
+                        桂ICP备2025052831号
+                    </a>
+                </span>
+            </div>
         </div>
     </footer>
 </template>
+
+<script setup>
+import { useBlogSettingsStore } from '@/stores/blogsettings'
+
+const blogSettingsStore = useBlogSettingsStore()
+const currentYear = new Date().getFullYear()
+</script>

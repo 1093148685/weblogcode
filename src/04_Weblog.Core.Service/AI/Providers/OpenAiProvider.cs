@@ -19,7 +19,7 @@ public class OpenAiProvider : BaseAiProvider
 
     public override async Task<AiChatResponse> ChatAsync(AiChatRequest request, string apiKey, CancellationToken ct = default)
     {
-        using var client = new HttpClient();
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
         client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
 
         var payload = new
@@ -104,7 +104,7 @@ public class OpenAiProvider : BaseAiProvider
 
     public override async IAsyncEnumerable<string> ChatStreamAsync(AiChatRequest request, string apiKey, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
     {
-        using var client = new HttpClient();
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
         client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
 
         var payload = new
@@ -172,14 +172,14 @@ public class OpenAiProvider : BaseAiProvider
     {
         try
         {
-            using var client = new HttpClient();
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
             client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
 
             var payload = new { model = DefaultModel, messages = new[] { new { role = "user", content = "Hi" } }, max_tokens = 5 };
             var json = JsonSerializer.Serialize(payload);
-            
-            var url = string.IsNullOrEmpty(apiUrl) 
-                ? "https://api.openai.com/v1/chat/completions" 
+
+            var url = string.IsNullOrEmpty(apiUrl)
+                ? "https://api.openai.com/v1/chat/completions"
                 : $"{apiUrl.TrimEnd('/')}/chat/completions";
 
             var response = await client.PostAsync(url, new StringContent(json, Encoding.UTF8, "application/json"), ct);
@@ -189,5 +189,65 @@ public class OpenAiProvider : BaseAiProvider
         {
             return false;
         }
+    }
+
+    // ── Embedding ────────────────────────────────────────────────────────────
+    // OpenAI 兼容格式的 Embedding 实现（同样适用于 DeepSeek / ZhipuAI 等兼容接口）
+
+    protected virtual string GetEmbeddingUrl(string? apiUrl = null)
+    {
+        if (!string.IsNullOrWhiteSpace(apiUrl))
+            return $"{apiUrl.TrimEnd('/')}/embeddings";
+        return "https://api.openai.com/v1/embeddings";
+    }
+
+    public virtual async Task<float[]> EmbedAsync(
+        string text, string apiKey, string? model = null, CancellationToken ct = default,
+        string? apiUrl = null)
+    {
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
+        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+
+        var payload = new { model = model ?? "text-embedding-3-small", input = text };
+        var json = JsonSerializer.Serialize(payload);
+        var responseBody = await PostAsync(client, GetEmbeddingUrl(apiUrl), json, ct);
+
+        var doc = JsonDocument.Parse(responseBody);
+        var dataArr = doc.RootElement.GetProperty("data")[0].GetProperty("embedding");
+        return dataArr.EnumerateArray().Select(e => e.GetSingle()).ToArray();
+    }
+
+    public virtual async Task<List<float[]>> EmbedBatchAsync(
+        List<string> texts, string apiKey, string? model = null, CancellationToken ct = default,
+        string? apiUrl = null)
+    {
+        const int batchSize = 20;
+        var result = new List<float[]>();
+
+        for (var i = 0; i < texts.Count; i += batchSize)
+        {
+            var batch = texts.Skip(i).Take(batchSize).ToList();
+
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
+            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+
+            var payload = new { model = model ?? "text-embedding-3-small", input = batch };
+            var json = JsonSerializer.Serialize(payload);
+            var responseBody = await PostAsync(client, GetEmbeddingUrl(apiUrl), json, ct);
+
+            var doc = JsonDocument.Parse(responseBody);
+            // 返回顺序与输入顺序一致（OpenAI 保证）
+            var ordered = doc.RootElement.GetProperty("data")
+                .EnumerateArray()
+                .OrderBy(d => d.GetProperty("index").GetInt32())
+                .Select(d => d.GetProperty("embedding")
+                    .EnumerateArray()
+                    .Select(e => e.GetSingle())
+                    .ToArray())
+                .ToList();
+            result.AddRange(ordered);
+        }
+
+        return result;
     }
 }

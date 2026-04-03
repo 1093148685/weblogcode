@@ -13,6 +13,7 @@ using Weblog.Core.Service.AI;
 using Weblog.Core.Service.AI.Core;
 using Weblog.Core.Service.AI.Providers;
 using Weblog.Core.Service.AI.Plugins;
+using Weblog.Core.Service.AI.Rag;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -56,7 +57,10 @@ builder.Services.AddScoped<ISqlSugarClient>(s =>
         typeof(AiConversation),
         typeof(AiUsageLog),
         typeof(AiAgentLog),
-        typeof(AiAgentConfig)
+        typeof(AiAgentConfig),
+        typeof(KnowledgeBase),
+        typeof(KbDocument),
+        typeof(KbChunk)
     );
 
     return db;
@@ -92,6 +96,7 @@ builder.Services.AddSingleton<Weblog.Core.Service.AI.Core.AiProviderSelector>();
 builder.Services.AddScoped<Weblog.Core.Service.AI.IAiProviderService, Weblog.Core.Service.AI.AiProviderService>();
 builder.Services.AddSingleton<Weblog.Core.Service.AI.Plugins.PluginManager>();
 builder.Services.AddScoped<Weblog.Core.Service.AI.IAiKernel, Weblog.Core.Service.AI.AiKernel>();
+builder.Services.AddScoped<IRagService, RagService>();
 builder.Services.AddHttpClient<IGiphyService, GiphyService>();
 builder.Services.AddHttpClient<ILinkPreviewService, LinkPreviewService>();
 

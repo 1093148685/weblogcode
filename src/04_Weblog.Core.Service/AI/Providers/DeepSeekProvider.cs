@@ -18,7 +18,7 @@ public class DeepSeekProvider : BaseAiProvider
 
     public override async Task<AiChatResponse> ChatAsync(AiChatRequest request, string apiKey, CancellationToken ct = default)
     {
-        using var client = new HttpClient();
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
         client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
 
         var payload = new
@@ -104,7 +104,7 @@ public class DeepSeekProvider : BaseAiProvider
 
     public override async IAsyncEnumerable<string> ChatStreamAsync(AiChatRequest request, string apiKey, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
     {
-        using var httpClient = new HttpClient();
+        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
 
         var payload = new
         {
@@ -165,7 +165,7 @@ public class DeepSeekProvider : BaseAiProvider
     {
         try
         {
-            using var client = new HttpClient();
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
             client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
             var payload = new { model = DefaultModel, messages = new[] { new { role = "user", content = "Hi" } }, max_tokens = 5 };
             
@@ -189,4 +189,45 @@ public class DeepSeekProvider : BaseAiProvider
     
     private ILogger<DeepSeekProvider>? _logger;
     public void SetLogger(ILogger<DeepSeekProvider> logger) => _logger = logger;
+
+    // ── Embedding ─────────────────────────────────────────────────────────
+    // DeepSeek Embedding API 兼容 OpenAI 格式
+
+    public async Task<float[]> EmbedAsync(
+        string text, string apiKey, string? model = null, CancellationToken ct = default)
+    {
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
+        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+        var payload = new { model = model ?? "deepseek-embedding", input = text };
+        var json = JsonSerializer.Serialize(payload);
+        var responseBody = await PostAsync(client, "https://api.deepseek.com/v1/embeddings", json, ct);
+        var doc = JsonDocument.Parse(responseBody);
+        return doc.RootElement.GetProperty("data")[0].GetProperty("embedding")
+            .EnumerateArray().Select(e => e.GetSingle()).ToArray();
+    }
+
+    public async Task<List<float[]>> EmbedBatchAsync(
+        List<string> texts, string apiKey, string? model = null, CancellationToken ct = default)
+    {
+        const int batchSize = 20;
+        var result = new List<float[]>();
+        for (var i = 0; i < texts.Count; i += batchSize)
+        {
+            var batch = texts.Skip(i).Take(batchSize).ToList();
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
+            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+            var payload = new { model = model ?? "deepseek-embedding", input = batch };
+            var json = JsonSerializer.Serialize(payload);
+            var responseBody = await PostAsync(client, "https://api.deepseek.com/v1/embeddings", json, ct);
+            var doc = JsonDocument.Parse(responseBody);
+            var ordered = doc.RootElement.GetProperty("data")
+                .EnumerateArray()
+                .OrderBy(d => d.GetProperty("index").GetInt32())
+                .Select(d => d.GetProperty("embedding")
+                    .EnumerateArray().Select(e => e.GetSingle()).ToArray())
+                .ToList();
+            result.AddRange(ordered);
+        }
+        return result;
+    }
 }

@@ -1,132 +1,113 @@
 <template>
     <Header></Header>
 
+    <!-- 阅读进度条 -->
+    <div class="fixed top-0 left-0 right-0 z-[70] h-1 bg-[var(--bg-hover)]">
+        <div class="h-full bg-gradient-to-r from-blue-500 to-blue-400 transition-all duration-150 ease-out"
+            :style="{ width: `${readingProgress}%` }"></div>
+    </div>
+
+    <!-- 阅读标题栏：向上滚动过标题后，丝滑出现在 Header 位置 -->
+    <Transition name="reading-bar">
+        <div v-if="showReadingTitle"
+            class="fixed top-0 left-0 right-0 z-[60] h-[72px] bg-[var(--bg-card)]/95 backdrop-blur-md border-b border-[var(--border-base)] shadow-nav flex items-center">
+            <div class="max-w-content mx-auto w-full px-6 flex items-center gap-3">
+                <svg class="w-4 h-4 flex-shrink-0 text-[var(--text-muted)]" fill="none" viewBox="0 0 24 24">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                        d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2"/>
+                </svg>
+                <span class="text-sm font-semibold text-[var(--text-heading)] truncate">{{ article.title }}</span>
+            </div>
+        </div>
+    </Transition>
+
     <!-- 文章标题、标签、Meta 信息 -->
-    <div class="bg-white dark:bg-gray-900">
-        <div class="max-w-screen-xl flex flex-col flex-wrap mx-auto px-4 md:px-6 pb-14 pt-10">
+    <div class="bg-[var(--bg-card)] border-b border-[var(--border-base)]">
+        <div class="max-w-content flex flex-col mx-auto px-6 pb-10 pt-8">
             <!-- 标签集合 -->
-            <div v-if="article.tags && article.tags.length > 0" class="mb-5">
+            <div v-if="article.tags && article.tags.length > 0" class="flex flex-wrap gap-1.5 mb-4">
                 <span @click="goTagArticleListPage(tag.id, tag.name)" v-for="(tag, index) in article.tags" :key="index"
-                    class="inline-block mb-1 cursor-pointer bg-green-100 text-green-800 text-sm font-medium me-2 
-                    px-2.5 py-0.5 rounded-md hover:bg-green-200 hover:text-green-900 
-                    dark:bg-green-900 dark:hover:bg-green-950 dark:text-green-300">
+                    class="cursor-pointer inline-block px-2.5 py-0.5 text-xs font-medium
+                           text-[var(--text-secondary)] bg-[var(--bg-hover)] border border-[var(--border-base)]
+                           rounded-full hover:bg-[var(--bg-active)] hover:text-[var(--color-primary)]
+                           hover:border-[var(--color-primary)] transition-all duration-200">
                     # {{ tag.name }}
                 </span>
             </div>
-            
+
             <!-- 文章标题 -->
-            <h1 class="font-bold text-4xl md:text-5xl mb-8 dark:text-white">{{ article.title }}</h1>
+            <h1 class="font-bold text-3xl md:text-4xl mb-5 text-[var(--text-heading)] leading-snug">{{ article.title }}</h1>
 
             <!-- Meta 信息 -->
-            <div class="flex gap-3 md:gap-6 text-gray-400 items-center text-sm">
+            <div class="flex flex-wrap gap-4 text-[var(--text-muted)] items-center text-sm">
                 <!-- 字数 -->
-                <div class="flex items-center" data-tooltip-target="word-tooltip-bottom" data-tooltip-placement="bottom">
-                    <svg t="1701512226243" class="w-4 h-4 mr-1 icon" viewBox="0 0 1024 1024" version="1.1"
-                        xmlns="http://www.w3.org/2000/svg" p-id="28617" width="48" height="48">
-                        <path
-                            d="M682.666667 85.333333l213.333333 213.333334v597.674666a42.368 42.368 0 0 1-42.368 42.325334H170.368A42.666667 42.666667 0 0 1 128 896.341333V127.658667C128 104.277333 146.986667 85.333333 170.368 85.333333H682.666667z m-85.333334 256v212.864L512 469.333333l-84.906667 85.333334L426.666667 341.333333H341.333333v341.333334h85.333334l85.333333-85.333334 85.333333 85.333334h85.333334V341.333333h-85.333334z"
-                            p-id="28618" fill="#8a8a8a"></path>
+                <span class="flex items-center gap-1" title="总字数">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                            d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2"/>
                     </svg>
                     {{ article.totalWords }}
-                </div>
-                <!-- 文章字数 Tooltip -->
-                <div id="word-tooltip-bottom" role="tooltip"
-                    class="absolute z-10 invisible inline-block px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded shadow-sm opacity-0 tooltip dark:bg-gray-700">
-                    总字数
-                    <div class="tooltip-arrow" data-popper-arrow></div>
-                </div>
+                </span>
 
                 <!-- 阅读时长 -->
-                <div class="hidden md:block">
-                    <div class="flex items-center" data-tooltip-target="read-time-tooltip-bottom"
-                        data-tooltip-placement="bottom">
-                        <svg t="1701512553358" class="w-4 h-4 mr-1.5 icon" viewBox="0 0 1024 1024" version="1.1"
-                            xmlns="http://www.w3.org/2000/svg" p-id="37812" width="48" height="48">
-                            <path
-                                d="M513 33.22c-265.1 0-480 214.9-480 480s214.9 480 480 480 480-214.9 480-480-214.9-480-480-480z m208.9 652.59c-11.05 19.13-35.51 25.69-54.64 14.64L474.1 588.93c-13.06-7.54-20.26-21.34-19.99-35.42 0-0.17-0.01-0.34-0.01-0.51V329.95c0-22.09 17.91-40 40-40s40 17.91 40 40v201.23l173.17 99.98c19.12 11.05 25.68 35.51 14.63 54.65z"
-                                fill="#8a8a8a" p-id="37813"></path>
-                        </svg>
-                        {{ article.readTime }}
-                    </div>
-                    <!-- 阅读时长 Tooltip -->
-                    <div id="read-time-tooltip-bottom" role="tooltip"
-                        class="absolute z-10 invisible inline-block px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded shadow-sm opacity-0 tooltip dark:bg-gray-700">
-                        阅读时长
-                        <div class="tooltip-arrow" data-popper-arrow></div>
-                    </div>
-                </div>
+                <span class="hidden md:flex items-center gap-1" title="阅读时长">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                            d="M12 6v6l4 2m6-2a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z"/>
+                    </svg>
+                    {{ article.readTime }}
+                </span>
 
                 <!-- 发布时间 -->
-                <div class="flex items-center" data-tooltip-target="publish-time-tooltip-bottom"
-                    data-tooltip-placement="bottom">
-                    <svg t="1701513012543" class="w-[18px] h-[18px] mr-1 icon" viewBox="0 0 1024 1024" version="1.1"
-                        xmlns="http://www.w3.org/2000/svg" p-id="41600" width="48" height="48">
-                        <path
-                            d="M725.333333 170.666667h74.709334C864.853333 170.666667 917.333333 223.189333 917.333333 288.096V799.893333C917.333333 864.757333 864.832 917.333333 800.042667 917.333333H223.957333C159.146667 917.333333 106.666667 864.810667 106.666667 799.904V288.106667C106.666667 223.242667 159.168 170.666667 223.957333 170.666667H298.666667v-32a32 32 0 0 1 64 0v32h298.666666v-32a32 32 0 0 1 64 0v32z m0 64v32a32 32 0 0 1-64 0v-32H362.666667v32a32 32 0 0 1-64 0v-32h-74.709334A53.354667 53.354667 0 0 0 170.666667 288.096V799.893333A53.301333 53.301333 0 0 0 223.957333 853.333333h576.085334A53.354667 53.354667 0 0 0 853.333333 799.904V288.106667A53.301333 53.301333 0 0 0 800.042667 234.666667H725.333333z m-10.666666 224a32 32 0 0 1 0 64H309.333333a32 32 0 0 1 0-64h405.333334zM586.666667 618.666667a32 32 0 0 1 0 64H309.333333a32 32 0 0 1 0-64h277.333334z"
-                            fill="#8a8a8a" p-id="41601"></path>
+                <span class="flex items-center gap-1" title="发布时间">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 20 20">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                            d="M5 1v3m5-3v3m5-3v3M1 7h18M5 11h10M2 3h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/>
                     </svg>
                     {{ article.createTime }}
-                </div>
-                <!-- 发布时间 Tooltip -->
-                <div id="publish-time-tooltip-bottom" role="tooltip"
-                    class="absolute z-10 invisible inline-block px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded shadow-sm opacity-0 tooltip dark:bg-gray-700">
-                    发布时间
-                    <div class="tooltip-arrow" data-popper-arrow></div>
-                </div>
+                </span>
 
                 <!-- 分类 -->
-                <div class="flex items-center" data-tooltip-target="category-tooltip-bottom"
-                    data-tooltip-placement="bottom">
-                    <svg t="1701513357854" class="w-4 h-4 mr-1.5 icon" viewBox="0 0 1024 1024" version="1.1"
-                        xmlns="http://www.w3.org/2000/svg" p-id="50560" width="48" height="48">
-                        <path
-                            d="M476.7232 112.503467L121.634133 279.825067a68.266667 68.266667 0 0 0 1.6896 124.279466l355.089067 155.648a68.266667 68.266667 0 0 0 54.818133 0l355.089067-155.6992a68.266667 68.266667 0 0 0 1.672533-124.279466l-355.089066-167.253334a68.266667 68.266667 0 0 0-58.197334 0zM150.7328 341.572267l355.089067-167.304534 355.072 167.253334-355.089067 155.6992-355.072-155.648zM860.842667 685.346133a34.133333 34.133333 0 0 1 28.962133 61.781334l-2.4064 1.1264-368.810667 155.682133a34.133333 34.133333 0 0 1-23.671466 1.0752l-2.8672-1.0752-368.7936-155.648a34.133333 34.133333 0 0 1 24.064-63.829333l2.491733 0.938666 355.498667 150.050134 355.5328-150.101334z"
-                            fill="#444444" p-id="50561"></path>
-                        <path
-                            d="M853.333333 512l-341.486933 153.634133L170.666667 512.341333v55.210667c0 13.4656 7.748267 25.6512 19.712 30.9248l286.190933 126.976a78.7968 78.7968 0 0 0 35.2768 8.3968c12.049067 0 24.081067-2.798933 35.293867-8.3968l286.498133-127.249067A33.7408 33.7408 0 0 0 853.333333 567.278933V512z"
-                            fill="#00B386" p-id="50562"></path>
+                <a v-if="article.categoryName"
+                    @click="goCategoryArticleListPage(article.categoryId, article.categoryName)"
+                    class="cursor-pointer flex items-center gap-1 hover:text-[var(--color-primary)] transition-colors" title="分类">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 18 18">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                            d="M1 5v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H1Zm0 0V2a1 1 0 0 1 1-1h5.443a1 1 0 0 1 .8.4l2.7 3.6H1Z"/>
                     </svg>
-                    <a @click="goCategoryArticleListPage(article.categoryId, article.categoryName)"
-                        class="cursor-pointer mr-1 hover:underline">{{ article.categoryName }}</a>
-                </div>
-                <!-- 分类 Tooltip -->
-                <div id="category-tooltip-bottom" role="tooltip"
-                    class="absolute z-10 invisible inline-block px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded shadow-sm opacity-0 tooltip dark:bg-gray-700">
-                    分类
-                    <div class="tooltip-arrow" data-popper-arrow></div>
-                </div>
+                    {{ article.categoryName }}
+                </a>
 
                 <!-- 阅读量 -->
-                <div class="flex items-center" data-tooltip-target="read-num-tooltip-bottom"
-                    data-tooltip-placement="bottom">
-                    <svg t="1701513523793" class="w-[18px] h-[18px] mr-1 icon" viewBox="0 0 1024 1024" version="1.1"
-                        xmlns="http://www.w3.org/2000/svg" p-id="56112" width="48" height="48">
-                        <path
-                            d="M512 87.806c-234.721 0-424.194 189.474-424.194 424.194s189.474 424.194 424.194 424.194 424.194-189.474 424.194-424.194-189.474-424.194-424.194-424.194zM594.010 825.904c-18.382 12.725-25.452 8.484-12.725-4.242 11.312-12.725 83.425-103.22-29.694-168.263-36.763-21.21-49.49-72.113-49.49-83.425 0-12.725 2.829-18.382-7.069-14.141-8.484 2.829-195.13 91.908-41.007 265.828 9.899 11.312 5.655 14.141-12.725 5.655-419.953-224.822 137.155-579.732 145.639-583.974 8.484-5.655 5.655 2.829-1.414 16.967-12.725 25.452-45.248 164.022 41.007 220.582 87.668 56.56 213.509 172.507-32.522 345.012z"
-                            p-id="56113" fill="#8a8a8a"></path>
+                <span class="flex items-center gap-1" title="阅读量">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7Z"/>
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                            d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
                     </svg>
                     {{ article.readNum }}
-                </div>
-                <!-- 阅读量 Tooltip -->
-                <div id="read-num-tooltip-bottom" role="tooltip"
-                    class="absolute z-10 invisible inline-block px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded shadow-sm opacity-0 tooltip dark:bg-gray-700">
-                    阅读量
-                    <div class="tooltip-arrow" data-popper-arrow></div>
-                </div>
+                </span>
+
+                <!-- 评论数 -->
+                <span class="flex items-center gap-1" title="评论数">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 0 1-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z"/>
+                    </svg>
+                    {{ article.commentNum }}
+                </span>
             </div>
         </div>
     </div>
 
     <!-- 主内容区域 -->
-    <main class="container max-w-screen-xl mx-auto px-4 md:px-6 py-4">
-        <!-- grid 表格布局，分为 4 列 -->
-        <div class="grid grid-cols-4 gap-7">
-            <!-- 左边栏，占用 3 列 -->
-            <div class="col-span-4 md:col-span-3 mb-3">
-                <!-- 文章卡片父容器 -->
-                <div
-                    class="w-full p-5 mb-3 bg-white border border-gray-200 rounded-lg dark:bg-gray-800 dark:border-gray-700">
-                    <!-- 文章 -->
+    <main class="max-w-content mx-auto px-6 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
+            <!-- 左边：文章内容 -->
+            <div class="min-w-0">
+                <!-- 文章卡片 -->
+                <div class="bg-[var(--bg-card)] border border-[var(--border-base)] rounded-card shadow-card p-6 mb-5">
                     <article>
                         <!-- AI 摘要 -->
                         <AiSummaryCard ref="aiSummaryRef" :content="article.content" :ready="articleRenderReady" />
@@ -137,68 +118,61 @@
                         </div>
 
                         <!-- 上下篇 -->
-                        <nav class="flex flex-row mt-7">
-                            <!-- basis-1/2 用于占用 flex 布局的一半空间 -->
+                        <nav class="flex flex-row mt-8 gap-3">
                             <div class="basis-1/2">
-                                <!-- h-full 指定高度占满 -->
                                 <a v-if="article.preArticle"
                                     @click="router.push('/article/' + article.preArticle.articleId)"
-                                    class="cursor-pointer flex flex-col h-full p-4 mr-3 text-base font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:border-sky-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">
-                                    <div>
-                                        <svg class="inline w-3.5 h-3.5 mr-2 mb-1" aria-hidden="true"
-                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
+                                    class="cursor-pointer flex flex-col h-full p-4 text-sm font-medium
+                                           text-[var(--text-secondary)] bg-[var(--bg-hover)] border border-[var(--border-base)]
+                                           rounded-card hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]
+                                           hover:bg-[var(--bg-active)] transition-all duration-200">
+                                    <div class="flex items-center gap-1 mb-1 text-xs text-[var(--text-muted)]">
+                                        <svg class="w-3 h-3" fill="none" viewBox="0 0 14 10">
                                             <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                                stroke-width="2" d="M13 5H1m0 0 4 4M1 5l4-4"></path>
+                                                stroke-width="2" d="M13 5H1m0 0 4 4M1 5l4-4"/>
                                         </svg>
                                         上一篇
                                     </div>
-                                    <div>{{ article.preArticle.articleTitle }}</div>
+                                    <div class="line-clamp-2 leading-snug">{{ article.preArticle.articleTitle }}</div>
                                 </a>
                             </div>
-
                             <div class="basis-1/2">
-                                <!-- text-right 指定文字居右显示 -->
                                 <a v-if="article.nextArticle"
                                     @click="router.push('/article/' + article.nextArticle.articleId)"
-                                    class="cursor-pointer flex flex-col h-full text-right p-4 text-base font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:border-sky-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">
-                                    <div>
+                                    class="cursor-pointer flex flex-col h-full text-right p-4 text-sm font-medium
+                                           text-[var(--text-secondary)] bg-[var(--bg-hover)] border border-[var(--border-base)]
+                                           rounded-card hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]
+                                           hover:bg-[var(--bg-active)] transition-all duration-200">
+                                    <div class="flex items-center justify-end gap-1 mb-1 text-xs text-[var(--text-muted)]">
                                         下一篇
-                                        <svg class="inline w-3.5 h-3.5 ml-2 mb-1" aria-hidden="true"
-                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
+                                        <svg class="w-3 h-3" fill="none" viewBox="0 0 14 10">
                                             <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                                stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"></path>
+                                                stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"/>
                                         </svg>
                                     </div>
-                                    <div>{{ article.nextArticle.articleTitle }}</div>
+                                    <div class="line-clamp-2 leading-snug">{{ article.nextArticle.articleTitle }}</div>
                                 </a>
                             </div>
                         </nav>
                     </article>
-
-
-
                 </div>
 
                 <!-- 评论组件 -->
                 <Comment></Comment>
             </div>
 
-            <!-- 右边侧边栏，占用一列 -->
-            <aside class="col-span-4 md:col-span-1">
-                <div>
-                    <!-- 博主信息 -->
+            <!-- 右边侧边栏 -->
+            <aside class="hidden lg:block w-[280px] flex-shrink-0">
+                <!-- 博主信息、分类、标签：随页面正常滚动 -->
+                <div class="space-y-4 mb-4">
                     <UserInfoCard></UserInfoCard>
-
-                    <!-- 分类 -->
                     <CategoryListCard></CategoryListCard>
-
-                    <!-- 标签 -->
                     <TagListCard></TagListCard>
                 </div>
-                
-                <!-- 文章目录 -->
-                <Toc></Toc>
-
+                <!-- 文章目录：固定在视口顶部，随页面滚动到位后吸附 -->
+                <div class="sticky top-[80px]">
+                    <Toc></Toc>
+                </div>
             </aside>
         </div>
     </main>
@@ -222,19 +196,24 @@ import { useRoute, useRouter } from 'vue-router'
 import { ref, watch, onMounted, onBeforeUnmount, nextTick, computed } from 'vue'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/tokyo-night-dark.css'
-import { useDark } from '@vueuse/core'
 import { marked } from 'marked'
-import { initTooltips } from 'flowbite'
 import Comment from '@/components/Comment.vue'
 import AiSummaryCard from '@/components/AiSummaryCard.vue'
 
-// 是否是暗黑模式
-const isDark = useDark()
-
-// 初始化 Flowbit 组件
-onMounted(() => {
-    initTooltips();
+// 是否是暗黑模式（通过 html.dark class 判断）
+const isDark = ref(document.documentElement.classList.contains('dark'))
+// 监听 dark 类的变化
+const darkObserver = new MutationObserver(() => {
+    isDark.value = document.documentElement.classList.contains('dark')
 })
+
+// 阅读标题栏：标题滚出视口时展示
+const showReadingTitle = ref(false)
+let titleObserver = null
+
+// 阅读进度
+const readingProgress = ref(0)
+let scrollHandler = null
 
 const route = useRoute()
 const router = useRouter()
@@ -315,6 +294,36 @@ function refreshArticleDetail(articleId) {
     })
 }
 refreshArticleDetail(route.params.articleId)
+
+// 启动暗色模式监听
+onMounted(() => {
+    darkObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+
+    // 监听文章标题是否滚出视口，控制阅读标题栏
+    nextTick(() => {
+        const titleEl = document.querySelector('h1')
+        if (titleEl) {
+            titleObserver = new IntersectionObserver(
+                ([entry]) => { showReadingTitle.value = !entry.isIntersecting },
+                { rootMargin: '-72px 0px 0px 0px' }
+            )
+            titleObserver.observe(titleEl)
+        }
+    })
+
+    // 阅读进度监听
+    scrollHandler = () => {
+        const scrollTop = window.scrollY
+        const docHeight = document.documentElement.scrollHeight - window.innerHeight
+        readingProgress.value = docHeight > 0 ? Math.min((scrollTop / docHeight) * 100, 100) : 0
+    }
+    window.addEventListener('scroll', scrollHandler, { passive: true })
+})
+onBeforeUnmount(() => {
+    darkObserver.disconnect()
+    titleObserver?.disconnect()
+    if (scrollHandler) window.removeEventListener('scroll', scrollHandler)
+})
 
 // 跳转分类文章列表页
 const goCategoryArticleListPage = (id, name) => {
@@ -739,5 +748,16 @@ img:focus) {
     --copied-icon: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' height='20' width='20' stroke='rgba(128,128,128,1)' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2m-6 9 2 2 4-4'/%3E%3C/svg%3E");
     -webkit-mask-image: var(--copied-icon);
     mask-image: var(--copied-icon);
+}
+
+/* 阅读标题栏动画 */
+.reading-bar-enter-active,
+.reading-bar-leave-active {
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
+}
+.reading-bar-enter-from,
+.reading-bar-leave-to {
+    transform: translateY(100%);
+    opacity: 0;
 }
 </style>

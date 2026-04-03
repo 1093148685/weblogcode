@@ -1,13 +1,17 @@
 import axios from "@/axios";
-import { getCache, setCache } from '@/composables/useCache'
+import { getCache, setCache, clearCache } from '@/composables/useCache'
 
 const CACHE_TTL = 3 * 60 * 1000 // 3分钟
 
 // 获取文章分页数据
-export function getArticlePageList(data) {
+export function getArticlePageList(data, noCache = false) {
     const cacheKey = `admin_article_list_${JSON.stringify(data)}`
-    const cached = getCache(cacheKey)
-    if (cached) return Promise.resolve(cached)
+    if (!noCache) {
+        const cached = getCache(cacheKey)
+        if (cached) return Promise.resolve(cached)
+    } else {
+        clearCache(cacheKey)
+    }
 
     return axios.post("/admin/article/list", data).then(res => {
         if (res.success) setCache(cacheKey, res, CACHE_TTL)

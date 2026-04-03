@@ -1,5 +1,5 @@
 <template>
-    <div class="h-screen flex flex-col overflow-hidden bg-white dark:bg-gray-900">
+    <div class="h-screen flex flex-col overflow-hidden bg-[var(--bg-base)]">
         <ChatPanel />
     </div>
 </template>
