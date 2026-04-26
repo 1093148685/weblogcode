@@ -92,6 +92,18 @@
                                     <el-icon><Plus /></el-icon>
                                     追加到编辑器
                                 </el-button>
+                                <el-button size="small" @click="handleReplaceEditor(msg.content)">
+                                    替换正文
+                                </el-button>
+                                <el-button size="small" @click="handleFillSummary(msg.content)">
+                                    填入摘要
+                                </el-button>
+                                <el-button size="small" @click="handleFillTitle(msg.content)">
+                                    应用标题
+                                </el-button>
+                                <el-button size="small" @click="handleApplySeo(msg.content)">
+                                    应用 SEO
+                                </el-button>
                             </div>
                         </div>
                     </div>
@@ -200,6 +212,10 @@ const props = defineProps({
     modelValue: {
         type: Boolean,
         default: false
+    },
+    initialPrompt: {
+        type: String,
+        default: ''
     }
 })
 
@@ -226,14 +242,14 @@ const sessions = ref([])
 const currentSessionId = ref(null)
 
 const templates = [
-    { title: '技术教程', prompt: '写一篇详细的技术教程，介绍某个技术的核心概念、使用方法和最佳实践，包含代码示例' },
-    { title: '经验分享', prompt: '分享你在某个领域的经验和心得，内容实用、有深度，能帮助读者解决实际问题' },
-    { title: '产品评测', prompt: '对某个产品进行客观全面的评测，包括功能介绍、优缺点分析、使用体验等' },
-    { title: '问题解决', prompt: '描述一个常见问题的背景、原因分析和多种解决方案，帮助读者理解和应对' },
-    { title: '润色改写', prompt: '帮我优化和润色以下文本，使其表达更流畅，专业、有吸引力：' },
-    { title: '续写内容', prompt: '帮我续写以下内容，要求保持风格一致，内容连贯：' },
-    { title: '摘要总结', prompt: '为以下内容生成一个简洁有力的摘要，概括核心要点：' },
-    { title: '标题建议', prompt: '为以下文章内容提供5个吸引人的标题选项：' },
+    { title: '生成大纲', prompt: '请根据文章主题生成一份技术博客大纲，包含层级标题、每节要点和建议示例。' },
+    { title: '完整草稿', prompt: '请写一篇结构完整的技术博客，包含引言、核心概念、实践步骤、代码示例、常见问题和总结。' },
+    { title: '续写内容', prompt: '请基于已有正文继续写，保持原有语气和 Markdown 结构，不要重复已有内容。' },
+    { title: '润色改写', prompt: '请润色以下文本，使表达更清晰、更专业、更适合技术博客阅读，保留 Markdown 结构。' },
+    { title: '摘要总结', prompt: '请为文章生成 80-140 字摘要，只输出摘要正文，不要输出多余解释。' },
+    { title: 'SEO 标题', prompt: '请为文章生成 5 个 SEO 友好的标题，并说明每个标题适合的搜索关键词。' },
+    { title: '关键词', prompt: '请根据文章内容生成 8-12 个 SEO 关键词，并按重要性排序。' },
+    { title: '检查结构', prompt: '请检查文章结构、逻辑、可读性和技术表达，给出可执行的修改建议。' },
 ]
 
 const remainingCount = computed(() => MAX_CONVERSATIONS - conversations.value.length)
@@ -260,6 +276,9 @@ onMounted(() => {
 
 watch(dialogVisible, (newVal) => {
     if (newVal) {
+        if (props.initialPrompt) {
+            prompt.value = props.initialPrompt
+        }
         nextTick(() => {
             scrollToBottom()
             inputRef.value?.focus()
@@ -440,8 +459,36 @@ const handleCopyContent = async (content) => {
 }
 
 const handleAppendToEditor = (content) => {
-    emit('insert-content', content)
-    ElMessage.success('已追加到编辑器')
+    emit('insert-content', { action: 'append', content })
+    ElMessage.success('已追加到正文')
+}
+
+const handleReplaceEditor = async (content) => {
+    try {
+        await ElMessageBox.confirm('确定用 AI 结果替换当前正文吗？', '替换正文', {
+            confirmButtonText: '确定替换',
+            cancelButtonText: '取消',
+            type: 'warning'
+        })
+        emit('insert-content', { action: 'replace', content })
+        ElMessage.success('已替换正文')
+    } catch {
+    }
+}
+
+const handleFillSummary = (content) => {
+    emit('insert-content', { action: 'summary', content })
+    ElMessage.success('已填入摘要')
+}
+
+const handleFillTitle = (content) => {
+    emit('insert-content', { action: 'title', content })
+    ElMessage.success('已应用标题')
+}
+
+const handleApplySeo = (content) => {
+    emit('insert-content', { action: 'seo', content })
+    ElMessage.success('已应用 SEO 建议')
 }
 
 const onSettingsChange = (settings) => {
@@ -623,7 +670,7 @@ const generateContent = async () => {
                 cancelButtonText: '否',
                 type: 'success'
             }).then(() => {
-                emit('insert-content', result)
+                emit('insert-content', { action: 'append', content: result })
             }).catch(() => {})
         }
 

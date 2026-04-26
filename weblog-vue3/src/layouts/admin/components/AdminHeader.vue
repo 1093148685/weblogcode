@@ -2,7 +2,7 @@
     <!-- 固钉组件 -->
     <el-affix :offset="0">
         <!-- Header 主体 -->
-        <div class="admin-header h-[64px] flex items-center pr-4 border-b border-slate-200/60">
+        <div class="admin-header h-[64px] flex items-center pr-4">
 
             <!-- 左边：菜单折叠按钮 -->
             <div
@@ -10,7 +10,7 @@
                 @click="handleMenuWidth"
                 title="折叠菜单"
             >
-                <el-icon class="text-slate-500 text-[18px]">
+                <el-icon class="header-icon text-[18px]">
                     <Fold v-if="menuStore.menuWidth == '250px'" />
                     <Expand v-else />
                 </el-icon>
@@ -19,8 +19,8 @@
             <!-- 面包屑区域 -->
             <div class="flex-1 hidden md:flex items-center ml-2">
                 <el-breadcrumb separator="/">
-                    <el-breadcrumb-item :to="{ path: '/admin/index' }">首页</el-breadcrumb-item>
-                    <el-breadcrumb-item v-if="currentPageTitle" class="text-slate-600">{{ currentPageTitle }}</el-breadcrumb-item>
+                    <el-breadcrumb-item :to="{ path: '/admin/index' }">控制台</el-breadcrumb-item>
+                    <el-breadcrumb-item v-if="currentPageTitle">{{ currentPageTitle }}</el-breadcrumb-item>
                 </el-breadcrumb>
             </div>
 
@@ -30,21 +30,21 @@
                 <!-- 刷新 -->
                 <el-tooltip effect="dark" content="刷新页面" placement="bottom">
                     <div class="header-btn w-[38px] h-[38px] cursor-pointer flex items-center justify-center rounded-lg" @click="handleRefresh">
-                        <el-icon class="text-slate-500 text-[16px]"><Refresh /></el-icon>
+                        <el-icon class="header-icon text-[16px]"><Refresh /></el-icon>
                     </div>
                 </el-tooltip>
 
                 <!-- 跳转前台 -->
                 <el-tooltip effect="dark" content="访问前台" placement="bottom">
                     <div class="header-btn w-[38px] h-[38px] cursor-pointer flex items-center justify-center rounded-lg" @click="router.push('/')">
-                        <el-icon class="text-slate-500 text-[16px]"><Monitor /></el-icon>
+                        <el-icon class="header-icon text-[16px]"><Monitor /></el-icon>
                     </div>
                 </el-tooltip>
 
                 <!-- 全屏 -->
                 <el-tooltip effect="dark" :content="isFullscreen ? '退出全屏' : '全屏'" placement="bottom">
                     <div class="header-btn w-[38px] h-[38px] cursor-pointer flex items-center justify-center rounded-lg" @click="toggle">
-                        <el-icon class="text-slate-500 text-[16px]">
+                        <el-icon class="header-icon text-[16px]">
                             <FullScreen v-if="!isFullscreen" />
                             <Aim v-else />
                         </el-icon>
@@ -62,14 +62,14 @@
                 </el-tooltip>
 
                 <!-- 分割线 -->
-                <div class="w-px h-5 bg-slate-200 mx-1"></div>
+                <div class="header-divider w-px h-5 mx-1"></div>
 
                 <!-- 用户头像下拉 -->
                 <el-dropdown class="flex items-center" @command="handleCommand" trigger="click">
                     <div class="user-trigger flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-all duration-200">
-                        <el-avatar :size="28" src="src/assets/avr.jpg" class="ring-2 ring-indigo-200/60" />
-                        <span class="text-slate-600 text-sm font-medium hidden sm:block">{{ userStore.userInfo.username }}</span>
-                        <el-icon class="text-slate-400 text-xs"><arrow-down /></el-icon>
+                        <el-avatar :size="28" src="src/assets/avr.jpg" class="user-avatar" />
+                        <span class="user-name text-sm font-medium hidden sm:block">{{ userStore.userInfo.username }}</span>
+                        <el-icon class="header-icon text-xs"><arrow-down /></el-icon>
                     </div>
                     <template #dropdown>
                         <el-dropdown-menu>
@@ -191,47 +191,70 @@ const onSubmit = () => {
 </script>
 
 <style scoped>
-/* ===== Header 背景（参考 FeiTwnd 简约白卡风格） ===== */
 .admin-header {
-    background: #ffffff;
-    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.08), transparent),
+        var(--admin-bg-card);
+    border-bottom: 1px solid var(--admin-border);
+    box-shadow: 0 14px 35px rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(18px);
 }
 
 /* ===== 工具栏按钮 ===== */
 .header-btn {
     border-radius: 8px;
     transition: all 0.18s ease;
+    color: var(--admin-text-muted);
 }
 
 .header-btn:hover {
-    background: #f1f5f9;
+    background: var(--admin-bg-hover);
 }
 
 .header-btn:hover :deep(.el-icon) {
-    color: #6366f1 !important;
+    color: var(--admin-accent-2) !important;
+}
+
+.header-icon {
+    color: var(--admin-text-muted);
+}
+
+.header-divider {
+    background: var(--admin-border);
 }
 
 /* ===== 用户触发区域 ===== */
 .user-trigger {
     border-radius: 8px;
     transition: all 0.18s ease;
+    color: var(--admin-text);
+    border: 1px solid transparent;
 }
 
 .user-trigger:hover {
-    background: #f1f5f9;
+    background: var(--admin-bg-hover);
+    border-color: var(--admin-border);
+}
+
+.user-avatar {
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.32);
+}
+
+.user-name {
+    color: var(--admin-text);
 }
 
 /* ===== 面包屑 ===== */
 :deep(.el-breadcrumb__inner) {
-    color: #94a3b8;
+    color: var(--admin-text-muted);
     font-size: 13px;
 }
 
 :deep(.el-breadcrumb__inner.is-link:hover) {
-    color: #6366f1;
+    color: var(--admin-accent-2);
 }
 
 :deep(.el-breadcrumb__separator) {
-    color: #cbd5e1;
+    color: var(--admin-border-strong);
 }
 </style>

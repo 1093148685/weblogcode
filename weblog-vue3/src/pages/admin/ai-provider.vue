@@ -1,19 +1,25 @@
 <template>
-    <div class="ai-page p-5">
+    <div class="page-shell ai-page">
 
         <!-- 页头 -->
-        <div class="page-header mb-5">
-            <div class="flex items-center gap-3 mb-1">
-                <div class="page-header__icon">
+        <div class="page-hero">
+            <div class="page-hero__main">
+                <div class="page-hero__icon">
                     <el-icon :size="20"><Connection /></el-icon>
                 </div>
-                <h1 class="text-lg font-bold text-slate-800">AI Provider 管理</h1>
+                <div>
+                    <h1 class="page-hero__title">AI Provider 管理</h1>
+                    <p class="page-hero__desc">配置大模型服务提供商，支持多 Provider 主备切换</p>
+                </div>
             </div>
-            <p class="text-sm text-slate-400 ml-11">配置大模型服务提供商，支持多 Provider 主备切换</p>
+            <div class="page-hero__actions">
+                <el-button :icon="RefreshRight" @click="handleMigrate" :loading="migrating" plain>迁移旧数据</el-button>
+                <el-button type="primary" :icon="Plus" :disabled="!isAdmin()" @click="handleAdd">新增 Provider</el-button>
+            </div>
         </div>
 
         <!-- 统计卡片 -->
-        <div class="grid grid-cols-3 gap-4 mb-5">
+        <div class="page-stats">
             <div class="mini-stat mini-stat--blue">
                 <div class="mini-stat__num">{{ tableData.length }}</div>
                 <div class="mini-stat__label">全部 Provider</div>
@@ -39,14 +45,17 @@
             <div v-if="healthList.length === 0" class="text-center text-gray-400 py-4 text-sm">
                 点击「检查连通性」测试所有已启用 Provider
             </div>
-            <div v-else class="flex flex-wrap gap-3">
+            <div v-else class="provider-health-grid">
                 <div v-for="h in healthList" :key="h.name"
-                     class="flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm"
-                     :class="h.status === 'healthy' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-600'">
+                     class="provider-health-item"
+                     :class="h.status === 'healthy' ? 'is-healthy' : 'is-error'">
                     <span class="w-2 h-2 rounded-full" :class="h.status === 'healthy' ? 'bg-green-500' : 'bg-red-500'"></span>
                     <span class="font-medium">{{ h.name }}</span>
                     <span class="text-xs opacity-70">{{ h.latencyMs }}ms</span>
-                    <span v-if="h.error" class="text-xs" :title="h.error">⚠</span>
+                    <span v-if="h.lastChecked" class="text-xs opacity-60">{{ h.lastChecked }}</span>
+                    <el-tooltip v-if="h.error" effect="dark" :content="h.error" placement="top">
+                        <span class="text-xs cursor-help">⚠</span>
+                    </el-tooltip>
                 </div>
             </div>
         </el-card>
@@ -60,19 +69,18 @@
                         <el-tag size="small" class="ml-1">{{ tableData.length }} 条</el-tag>
                     </div>
                     <div class="flex gap-2">
-                        <el-button :icon="RefreshRight" @click="handleMigrate" :loading="migrating" plain>迁移旧数据</el-button>
-                        <el-button type="primary" :icon="Plus" :disabled="!isAdmin()" @click="handleAdd">新增 Provider</el-button>
+                        <el-button size="small" @click="loadData" :loading="loading" plain>刷新列表</el-button>
                     </div>
                 </div>
             </template>
 
-            <el-table :data="tableData" v-loading="loading" style="width: 100%">
+            <el-table :data="tableData" v-loading="loading" style="width: 100%" empty-text="暂无 Provider，请先新增服务商">
                 <el-table-column prop="displayName" label="名称" min-width="180">
                     <template #default="{ row }">
                         <div class="flex items-center gap-2">
                             <div class="provider-avatar">{{ row.displayName?.charAt(0) }}</div>
                             <div>
-                                <div class="font-medium text-slate-700 text-sm">{{ row.displayName }}</div>
+                                <div class="font-medium provider-name text-sm">{{ row.displayName }}</div>
                                 <el-tag size="small" class="mt-0.5">{{ row.name }}</el-tag>
                             </div>
                         </div>
@@ -97,7 +105,24 @@
                 </el-table-column>
                 <el-table-column prop="isEnabled" label="状态" width="80" align="center">
                     <template #default="{ row }">
-                        <el-switch v-model="row.isEnabled" @change="handleToggleEnable(row)" :disabled="!isAdmin()" />
+                        <el-switch
+                            v-model="row.isEnabled"
+                            @change="(val) => handleToggleEnable(row, val)"
+                            :disabled="!isAdmin() || row._saving"
+                            :loading="row._saving"
+                        />
+                    </template>
+                </el-table-column>
+                <el-table-column label="连通性" width="150">
+                    <template #default="{ row }">
+                        <div class="provider-status-cell">
+                            <el-tag size="small" :type="providerStatusType(row)">
+                                {{ providerStatusLabel(row) }}
+                            </el-tag>
+                            <span v-if="providerStatusText(row)" class="provider-status-text">
+                                {{ providerStatusText(row) }}
+                            </span>
+                        </div>
                     </template>
                 </el-table-column>
                 <el-table-column prop="updatedAt" label="更新时间" width="160">
@@ -107,14 +132,16 @@
                 </el-table-column>
                 <el-table-column label="操作" width="240" fixed="right">
                     <template #default="{ row }">
-                        <el-button type="success" link size="small" @click="handleTest(row)">
-                            <el-icon class="mr-0.5"><Connection /></el-icon>测试
-                        </el-button>
-                        <el-button type="info" link size="small" @click="handleViewModels(row)">
-                            <el-icon class="mr-0.5"><Cpu /></el-icon>查看模型
-                        </el-button>
-                        <el-button type="primary" link size="small" @click="handleEdit(row)">编辑</el-button>
-                        <el-button type="danger" link size="small" :disabled="!isAdmin()" @click="handleDelete(row)">删除</el-button>
+                        <div class="table-actions">
+                            <el-button type="info" link size="small" @click="handleViewModels(row)">
+                                <el-icon class="mr-0.5"><Cpu /></el-icon>查看模型
+                            </el-button>
+                            <el-button type="success" link size="small" @click="handleTest(row)" :loading="testingId === row.id">
+                                <el-icon class="mr-0.5"><Connection /></el-icon>测试
+                            </el-button>
+                            <el-button type="primary" link size="small" @click="handleEdit(row)">编辑</el-button>
+                            <el-button type="danger" link size="small" :disabled="!isAdmin()" @click="handleDelete(row)">删除</el-button>
+                        </div>
                     </template>
                 </el-table-column>
             </el-table>
@@ -142,8 +169,8 @@
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <div v-for="k in pool.keys" :key="k.keyPrefix"
-                             class="px-3 py-1.5 rounded-lg text-xs font-mono border"
-                             :class="k.isHealthy ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-600'">
+                             class="key-pill"
+                             :class="k.isHealthy ? 'is-healthy' : 'is-error'">
                             {{ k.keyPrefix }}
                             <span v-if="!k.isHealthy" class="ml-1 opacity-70">(失败{{ k.failCount }}次)</span>
                         </div>
@@ -155,7 +182,7 @@
         <!-- 查看模型弹窗 -->
         <el-dialog v-model="modelsDialogVisible" :title="`${currentProviderName} 的模型列表`" width="700px">
             <div v-if="providerModels.length === 0" class="text-center text-gray-400 py-8 text-sm">该提供商下暂无模型</div>
-            <el-table v-else :data="providerModels" size="small">
+            <el-table v-else :data="providerModels" size="small" max-height="420">
                 <el-table-column prop="name" label="模型名称" min-width="160">
                     <template #default="{ row }">
                         <span class="font-medium text-slate-700 text-sm">{{ row.name }}</span>
@@ -168,7 +195,9 @@
                 </el-table-column>
             </el-table>
             <template #footer>
-                <el-button @click="modelsDialogVisible = false">关闭</el-button>
+                <div class="dialog-footer-actions">
+                    <el-button @click="modelsDialogVisible = false">关闭</el-button>
+                </div>
             </template>
         </el-dialog>
 
@@ -215,15 +244,18 @@
                 </el-form-item>
             </el-form>
             <template #footer>
-                <el-button @click="dialogVisible = false">取消</el-button>
-                <el-button type="primary" @click="handleSubmit" :loading="submitting">确定</el-button>
+                <div class="dialog-footer-actions">
+                    <el-button @click="dialogVisible = false">取消</el-button>
+                    <el-button type="primary" @click="handleSubmit" :loading="submitting">确定</el-button>
+                </div>
             </template>
         </el-dialog>
     </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { ElMessageBox } from 'element-plus'
 import { Plus, RefreshRight, Connection, Cpu } from '@element-plus/icons-vue'
 import { getAiProviders, createAiProvider, updateAiProvider, deleteAiProvider, testAiProvider, migrateAiProviders } from '@/api/admin/ai-provider'
 import { getProviderHealth, getKeyPoolStatus, resetProviderKeys } from '@/api/admin/agent'
@@ -235,6 +267,7 @@ defineOptions({ name: 'AdminAiProvider' })
 const loading = ref(false)
 const submitting = ref(false)
 const migrating = ref(false)
+const testingId = ref(null)
 const tableData = ref([])
 const dialogVisible = ref(false)
 const isEditing = ref(false)
@@ -243,12 +276,65 @@ const formRef = ref(null)
 // 健康检查
 const healthList = ref([])
 const healthLoading = ref(false)
+const lastTestMap = ref({})
+const healthMap = computed(() => {
+    const map = {}
+    healthList.value.forEach(item => {
+        map[(item.name || '').toLowerCase()] = item
+    })
+    return map
+})
+
+const getProviderHealthItem = (row) => healthMap.value[(row.name || '').toLowerCase()]
+
+const providerStatusType = (row) => {
+    const latest = lastTestMap.value[row.id]
+    if (latest?.status === 'success') return 'success'
+    if (latest?.status === 'error') return 'danger'
+
+    const health = getProviderHealthItem(row)
+    if (!health) return row.isEnabled ? 'info' : 'info'
+    if (health.status === 'healthy') return 'success'
+    if (health.status === 'unhealthy' || health.status === 'error') return 'danger'
+    return 'warning'
+}
+
+const providerStatusLabel = (row) => {
+    const latest = lastTestMap.value[row.id]
+    if (latest?.status === 'success') return '刚刚可用'
+    if (latest?.status === 'error') return '测试失败'
+
+    const health = getProviderHealthItem(row)
+    if (!row.isEnabled) return '已停用'
+    if (!health) return '未检查'
+    if (health.status === 'healthy') return '健康'
+    if (health.status === 'unhealthy') return '异常'
+    if (health.status === 'error') return '错误'
+    return '未知'
+}
+
+const providerStatusText = (row) => {
+    const latest = lastTestMap.value[row.id]
+    if (latest) return latest.latencyMs ? `${latest.latencyMs}ms` : latest.message
+
+    const health = getProviderHealthItem(row)
+    if (!health) return ''
+    if (health.error) return health.error
+    return health.latencyMs ? `${health.latencyMs}ms` : ''
+}
+
 const checkHealth = async () => {
     healthLoading.value = true
     try {
         const res = await getProviderHealth()
-        if (res.code === 200) healthList.value = res.data || []
-    } catch { showMessage('健康检查失败', 'error') }
+        if (res.success || res.code === 200) {
+            healthList.value = res.data || []
+            if (healthList.value.length === 0) showMessage('暂无已启用 Provider 可检查', 'warning')
+            else loadKeyPool()
+        } else {
+            showMessage(res.message || '健康检查失败', 'error')
+        }
+    } catch (e) { showMessage(e.message || '健康检查失败', 'error') }
     finally { healthLoading.value = false }
 }
 
@@ -257,7 +343,7 @@ const keyPoolList = ref([])
 const loadKeyPool = async () => {
     try {
         const res = await getKeyPoolStatus()
-        if (res.code === 200) keyPoolList.value = res.data || []
+        if (res.success || res.code === 200) keyPoolList.value = res.data || []
     } catch {}
 }
 const resetKeys = async (name) => {
@@ -285,7 +371,15 @@ const form = reactive({
 
 const rules = {
     name: [{ required: true, message: '请选择 Provider', trigger: 'change' }],
-    displayName: [{ required: true, message: '请输入显示名称', trigger: 'blur' }]
+    displayName: [{ required: true, message: '请输入显示名称', trigger: 'blur' }],
+    apiKey: [{
+        validator: (_, value, callback) => {
+            if (!isEditing.value && !value) callback(new Error('请输入 API Key'))
+            else callback()
+        },
+        trigger: 'blur'
+    }],
+    priority: [{ required: true, message: '请设置优先级', trigger: 'change' }]
 }
 
 const onProviderChange = (val) => {
@@ -334,8 +428,8 @@ const handleEdit = (row) => {
 }
 
 const handleSubmit = async () => {
-    if (!form.name || !form.displayName) { showMessage('请填写完整信息', 'warning'); return }
-    if (!isEditing.value && !form.apiKey) { showMessage('请输入 API Key', 'warning'); return }
+    const valid = await formRef.value?.validate().catch(() => false)
+    if (!valid) return
     submitting.value = true
     try {
         const data = { ...form }
@@ -344,7 +438,7 @@ const handleSubmit = async () => {
         if (res.success || res.code === 200) { showMessage(isEditing.value ? '更新成功' : '创建成功'); dialogVisible.value = false; loadData() }
         else showMessage(res.message || '操作失败', 'error')
     } catch (e) {
-        showMessage('操作失败', 'error')
+        showMessage(e.message || '操作失败', 'error')
     } finally {
         submitting.value = false
     }
@@ -362,18 +456,47 @@ const handleDelete = async (row) => {
 }
 
 const handleTest = async (row) => {
-    const msg = showMessage('正在连接测试...', 'info')
+    testingId.value = row.id
+    showMessage(`正在测试 ${row.displayName}...`, 'info')
+    const started = performance.now()
     try {
         const res = await testAiProvider(row.id)
-        if ((res.success || res.code === 200) && res.data) showMessage('✓ 连接成功', 'success')
-        else showMessage('✗ 连接失败', 'error')
+        const latencyMs = Math.round(performance.now() - started)
+        if ((res.success || res.code === 200) && res.data) {
+            lastTestMap.value[row.id] = { status: 'success', latencyMs, message: '连接成功' }
+            showMessage(`✓ 连接成功（${latencyMs}ms）`, 'success')
+            loadKeyPool()
+        }
+        else {
+            lastTestMap.value[row.id] = { status: 'error', latencyMs, message: res.message || '连接失败' }
+            showMessage(res.message || '✗ 连接失败', 'error')
+        }
     } catch (e) {
-        showMessage('✗ 连接失败', 'error')
+        lastTestMap.value[row.id] = { status: 'error', latencyMs: Math.round(performance.now() - started), message: e.message || '连接失败' }
+        showMessage(e.message || '✗ 连接失败', 'error')
+    } finally {
+        testingId.value = null
     }
 }
 
-const handleToggleEnable = async (row) => {
-    await updateAiProvider(row.id, { displayName: row.displayName, type: row.type, apiUrl: row.apiUrl, isEnabled: row.isEnabled, priority: row.priority })
+const handleToggleEnable = async (row, nextValue) => {
+    const previous = !nextValue
+    row._saving = true
+    try {
+        const res = await updateAiProvider(row.id, { displayName: row.displayName, type: row.type, apiUrl: row.apiUrl, isEnabled: nextValue, priority: row.priority })
+        if (!(res.success || res.code === 200)) {
+            row.isEnabled = previous
+            showMessage(res.message || '状态更新失败', 'error')
+        } else {
+            showMessage(nextValue ? 'Provider 已启用' : 'Provider 已停用')
+            loadKeyPool()
+        }
+    } catch (e) {
+        row.isEnabled = previous
+        showMessage(e.message || '状态更新失败', 'error')
+    } finally {
+        row._saving = false
+    }
 }
 
 // 查看模型
@@ -384,13 +507,10 @@ let allModels = []
 
 const handleViewModels = async (row) => {
     currentProviderName.value = row.displayName
-    // 每次都重新拉取，确保数据最新
-    if (allModels.length === 0) {
-        try {
-            const res = await getAvailableModels()
-            if (res.success || res.code === 200) allModels = res.data || []
-        } catch { showMessage('加载模型列表失败', 'error'); return }
-    }
+    try {
+        const res = await getAvailableModels()
+        if (res.success || res.code === 200) allModels = res.data || []
+    } catch { showMessage('加载模型列表失败', 'error'); return }
     // 用 provider 字段匹配（大小写不敏感）
     const providerName = (row.name || '').toLowerCase()
     providerModels.value = allModels.filter(m => (m.provider || '').toLowerCase() === providerName)
@@ -456,6 +576,10 @@ onMounted(() => { loadData(); loadKeyPool() })
     color: var(--text-heading);
 }
 
+.provider-name {
+    color: var(--admin-text);
+}
+
 /* Provider 头像 */
 .provider-avatar {
     width: 32px;
@@ -469,6 +593,62 @@ onMounted(() => { loadData(); loadKeyPool() })
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+}
+
+.provider-health-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+.provider-health-item,
+.key-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 12px;
+    border: 1px solid var(--admin-border);
+    padding: 10px 12px;
+    font-size: 13px;
+    background: var(--admin-bg-soft);
+}
+
+.key-pill {
+    padding: 6px 10px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+}
+
+.provider-health-item.is-healthy,
+.key-pill.is-healthy {
+    color: #34d399;
+    border-color: rgba(52, 211, 153, 0.28);
+    background: rgba(16, 185, 129, 0.10);
+}
+
+.provider-health-item.is-error,
+.key-pill.is-error {
+    color: #f87171;
+    border-color: rgba(248, 113, 113, 0.28);
+    background: rgba(239, 68, 68, 0.10);
+}
+
+.provider-status-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    min-width: 0;
+}
+
+.provider-status-text {
+    max-width: 120px;
+    color: var(--admin-text-muted);
+    font-size: 11px;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* 优先级样式 */

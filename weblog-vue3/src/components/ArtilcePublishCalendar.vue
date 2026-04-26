@@ -30,7 +30,13 @@ const myData = []
 
 // 初始化日历热点图
 function initCalendar() {
+    var chartDom = document.getElementById('calendar');
+    const rootStyle = getComputedStyle(chartDom)
+    const textColor = rootStyle.getPropertyValue('--admin-text-muted').trim() || '#94a3b8'
+    const lineColor = 'rgba(148, 163, 184, 0.34)'
+    const emptyColor = 'rgba(15, 23, 42, 0.62)'
     // 将传入的数据设置到 myDate 数组中
+    myData.length = 0
     let map = props.value
     for (let key in map) {
         myData.push([
@@ -39,7 +45,6 @@ function initCalendar() {
         ]);
     }
 
-    var chartDom = document.getElementById('calendar');
     var myChart = echarts.init(chartDom, null, { width: 600 });
     var option;
 
@@ -47,10 +52,27 @@ function initCalendar() {
         visualMap: {
             show: false,
             min: 0,
-            max: 10
+            max: 10,
+            inRange: {
+                color: [emptyColor, '#14532d', '#16a34a', '#4ade80']
+            }
         },
         calendar: { // 日历显示的范围：开始日期 - 结束日期
             range: [startDate, endDate],
+            itemStyle: {
+                color: emptyColor,
+                borderColor: lineColor,
+                borderWidth: 1
+            },
+            yearLabel: { color: textColor },
+            monthLabel: { color: textColor },
+            dayLabel: { color: textColor },
+            splitLine: {
+                lineStyle: {
+                    color: lineColor,
+                    width: 1
+                }
+            }
         },
         series: {
             type: 'heatmap',
@@ -58,7 +80,7 @@ function initCalendar() {
             data: myData
         }, 
         gradientColor: [ // 自定义热点颜色，参考了 GitHub 代码提交的颜色
-            '#fff',
+            emptyColor,
             '#40c463',
             '#30a14e',
             '#216e39',

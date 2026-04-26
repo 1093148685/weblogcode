@@ -39,7 +39,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
+
+const props = defineProps({
+    ready: {
+        type: Boolean,
+        default: false
+    }
+})
 
 // 是否是暗黑模式（通过 html.dark class 判断）
 const isDark = ref(document.documentElement.classList.contains('dark'))
@@ -49,40 +56,122 @@ const darkObserver = new MutationObserver(() => {
 
 // 响应式的目录数据
 const titles = ref([])
-onMounted(() => {
-    darkObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
-    // 通过 .artilce-content 样式来获取父级 div
-    const container = document.querySelector('.article-content')
+let contentObserver = null
+let initTimer = null
+let isSetup = false
 
-    // 使用 MutationObserver 监视 DOM 的变化
-    const observer = new MutationObserver(mutationsList => {
-        for (let mutation of mutationsList) {
-            if (mutation.type === 'childList') {
-                // 先清空目录缓存数据
-                titles.value = []
-                // 计算目录数据
-                initTocData(container)
+function bindImageListeners(container) {
+    const images = container.querySelectorAll('img')
+    images.forEach(img => {
+        img.addEventListener('load', () => {
+            initTocData(container)
+            handleContentScroll()
+        }, { once: true })
+    })
+}
 
-                // 监听所有图片的加载事件
-                const images = container.querySelectorAll('img');
-                images.forEach(img => {
-                    img.addEventListener('load', () => {
-                        // 图片加载完成后重新计算标题的 offsetTop
-                        initTocData(container)
-                    })
+function initTocData(container) {
+    // 只提取二级、三级标题
+    let levels = ['h2', 'h3']
+    let headings = container.querySelectorAll(levels)
+
+    // 存放组装后的目录标题数据
+    let titlesArr = []
+
+    // 下标
+    let index = 1
+    headings.forEach(heading => {
+        // 标题等级， h2 -> 级别 2 ； h3 -> 级别3
+        let headingLevel = parseInt(heading.tagName.substring(1))
+        // 标题文字
+        let headingText = heading.innerText
+        // 标题的位置（距离顶部的距离）
+        let offsetTop = heading.offsetTop - 95
+
+        if (headingLevel === 2) { // 二级标题
+            titlesArr.push({
+                index,
+                level: headingLevel,
+                text: headingText,
+                offsetTop,
+                children: [] // 二级标题下的子标题
+            })
+        } else { // 三级标题
+            // 父级标题
+            let parentHeading = titlesArr[titlesArr.length - 1]
+            // 设置父级标题的 children
+            if (parentHeading) {
+                parentHeading.children.push({
+                    index,
+                    level: headingLevel,
+                    text: headingText,
+                    offsetTop
                 })
-
-                // 添加滚动事件监听
-                window.addEventListener('scroll', handleContentScroll);
             }
         }
+        // 下标 +1
+        index++
     })
 
-    // 配置监视子节点的变化
-    const config = { childList: true, subtree: true }
-    // 开始观察正文 div 的内容变化
-    observer.observe(container, config)
+    // 设置数据
+    titles.value = titlesArr
+}
+
+function setupToc() {
+    const container = document.querySelector('.article-content')
+    if (!container) return false
+
+    // 重置并重新初始化
+    titles.value = []
+    initTocData(container)
+    bindImageListeners(container)
+    handleContentScroll()
+
+    if (!contentObserver) {
+        window.addEventListener('scroll', handleContentScroll)
+        contentObserver = new MutationObserver(() => {
+            titles.value = []
+            initTocData(container)
+            bindImageListeners(container)
+            handleContentScroll()
+        })
+        contentObserver.observe(container, { childList: true, subtree: true })
+    }
+
+    isSetup = true
+    return true
+}
+
+function trySetup() {
+    if (setupToc()) {
+        if (initTimer) {
+            clearTimeout(initTimer)
+            initTimer = null
+        }
+    } else {
+        initTimer = setTimeout(trySetup, 100)
+    }
+}
+
+onMounted(() => {
+    darkObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    trySetup()
 })
+
+// 监听 ready prop，当文章内容渲染完成后强制重新初始化目录
+watch(() => props.ready, async (isReady) => {
+    if (isReady) {
+        // 先等待 DOM 更新
+        await nextTick()
+        // 再等待确保 v-html 内容已渲染
+        await new Promise(resolve => setTimeout(resolve, 200))
+        await nextTick()
+        // 强制重新初始化
+        isSetup = false
+        titles.value = []
+        setupToc()
+    }
+}, { immediate: false })
 
 // 记录当前被选中的标题下标
 const activeHeadingIndex = ref(-1)
@@ -116,57 +205,13 @@ function handleContentScroll() {
 onBeforeUnmount(() => {
     window.removeEventListener('scroll', handleContentScroll)
     darkObserver.disconnect()
+    contentObserver?.disconnect()
+    if (initTimer) clearTimeout(initTimer)
 })
 
 // 滚动到指定的位置
 function scrollToView(offsetTop) {
     window.scrollTo({ top: offsetTop, behavior: "smooth" });
-}
-
-// 初始化标题数据
-function initTocData(container) {
-    // 只提取二级、三级标题
-    let levels = ['h2', 'h3']
-    let headings = container.querySelectorAll(levels)
-
-    // 存放组装后的目录标题数据
-    let titlesArr = []
-
-    // 下标
-    let index = 1
-    headings.forEach(heading => {
-        // 标题等级， h2 -> 级别 2 ； h3 -> 级别3
-        let headingLevel = parseInt(heading.tagName.substring(1))
-        // 标题文字
-        let headingText = heading.innerText
-        // 标题的位置（距离顶部的距离）
-        let offsetTop = heading.offsetTop - 95
-
-        if (headingLevel === 2) { // 二级标题
-            titlesArr.push({
-                index,
-                level: headingLevel,
-                text: headingText,
-                offsetTop,
-                children: [] // 二级标题下的子标题
-            })
-        } else { // 三级标题
-            // 父级标题
-            let parentHeading = titlesArr[titlesArr.length - 1]
-            // 设置父级标题的 children
-            parentHeading.children.push({
-                index,
-                level: headingLevel,
-                text: headingText,
-                offsetTop
-            })
-        }
-        // 下标 +1
-        index++
-    })
-
-    // 设置数据
-    titles.value = titlesArr
 }
 </script>
 

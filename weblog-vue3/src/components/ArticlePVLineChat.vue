@@ -18,6 +18,10 @@ const props = defineProps({
 // 初始化折线图
 function initLineChat() {
     var chartDom = document.getElementById('lineChat');
+    const rootStyle = getComputedStyle(chartDom)
+    const textColor = rootStyle.getPropertyValue('--admin-text-muted').trim() || '#94a3b8'
+    const lineColor = 'rgba(148, 163, 184, 0.26)'
+    const accent = rootStyle.getPropertyValue('--admin-accent').trim() || '#60a5fa'
     var myChart = echarts.init(chartDom, null, { width: 600 });
     var option;
 
@@ -28,15 +32,24 @@ function initLineChat() {
     option = {
         xAxis: {
             type: 'category',
-            data: pvDates
+            data: pvDates,
+            axisLabel: { color: textColor },
+            axisLine: { lineStyle: { color: lineColor } },
+            axisTick: { lineStyle: { color: lineColor } }
         },
         yAxis: {
-            type: 'value'
+            type: 'value',
+            axisLabel: { color: textColor },
+            splitLine: { lineStyle: { color: lineColor } }
         },
         series: [
             {
                 data: pvCounts,
-                type: 'line'
+                type: 'line',
+                smooth: true,
+                symbolSize: 7,
+                lineStyle: { color: accent, width: 3 },
+                itemStyle: { color: accent }
             }
         ]
     };

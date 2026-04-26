@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <!-- 使用 grid 网格布局，并指定列数为 2，高度占满全屏 -->
     <div class="grid grid-cols-2 h-screen">
         <!-- 默认占两列，order 用于指定排列顺序，md 用于适配非移动端（PC 端） -->
@@ -97,11 +97,9 @@ const rules = {
 }
 
 const onSubmit = () => {
-    console.log('登录')
     // 先验证 form 表单字段
     formRef.value.validate((valid) => {
         if (!valid) {
-            console.log('表单验证不通过')
             return false
         }
         // 开始加载
@@ -109,7 +107,6 @@ const onSubmit = () => {
 
         // 调用登录接口
         login(form.username, form.password).then((res) => {
-            console.log(res)
             // 判断是否成功
             if (res.success == true) {
                 // 提示登录成功
@@ -140,7 +137,6 @@ const onSubmit = () => {
 
 // 按回车键后，执行登录事件
 function onKeyUp(e) {
-    console.log(e)
     if (e.key == 'Enter') {
         onSubmit()
     }
@@ -148,7 +144,6 @@ function onKeyUp(e) {
 
 // 添加键盘监听
 onMounted(() => {
-    console.log('添加键盘监听')
     document.addEventListener('keyup', onKeyUp)
 })
 

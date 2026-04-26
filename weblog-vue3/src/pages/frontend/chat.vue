@@ -1,5 +1,5 @@
 <template>
-    <div class="h-screen flex flex-col overflow-hidden bg-[var(--bg-base)]">
+    <div class="h-screen flex flex-col overflow-hidden bg-[var(--bg-base)] page-shell !p-0">
         <ChatPanel />
     </div>
 </template>

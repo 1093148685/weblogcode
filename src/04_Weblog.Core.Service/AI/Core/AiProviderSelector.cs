@@ -192,6 +192,22 @@ public class AiProviderSelector
     {
         lock (_lock)
         {
+            // Embedding 请求：优先匹配 Embedding 类型，没有则 fallback 到 Chat 类型
+            // （OpenAI / DeepSeek 等 Chat Provider 同时支持 Embedding API，用同一个 Key）
+            if (type == AiProviderType.Embedding)
+            {
+                var embeddingProviders = _providerConfigs
+                    .Where(p => p.IsEnabled && p.Type == AiProviderType.Embedding)
+                    .ToList();
+                if (embeddingProviders.Count > 0)
+                    return embeddingProviders;
+
+                // fallback：Chat Provider 也支持 Embedding
+                return _providerConfigs
+                    .Where(p => p.IsEnabled && p.Type == AiProviderType.Chat)
+                    .ToList();
+            }
+
             return _providerConfigs
                 .Where(p => p.IsEnabled && (type == AiProviderType.Chat || p.Type == type))
                 .ToList();

@@ -1,17 +1,17 @@
 <template>
-    <div class="ai-assistant-root p-6">
+    <div class="page-shell ai-assistant-root">
         <!-- 页头 -->
-        <div class="flex items-center justify-between mb-6">
-            <div class="flex items-center gap-3">
-                <div class="page-header__icon">
+        <div class="page-hero">
+            <div class="page-hero__main">
+                <div class="page-hero__icon">
                     <el-icon :size="20"><MagicStick /></el-icon>
                 </div>
                 <div>
-                    <h1 class="text-lg font-bold text-slate-800">AI 写作助手</h1>
-                    <p class="text-sm text-slate-400 mt-0.5">一键生成文章 · SEO 优化 · 内容安全检测</p>
+                    <h1 class="page-hero__title">AI 写作助手</h1>
+                    <p class="page-hero__desc">一键生成文章、SEO 优化、内容安全检测与历史草稿管理。</p>
                 </div>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="page-hero__actions">
                 <el-tag size="small" type="info">Token 统计</el-tag>
                 <el-button size="small" @click="loadTokenStats" :loading="statsLoading">
                     <el-icon><Refresh /></el-icon>
@@ -46,17 +46,17 @@
         </el-drawer>
 
         <!-- Token 统计 -->
-        <div v-if="tokenStats.length > 0" class="grid grid-cols-4 gap-3 mb-6">
-            <div v-for="s in tokenStats" :key="s.date" class="bg-white dark:bg-gray-800 border rounded-lg px-4 py-3">
-                <div class="text-xs text-gray-400">{{ s.date }}</div>
-                <div class="text-lg font-bold text-blue-600 mt-1">{{ (s.totalTokens / 1000).toFixed(1) }}K</div>
-                <div class="text-xs text-gray-400">{{ s.totalRequests }} 次</div>
+        <div v-if="tokenStats.length > 0" class="assistant-stats">
+            <div v-for="s in tokenStats" :key="`${s.date}-${s.provider}`" class="mini-stat">
+                <div class="mini-stat__label">{{ s.date }} · {{ s.provider || 'unknown' }}</div>
+                <div class="mini-stat__num">{{ ((s.totalTokens || 0) / 1000).toFixed(1) }}K</div>
+                <div class="mini-stat__label">{{ s.totalRequests }} 次请求</div>
             </div>
         </div>
 
-        <div class="grid grid-cols-3 gap-5">
+        <div class="assistant-grid">
             <!-- ── 1. 一键生成文章 ── -->
-            <div class="col-span-2">
+            <div class="assistant-main">
                 <el-card shadow="never" class="ai-card">
                     <template #header>
                         <div class="flex items-center gap-2">
@@ -102,7 +102,7 @@
                     <!-- 生成结果 -->
                     <div v-if="genContent" class="mt-4 border-t pt-4">
                         <div class="flex items-center justify-between mb-2">
-                            <span class="text-sm font-medium text-gray-700">生成结果</span>
+                            <span class="text-sm font-medium result-title">生成结果</span>
                             <span class="text-xs text-gray-400">{{ genContent.length }} 字</span>
                         </div>
                         <div class="result-box" v-html="renderMd(genContent)"></div>
@@ -111,7 +111,7 @@
             </div>
 
             <!-- ── 右侧两个工具 ── -->
-            <div class="flex flex-col gap-5">
+            <div class="assistant-side">
                 <!-- SEO 优化建议 -->
                 <el-card shadow="never" class="ai-card">
                     <template #header>
@@ -154,6 +154,16 @@
                             <div v-if="seoResult.keywordDensity" class="text-sm">
                                 <span class="text-gray-500">关键词密度：</span>
                                 <span class="text-gray-700">{{ seoResult.keywordDensity }}</span>
+                            </div>
+                            <div v-if="seoResult.metaDescription" class="text-sm">
+                                <span class="text-gray-500">Meta 描述：</span>
+                                <span class="text-gray-700">{{ seoResult.metaDescription }}</span>
+                            </div>
+                            <div v-if="seoResult.keywords?.length" class="text-sm">
+                                <span class="text-gray-500">关键词：</span>
+                                <el-tag v-for="keyword in seoResult.keywords" :key="keyword" size="small" class="mr-1 mb-1">
+                                    {{ keyword }}
+                                </el-tag>
                             </div>
                             <div v-if="seoResult.readability" class="text-sm">
                                 <span class="text-gray-500">可读性：</span>
@@ -358,12 +368,7 @@ const runSeo = async () => {
             keywords: seoForm.value.keywords || undefined
         })
         if (res.success && res.data) {
-            let data = res.data
-            // 兼容直接返回字符串或 JSON 对象
-            if (typeof data === 'string') {
-                try { data = JSON.parse(data) } catch { data = { score: 0, label: data } }
-            }
-            seoResult.value = data
+            seoResult.value = normalizeSeoResult(res.data)
         } else {
             ElMessage.error(res.message || '分析失败')
         }
@@ -385,11 +390,7 @@ const runModerate = async () => {
     try {
         const res = await moderateContent({ content: modContent.value })
         if (res.success && res.data) {
-            let data = res.data
-            if (typeof data === 'string') {
-                try { data = JSON.parse(data) } catch { data = { level: 'safe', label: data } }
-            }
-            modResult.value = data
+            modResult.value = normalizeModerationResult(res.data)
         } else {
             ElMessage.error(res.message || '检测失败')
         }
@@ -406,6 +407,61 @@ const renderMd = (text) => {
     try { return marked.parse(text) } catch { return text }
 }
 
+const normalizeSeoResult = (raw) => {
+    let data = raw
+    if (typeof data === 'string') {
+        try { data = JSON.parse(data) } catch { data = parseSeoText(data) }
+    }
+    return {
+        score: Number(data.score ?? data.Score ?? 75),
+        titleSuggestion: data.titleSuggestion ?? data.TitleSuggestion ?? '',
+        metaDescription: data.metaDescription ?? data.MetaDescription ?? data.description ?? '',
+        keywordDensity: data.keywordDensity ?? data.KeywordDensity ?? '',
+        readability: data.readability ?? data.Readability ?? '',
+        keywords: normalizeStringList(data.keywords ?? data.Keywords),
+        suggestions: data.suggestions ?? data.Suggestions ?? (data.label ? [data.label] : [])
+    }
+}
+
+const normalizeModerationResult = (raw) => {
+    let data = raw
+    if (typeof data === 'string') {
+        try { data = JSON.parse(data) } catch { data = { level: 'safe', label: data, issues: [] } }
+    }
+    return {
+        level: data.level ?? data.Level ?? 'safe',
+        label: data.label ?? data.Label ?? '检测完成',
+        issues: normalizeStringList(data.issues ?? data.Issues)
+    }
+}
+
+const normalizeStringList = (value) => {
+    if (!value) return []
+    if (Array.isArray(value)) return value.map(item => String(item).trim()).filter(Boolean)
+    return String(value)
+        .split(/[，,、;\n]/)
+        .map(item => item.replace(/^[-*\d.、)\s]+/, '').trim())
+        .filter(Boolean)
+}
+
+const parseSeoText = (text) => {
+    const lines = String(text || '').split(/\r?\n/).map(line => line.trim()).filter(Boolean)
+    const pick = (patterns) => {
+        const line = lines.find(item => patterns.some(pattern => pattern.test(item)))
+        return line ? line.replace(/^[-*\d.、)\s]+/, '').replace(/^[^:：]+[:：]\s*/, '').trim() : ''
+    }
+
+    return {
+        score: 75,
+        titleSuggestion: pick([/标题/i]),
+        metaDescription: pick([/meta\s*description/i, /描述/, /摘要/]),
+        keywordDensity: pick([/关键词密度/]),
+        readability: pick([/可读性/]),
+        keywords: normalizeStringList(pick([/关键词/i, /keywords/i])),
+        suggestions: lines.slice(0, 8)
+    }
+}
+
 // ── 初始化 ─────────────────────────────────────
 loadTokenStats()
 </script>
@@ -415,41 +471,55 @@ loadTokenStats()
     min-height: 100%;
 }
 
-.page-header__icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
+.assistant-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.25rem;
 }
 
-.ai-card {
-    border-radius: 14px !important;
+.assistant-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+    gap: 1.25rem;
+}
+
+.assistant-main,
+.assistant-side {
+    min-width: 0;
+}
+
+.assistant-side {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
 }
 
 .card-title {
     font-size: 14px;
-    font-weight: 600;
-    color: var(--text-heading);
+    font-weight: 700;
+    color: var(--admin-text);
+}
+
+.result-title {
+    color: var(--admin-text);
 }
 
 .result-box {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    background: var(--admin-bg-soft);
+    border: 1px solid var(--admin-border);
     border-radius: 10px;
     padding: 16px;
     max-height: 500px;
     overflow-y: auto;
     font-size: 14px;
     line-height: 1.7;
+    color: var(--admin-text);
 }
 
 :global(html.dark) .result-box {
-    background: #1e293b;
-    border-color: #334155;
+    background: rgba(15, 23, 42, 0.72);
+    border-color: var(--admin-border);
 }
 
 .result-box :deep(h1) { font-size: 1.5em; font-weight: 700; margin: 0.8em 0 0.4em; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.3em; }
@@ -465,4 +535,11 @@ loadTokenStats()
 .result-box :deep(table) { border-collapse: collapse; width: 100%; margin: 0.5em 0; font-size: 0.9em; }
 .result-box :deep(th) { background: #f1f5f9; font-weight: 600; padding: 0.5em 0.8em; border: 1px solid #e2e8f0; }
 .result-box :deep(td) { padding: 0.4em 0.8em; border: 1px solid #e2e8f0; }
+
+@media (max-width: 1180px) {
+    .assistant-grid,
+    .assistant-stats {
+        grid-template-columns: 1fr;
+    }
+}
 </style>

@@ -1,22 +1,24 @@
 <template>
-    <div class="p-5 min-h-full">
+    <div class="page-shell min-h-full">
 
         <!-- 页头 -->
-        <div class="flex items-center justify-between mb-5">
-            <div class="flex items-center gap-3">
-                <div class="page-header__icon">
+        <div class="page-hero">
+            <div class="page-hero__main">
+                <div class="page-hero__icon">
                     <el-icon :size="20"><Grid /></el-icon>
                 </div>
                 <div>
-                    <h1 class="text-lg font-bold text-slate-800">AI 插件市场</h1>
-                    <p class="text-sm text-slate-400 mt-0.5">管理并配置博客的 AI 能力插件</p>
+                    <h1 class="page-hero__title">AI 插件市场</h1>
+                    <p class="page-hero__desc">管理并配置博客的 AI 能力插件</p>
                 </div>
             </div>
-            <el-button :icon="Refresh" @click="loadData" :loading="loading" circle plain />
+            <div class="page-hero__actions">
+                <el-button :icon="Refresh" @click="loadData" :loading="loading" plain>刷新</el-button>
+            </div>
         </div>
 
         <!-- 统计卡片 -->
-        <div class="grid grid-cols-3 gap-4 mb-5">
+        <div class="page-stats">
             <div class="mini-stat mini-stat--blue">
                 <div class="mini-stat__num">{{ tableData.length }}</div>
                 <div class="mini-stat__label">已安装插件</div>
@@ -29,10 +31,14 @@
                 <div class="mini-stat__num">{{ enabledProviders.length }}</div>
                 <div class="mini-stat__label">可用 Provider</div>
             </div>
+            <div class="mini-stat mini-stat--cyan">
+                <div class="mini-stat__num">{{ readyPluginCount }}</div>
+                <div class="mini-stat__label">依赖就绪</div>
+            </div>
         </div>
 
         <!-- ── 搜索 & 筛选栏 ── -->
-        <div class="flex flex-wrap items-center gap-3 mb-5">
+        <div class="section-toolbar">
             <el-input
                 v-model="searchKeyword"
                 placeholder="搜索插件名称或描述…"
@@ -44,7 +50,6 @@
                 <el-option label="全部分类" value="" />
                 <el-option label="对话助手" value="assistant" />
                 <el-option label="内容处理" value="content" />
-                <el-option label="编辑辅助" value="editor" />
                 <el-option label="通用" value="general" />
             </el-select>
             <el-select v-model="filterStatus" placeholder="全部状态" clearable class="!w-32">
@@ -52,20 +57,19 @@
                 <el-option label="已启用" value="enabled" />
                 <el-option label="已停用" value="disabled" />
             </el-select>
-            <span class="text-sm text-gray-400 ml-auto">共 {{ filteredPlugins.length }} 个插件</span>
+            <span class="section-toolbar__meta">共 {{ filteredPlugins.length }} 个插件</span>
         </div>
 
         <!-- ── 插件卡片区域 ── -->
-        <div v-loading="loading" class="grid grid-cols-1 gap-4" :class="filteredPlugins.length > 1 ? 'md:grid-cols-2 xl:grid-cols-3' : ''">
+        <div v-loading="loading" class="plugin-market-grid grid grid-cols-1 gap-4" :class="filteredPlugins.length > 1 ? 'md:grid-cols-2 xl:grid-cols-3' : ''">
             <div
                 v-for="plugin in filteredPlugins"
                 :key="plugin.pluginId"
-                class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden
-                       hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-200 cursor-pointer"
+                class="plugin-market-card"
                 @click="openDrawer(plugin)"
             >
                 <!-- 卡片顶部色条 -->
-                <div class="h-1" :class="getCategoryColor(plugin.category)"></div>
+                <div class="plugin-market-card__bar" :class="getCategoryColor(plugin.category)"></div>
 
                 <div class="p-5">
                     <!-- 插件头部信息 -->
@@ -77,9 +81,9 @@
                                     <component :is="getCategoryIcon(plugin.category)" />
                                 </el-icon>
                             </div>
-                            <div>
-                                <div class="font-semibold text-gray-800 dark:text-gray-100 text-sm">{{ plugin.name }}</div>
-                                <div class="text-xs text-gray-400 font-mono mt-0.5">{{ plugin.pluginId }}</div>
+                            <div class="min-w-0">
+                                <div class="plugin-market-card__title">{{ plugin.name }}</div>
+                                <div class="plugin-market-card__id">{{ plugin.pluginId }}</div>
                             </div>
                         </div>
                         <!-- 启用开关 -->
@@ -92,7 +96,7 @@
                     </div>
 
                     <!-- 描述 -->
-                    <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-4 line-clamp-2">
+                    <p class="plugin-market-card__desc line-clamp-2">
                         {{ plugin.description }}
                     </p>
 
@@ -116,12 +120,15 @@
                     </div>
 
                     <!-- 底部状态栏 -->
-                    <div class="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
+                    <div class="plugin-market-card__footer">
                         <div class="flex items-center gap-2">
                             <span class="w-2 h-2 rounded-full" :class="plugin.isEnabled ? 'bg-green-500' : 'bg-gray-300'"></span>
-                            <span class="text-xs" :class="plugin.isEnabled ? 'text-green-600' : 'text-gray-400'">
+                            <span class="text-xs" :class="plugin.isEnabled ? 'text-emerald-400' : 'text-gray-400'">
                                 {{ plugin.isEnabled ? '运行中' : '已停用' }}
                             </span>
+                            <el-tag size="small" :type="pluginReady(plugin) ? 'success' : 'warning'" effect="plain">
+                                {{ pluginReady(plugin) ? '依赖就绪' : `缺少 ${missingProviders(plugin).length}` }}
+                            </el-tag>
                             <span v-if="plugin.version" class="text-xs text-gray-300 dark:text-gray-600 font-mono">v{{ plugin.version }}</span>
                         </div>
                         <el-button text size="small" class="!text-blue-500 !p-0" @click.stop="openDrawer(plugin)">
@@ -168,7 +175,7 @@
             <div v-if="currentPlugin" class="px-1">
 
                 <!-- ── 插件状态 ── -->
-                <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 mb-5">
+                <div class="plugin-drawer-status">
                     <div>
                         <div class="text-sm font-medium text-gray-700 dark:text-gray-300">插件状态</div>
                         <div class="text-xs text-gray-500 mt-0.5">控制该插件是否对外提供服务</div>
@@ -277,55 +284,6 @@
                                         <el-option label="标准 (200-300字)" value="200-300" />
                                         <el-option label="详细 (400-500字)" value="400-500" />
                                     </el-select>
-                                </el-form-item>
-                            </template>
-
-                            <!-- editor_assistant 专属配置 -->
-                            <template v-else-if="currentPlugin.pluginId === 'editor_assistant'">
-                                <el-form-item label="温度参数">
-                                    <el-slider v-model="drawerForm.temperature" :min="0" :max="2" :step="0.1" show-input />
-                                </el-form-item>
-                                <el-form-item label="最大回复 Token">
-                                    <el-input-number v-model="drawerForm.maxTokens" :min="256" :max="8000" :step="256" class="!w-40" />
-                                </el-form-item>
-                            </template>
-
-                            <!-- tag_recommend 专属配置 -->
-                            <template v-else-if="currentPlugin.pluginId === 'tag_recommend'">
-                                <el-form-item label="推荐标签数量">
-                                    <div class="flex items-center gap-3">
-                                        <el-input-number
-                                            v-model="drawerForm.tagCount"
-                                            :min="1" :max="20"
-                                            class="!w-36"
-                                        />
-                                        <span class="text-sm text-gray-500">每篇文章推荐的标签数</span>
-                                    </div>
-                                </el-form-item>
-                                <el-form-item label="最大处理字数">
-                                    <el-input-number v-model="drawerForm.maxContentLength" :min="1000" :max="50000" :step="1000" class="!w-40" />
-                                    <div class="text-xs text-gray-400 mt-1">文章内容超出该字数将被截断后再分析</div>
-                                </el-form-item>
-                            </template>
-
-                            <!-- translation 专属配置 -->
-                            <template v-else-if="currentPlugin.pluginId === 'translation'">
-                                <el-form-item label="默认目标语言">
-                                    <el-select v-model="drawerForm.defaultTargetLanguage" class="!w-52">
-                                        <el-option label="英语 (English)" value="en" />
-                                        <el-option label="中文 (Chinese)" value="zh" />
-                                        <el-option label="日语 (Japanese)" value="ja" />
-                                        <el-option label="韩语 (Korean)" value="ko" />
-                                        <el-option label="法语 (French)" value="fr" />
-                                        <el-option label="德语 (German)" value="de" />
-                                        <el-option label="西班牙语 (Spanish)" value="es" />
-                                        <el-option label="俄语 (Russian)" value="ru" />
-                                    </el-select>
-                                    <div class="text-xs text-gray-400 mt-1">用户未指定目标语言时的默认翻译方向</div>
-                                </el-form-item>
-                                <el-form-item label="最大处理字数">
-                                    <el-input-number v-model="drawerForm.maxContentLength" :min="1000" :max="50000" :step="1000" class="!w-40" />
-                                    <div class="text-xs text-gray-400 mt-1">翻译内容超出该字数将被截断</div>
                                 </el-form-item>
                             </template>
 
@@ -475,7 +433,9 @@
                                         </span>
                                     </el-tag>
                                 </div>
-                                <p class="text-xs text-gray-400 mt-2">绿色表示该 Provider 当前已启用并可用</p>
+                                <p class="text-xs text-gray-400 mt-2">
+                                    {{ pluginReady(currentPlugin) ? '依赖已满足，可以直接测试运行' : `还缺少：${missingProviders(currentPlugin).join('、')}` }}
+                                </p>
                             </div>
                         </div>
                     </el-tab-pane>
@@ -485,7 +445,7 @@
 
             <!-- 抽屉底部操作 -->
             <template #footer>
-                <div class="flex items-center justify-between">
+                <div class="dialog-footer-actions">
                     <el-button @click="drawerVisible = false">取消</el-button>
                     <el-button type="primary" @click="saveDrawerConfig" :loading="saving" :icon="Check">
                         保存配置
@@ -535,13 +495,9 @@ const drawerForm = reactive({
     dailyLimit: 10,
     temperature: 0.7,
     maxTokens: 4096,
-    // article_summary / tag_recommend / translation
+    // article_summary
     maxContentLength: 8000,
     summaryLength: '200-300',
-    // tag_recommend
-    tagCount: 5,
-    // translation
-    defaultTargetLanguage: 'en',
     // raw JSON fallback
     rawConfig: '{}'
 })
@@ -557,6 +513,7 @@ const testResult = ref(null)
 
 // ──────── 计算属性 ────────
 const enabledCount = computed(() => tableData.value.filter(p => p.isEnabled).length)
+const readyPluginCount = computed(() => tableData.value.filter(plugin => pluginReady(plugin)).length)
 const todayTotal = computed(() => usageStats.value.reduce((s, u) => s + (u.usedCount || 0), 0))
 const allTimeTotal = computed(() => usageStats.value.reduce((s, u) => s + (u.totalCount || 0), 0))
 
@@ -588,6 +545,17 @@ const isProviderEnabled = (providerName) => {
     )
 }
 
+const missingProviders = (plugin) => {
+    const providers = plugin?.requiredProviders || []
+    if (providers.length === 0) return []
+    return providers.filter(provider => !isProviderEnabled(provider))
+}
+
+const pluginReady = (plugin) => {
+    if (!plugin) return false
+    return missingProviders(plugin).length === 0
+}
+
 // ──────── 分类映射 ────────
 const categoryMeta = {
     assistant: {
@@ -597,10 +565,6 @@ const categoryMeta = {
     content: {
         name: '内容处理', color: 'bg-amber-500', bg: 'bg-amber-100 dark:bg-amber-900/40',
         icon: 'Document', iconClass: 'text-amber-500', tagType: 'warning'
-    },
-    editor: {
-        name: '编辑辅助', color: 'bg-purple-500', bg: 'bg-purple-100 dark:bg-purple-900/40',
-        icon: 'Edit', iconClass: 'text-purple-500', tagType: 'danger'
     },
     general: {
         name: '通用', color: 'bg-gray-400', bg: 'bg-gray-100 dark:bg-gray-700',
@@ -660,15 +624,6 @@ const openDrawer = (plugin) => {
     } else if (plugin.pluginId === 'article_summary') {
         drawerForm.maxContentLength = saved.maxContentLength ?? 8000
         drawerForm.summaryLength = saved.summaryLength || '200-300'
-    } else if (plugin.pluginId === 'editor_assistant') {
-        drawerForm.temperature = saved.temperature ?? 0.8
-        drawerForm.maxTokens = saved.maxTokens ?? 2000
-    } else if (plugin.pluginId === 'tag_recommend') {
-        drawerForm.tagCount = saved.tagCount ?? 5
-        drawerForm.maxContentLength = saved.maxContentLength ?? 5000
-    } else if (plugin.pluginId === 'translation') {
-        drawerForm.defaultTargetLanguage = saved.defaultTargetLanguage || 'en'
-        drawerForm.maxContentLength = saved.maxContentLength ?? 10000
     } else {
         drawerForm.rawConfig = plugin.config || '{}'
     }
@@ -707,27 +662,6 @@ const buildConfigJson = () => {
             ...modelField,
             maxContentLength: drawerForm.maxContentLength,
             summaryLength: drawerForm.summaryLength
-        })
-    }
-    if (id === 'editor_assistant') {
-        return JSON.stringify({
-            ...modelField,
-            temperature: drawerForm.temperature,
-            maxTokens: drawerForm.maxTokens
-        })
-    }
-    if (id === 'tag_recommend') {
-        return JSON.stringify({
-            ...modelField,
-            tagCount: drawerForm.tagCount,
-            maxContentLength: drawerForm.maxContentLength
-        })
-    }
-    if (id === 'translation') {
-        return JSON.stringify({
-            ...modelField,
-            defaultTargetLanguage: drawerForm.defaultTargetLanguage,
-            maxContentLength: drawerForm.maxContentLength
         })
     }
     // 兜底：尝试合并 model 到 rawConfig
@@ -833,6 +767,88 @@ onMounted(loadData)
     padding-top: 12px;
 }
 
+.plugin-market-grid {
+    align-items: stretch;
+}
+
+.plugin-market-card {
+    position: relative;
+    overflow: hidden;
+    min-height: 212px;
+    cursor: pointer;
+    border-radius: 16px;
+    background:
+        radial-gradient(circle at top right, rgba(34, 211, 238, 0.12), transparent 38%),
+        var(--admin-bg-card);
+    border: 1px solid var(--admin-border);
+    box-shadow: var(--admin-shadow-soft);
+    transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+}
+
+.plugin-market-card::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    border-radius: 15px;
+    pointer-events: none;
+    background: linear-gradient(135deg, rgba(255,255,255,0.08), transparent 45%);
+}
+
+.plugin-market-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(96, 165, 250, 0.45);
+    box-shadow: var(--admin-shadow);
+}
+
+.plugin-market-card__bar {
+    height: 3px;
+    opacity: 0.95;
+}
+
+.plugin-market-card__title {
+    max-width: 180px;
+    overflow: hidden;
+    color: var(--admin-text);
+    font-size: 14px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.plugin-market-card__id {
+    margin-top: 2px;
+    color: var(--admin-text-faint);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
+}
+
+.plugin-market-card__desc {
+    min-height: 44px;
+    margin-bottom: 16px;
+    color: var(--admin-text-muted);
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.plugin-market-card__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 12px;
+    border-top: 1px solid var(--admin-border);
+}
+
+.plugin-drawer-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding: 16px;
+    border-radius: 16px;
+    background: var(--admin-bg-soft);
+    border: 1px solid var(--admin-border);
+}
+
 /* 卡片悬浮阴影 */
 .hover\:shadow-md:hover {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
@@ -867,4 +883,11 @@ onMounted(loadData)
 .mini-stat--blue   { background: linear-gradient(135deg,#eef2ff,#e0e7ff); color:#4338ca; border-color:#c7d2fe; }
 .mini-stat--green  { background: linear-gradient(135deg,#f0fdf4,#dcfce7); color:#16a34a; border-color:#bbf7d0; }
 .mini-stat--violet { background: linear-gradient(135deg,#fdf4ff,#f3e8ff); color:#9333ea; border-color:#e9d5ff; }
+.mini-stat--cyan   { background: linear-gradient(135deg,#ecfeff,#cffafe); color:#0891b2; border-color:#a5f3fc; }
+
+:global(html.dark) .mini-stat--cyan {
+    background: rgba(8, 145, 178, 0.15) !important;
+    border-color: rgba(34, 211, 238, 0.28) !important;
+    color: #67e8f9 !important;
+}
 </style>

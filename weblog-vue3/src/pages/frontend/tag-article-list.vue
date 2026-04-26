@@ -48,9 +48,9 @@
 
                 <!-- 标签文章列表 -->
                 <div class="p-5 mb-4 border border-[var(--border-base)] rounded-lg bg-[var(--bg-card)] shadow-card">
-                    <ol v-if="articles && articles.length > 0" class="space-y-0 divide-y divide-[var(--border-base)]">
-                        <li v-for="(article, index) in articles" :key="index" class="py-3 first:pt-0 last:pb-0">
-                            <a @click="goArticleDetailPage(article.id)" class="cursor-pointer items-center block p-3 sm:flex hover:bg-[var(--bg-hover)] hover:rounded-lg transition-colors gap-4">
+                    <ol v-if="articles && articles.length > 0" class="space-y-4">
+                        <li v-for="(article, index) in articles" :key="index" class="border border-[var(--border-base)] rounded-xl overflow-hidden bg-[var(--bg-card)]">
+                            <a @click="goArticleDetailPage(article.id)" class="cursor-pointer items-center block p-4 sm:flex hover:bg-[var(--bg-hover)] transition-colors gap-4">
                                 <img class="w-28 h-20 mb-3 sm:mb-0 rounded-lg object-cover flex-shrink-0 bg-[var(--bg-hover)]" :src="article.cover" :alt="article.title" />
                                 <div class="text-[var(--text-secondary)] flex-1 min-w-0">
                                     <h2 class="text-base font-medium text-[var(--text-heading)] mb-2 truncate">
@@ -69,24 +69,6 @@
                                                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
                                             </svg>
                                             {{ article.readNum }}
-                                        </span>
-                                        <span class="hidden sm:flex items-center" title="评论数">
-                                            <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24">
-                                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 0 1-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z"/>
-                                            </svg>
-                                            {{ article.commentNum }}
-                                        </span>
-                                        <span class="hidden sm:flex items-center" title="字数">
-                                            <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24">
-                                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2Z"/>
-                                            </svg>
-                                            {{ article.totalWords }}
-                                        </span>
-                                        <span class="hidden sm:flex items-center" title="阅读时长">
-                                            <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24">
-                                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-                                            </svg>
-                                            {{ article.readTime }} min
                                         </span>
                                     </div>
                                 </div>

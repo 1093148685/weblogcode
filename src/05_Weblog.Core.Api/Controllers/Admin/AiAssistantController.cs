@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SqlSugar;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using Weblog.Core.Api.Filters;
 using Weblog.Core.Common.Result;
 using Weblog.Core.Model.Entities;
@@ -247,32 +249,32 @@ public class AiAssistantController : ControllerBase
     }
 
     [HttpPost("seo-optimize")]
-    public async Task<Result<string>> SeoOptimize([FromBody] SeoOptimizeRequest request)
+    public async Task<Result<object>> SeoOptimize([FromBody] SeoOptimizeRequest request)
     {
         try
         {
             var result = await _aiKernel.OptimizeSeoAsync(request.Title, request.Content, request.Keywords);
-            return Result<string>.Ok(result);
+            return Result<object>.Ok(ParseSeoResult(result));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "SeoOptimize failed");
-            return Result<string>.Fail(ex.Message);
+            return Result<object>.Fail(ex.Message);
         }
     }
 
     [HttpPost("moderate")]
-    public async Task<Result<string>> ModerateContent([FromBody] ModerateRequest request)
+    public async Task<Result<object>> ModerateContent([FromBody] ModerateRequest request)
     {
         try
         {
             var result = await _aiKernel.ModerateContentAsync(request.Content);
-            return Result<string>.Ok(result);
+            return Result<object>.Ok(ParseModerationResult(result));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "ModerateContent failed");
-            return Result<string>.Fail(ex.Message);
+            return Result<object>.Fail(ex.Message);
         }
     }
 
@@ -307,6 +309,197 @@ public class AiAssistantController : ControllerBase
             _logger.LogError(ex, "GetTokenStats failed");
             return Result<List<TokenStatDto>>.Fail(ex.Message);
         }
+    }
+
+    private static object ParseAiJsonOrText(string raw, object fallback)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return fallback;
+
+        var trimmed = raw.Trim();
+        if (trimmed.StartsWith("```"))
+        {
+            trimmed = trimmed
+                .Replace("```json", "", StringComparison.OrdinalIgnoreCase)
+                .Replace("```", "")
+                .Trim();
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<object>(trimmed) ?? fallback;
+        }
+        catch
+        {
+            return fallback;
+        }
+    }
+
+    private static SeoOptimizeResultDto ParseSeoResult(string raw)
+    {
+        var fallback = new SeoOptimizeResultDto
+        {
+            Score = 75,
+            Suggestions = SplitSuggestionLines(raw),
+            Raw = raw ?? ""
+        };
+
+        if (string.IsNullOrWhiteSpace(raw))
+            return fallback;
+
+        var parsed = ParseAiJsonOrText(raw, fallback);
+        if (parsed is JsonElement element && element.ValueKind == JsonValueKind.Object)
+        {
+            return new SeoOptimizeResultDto
+            {
+                Score = ReadInt(element, "score", "Score") ?? fallback.Score,
+                TitleSuggestion = ReadString(element, "titleSuggestion", "TitleSuggestion", "title", "Title") ?? "",
+                MetaDescription = ReadString(element, "metaDescription", "MetaDescription", "description", "Description") ?? "",
+                KeywordDensity = ReadString(element, "keywordDensity", "KeywordDensity") ?? "",
+                Readability = ReadString(element, "readability", "Readability") ?? "",
+                Keywords = ReadStringList(element, "keywords", "Keywords"),
+                Suggestions = ReadStringList(element, "suggestions", "Suggestions"),
+                Raw = raw
+            };
+        }
+
+        var text = raw.Trim();
+        fallback.TitleSuggestion = FirstNonEmpty(
+            CaptureLine(text, @"(?:SEO\s*)?标题(?:建议)?\s*[:：]\s*(.+)"),
+            SplitSuggestionLines(text).FirstOrDefault(line => line.Length <= 60));
+        fallback.MetaDescription = CaptureLine(text, @"(?:meta\s*description|描述|摘要)\s*[:：]\s*(.+)") ?? "";
+        fallback.Keywords = SplitKeywords(CaptureLine(text, @"(?:关键词|keywords)\s*[:：]\s*(.+)") ?? "");
+        fallback.KeywordDensity = CaptureLine(text, @"关键词密度\s*[:：]\s*(.+)") ?? "";
+        fallback.Readability = CaptureLine(text, @"可读性\s*[:：]\s*(.+)") ?? "";
+        return fallback;
+    }
+
+    private static ModerationResultDto ParseModerationResult(string raw)
+    {
+        var fallback = new ModerationResultDto
+        {
+            Level = GuessModerationLevel(raw),
+            Label = string.IsNullOrWhiteSpace(raw) ? "检测完成" : raw.Trim(),
+            Issues = SplitSuggestionLines(raw),
+            Raw = raw ?? ""
+        };
+
+        if (string.IsNullOrWhiteSpace(raw))
+            return fallback;
+
+        var parsed = ParseAiJsonOrText(raw, fallback);
+        if (parsed is JsonElement element && element.ValueKind == JsonValueKind.Object)
+        {
+            return new ModerationResultDto
+            {
+                Level = ReadString(element, "level", "Level") ?? fallback.Level,
+                Label = ReadString(element, "label", "Label", "summary", "Summary") ?? fallback.Label,
+                Issues = ReadStringList(element, "issues", "Issues", "risks", "Risks"),
+                Raw = raw
+            };
+        }
+
+        return fallback;
+    }
+
+    private static string CleanAiJsonFence(string raw)
+    {
+        var trimmed = raw.Trim();
+        if (!trimmed.StartsWith("```")) return trimmed;
+
+        return trimmed
+            .Replace("```json", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("```", "")
+            .Trim();
+    }
+
+    private static string? ReadString(JsonElement element, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            if (element.TryGetProperty(name, out var value))
+                return value.ValueKind == JsonValueKind.String ? value.GetString() : value.ToString();
+        }
+        return null;
+    }
+
+    private static int? ReadInt(JsonElement element, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            if (!element.TryGetProperty(name, out var value)) continue;
+            if (value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number)) return number;
+            if (int.TryParse(value.ToString(), out number)) return number;
+        }
+        return null;
+    }
+
+    private static List<string> ReadStringList(JsonElement element, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            if (!element.TryGetProperty(name, out var value)) continue;
+            if (value.ValueKind == JsonValueKind.Array)
+            {
+                return value.EnumerateArray()
+                    .Select(item => item.ValueKind == JsonValueKind.String ? item.GetString() : item.ToString())
+                    .Where(item => !string.IsNullOrWhiteSpace(item))
+                    .Select(item => item!.Trim())
+                    .ToList();
+            }
+            return SplitKeywords(value.ToString());
+        }
+        return new List<string>();
+    }
+
+    private static string? CaptureLine(string text, string pattern)
+    {
+        var match = Regex.Match(text, pattern, RegexOptions.IgnoreCase);
+        return match.Success ? CleanListMarker(match.Groups[1].Value) : null;
+    }
+
+    private static List<string> SplitSuggestionLines(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return new List<string>();
+        return text.Split('\n')
+            .Select(CleanListMarker)
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .Take(8)
+            .ToList();
+    }
+
+    private static List<string> SplitKeywords(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return new List<string>();
+        return Regex.Split(text, @"[，,、;\s]+")
+            .Select(CleanListMarker)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(12)
+            .ToList();
+    }
+
+    private static string CleanListMarker(string? value)
+    {
+        return Regex.Replace(value ?? "", @"^\s*(?:[-*]|\d+[.、)])\s*", "")
+            .Replace("**", "")
+            .Trim();
+    }
+
+    private static string GuessModerationLevel(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return "safe";
+        var text = raw.ToLowerInvariant();
+        if (text.Contains("高危") || text.Contains("违规") || text.Contains("danger") || text.Contains("block"))
+            return "danger";
+        if (text.Contains("风险") || text.Contains("警告") || text.Contains("warning") || text.Contains("review"))
+            return "warning";
+        return "safe";
+    }
+
+    private static string FirstNonEmpty(params string?[] values)
+    {
+        return values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? "";
     }
 }
 
@@ -362,6 +555,26 @@ public class SeoOptimizeRequest
 public class ModerateRequest
 {
     public string Content { get; set; } = string.Empty;
+}
+
+public class SeoOptimizeResultDto
+{
+    public int Score { get; set; } = 75;
+    public string TitleSuggestion { get; set; } = "";
+    public string MetaDescription { get; set; } = "";
+    public string KeywordDensity { get; set; } = "";
+    public string Readability { get; set; } = "";
+    public List<string> Keywords { get; set; } = new();
+    public List<string> Suggestions { get; set; } = new();
+    public string Raw { get; set; } = "";
+}
+
+public class ModerationResultDto
+{
+    public string Level { get; set; } = "safe";
+    public string Label { get; set; } = "";
+    public List<string> Issues { get; set; } = new();
+    public string Raw { get; set; } = "";
 }
 
 public class TokenStatDto

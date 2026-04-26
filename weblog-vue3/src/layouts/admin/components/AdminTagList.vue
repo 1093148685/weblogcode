@@ -55,10 +55,11 @@ const { menuStore, activeTab, tabList, tabChange, removeTab, handleCloseTab } = 
 <style>
 /* ===== 标签栏容器（参考 FeiTwnd 简约灰白） ===== */
 .tag-nav {
-    background: #ffffff;
-    border-bottom: 1px solid #e4e7ed;
-    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+    background: rgba(8, 13, 24, 0.82);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
     animation: slideDown 0.3s ease-out;
+    backdrop-filter: blur(14px);
 }
 
 @keyframes slideDown {
@@ -98,9 +99,9 @@ const { menuStore, activeTab, tabList, tabChange, removeTab, handleCloseTab } = 
     padding: 0 12px !important;
     margin: 0 2px !important;
     border-radius: 6px !important;
-    border: 1px solid rgba(226, 232, 240, 0.8) !important;
-    background: #ffffff !important;
-    color: #64748b !important;
+    border: 1px solid rgba(148, 163, 184, 0.18) !important;
+    background: rgba(15, 23, 42, 0.82) !important;
+    color: var(--admin-text-muted) !important;
     transition: all 0.18s ease !important;
     animation: tabFadeIn 0.25s ease-out;
     position: relative;
@@ -132,9 +133,9 @@ const { menuStore, activeTab, tabList, tabChange, removeTab, handleCloseTab } = 
 }
 
 .nav-tabs .el-tabs__item:hover {
-    background: #f8fafc !important;
-    color: #475569 !important;
-    border-color: rgba(203, 213, 225, 0.8) !important;
+    background: var(--admin-bg-hover) !important;
+    color: var(--admin-text) !important;
+    border-color: rgba(96, 165, 250, 0.42) !important;
     transform: translateY(-1px);
 }
 
@@ -144,7 +145,7 @@ const { menuStore, activeTab, tabList, tabChange, removeTab, handleCloseTab } = 
 
 /* ===== 激活 Tab ===== */
 .nav-tabs .el-tabs__item.is-active {
-    background: #303133 !important;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.95), rgba(34, 211, 238, 0.72)) !important;
     color: #fff !important;
     border-color: transparent !important;
     animation: tabFadeIn 0.25s ease-out;
@@ -159,7 +160,7 @@ const { menuStore, activeTab, tabList, tabChange, removeTab, handleCloseTab } = 
 }
 
 .nav-tabs .el-tabs__item.is-active:hover {
-    background: #000000 !important;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.98), rgba(14, 165, 233, 0.86)) !important;
     transform: translateY(-1px);
 }
 

@@ -18,7 +18,7 @@ using Weblog.Core.Service.AI.Rag;
 var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? "Server=localhost;Port=3306;Database=your_database;User=root;Password=your_password;";
+    ?? "Server=1Panel-minio-cRdZ;Port=3306;Database=netweblog;User=root;Password=mysql_7kbeab;";
 
 builder.Services.AddScoped<ISqlSugarClient>(s =>
 {

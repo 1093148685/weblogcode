@@ -11,7 +11,9 @@
 
 <style>
 .admin-footer {
-    background: rgba(255, 255, 255, 0.85);
+    background: rgba(8, 13, 24, 0.88);
+    border-color: var(--admin-border);
+    color: var(--admin-text-muted);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
 }

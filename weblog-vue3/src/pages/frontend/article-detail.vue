@@ -7,23 +7,10 @@
             :style="{ width: `${readingProgress}%` }"></div>
     </div>
 
-    <!-- 阅读标题栏：向上滚动过标题后，丝滑出现在 Header 位置 -->
-    <Transition name="reading-bar">
-        <div v-if="showReadingTitle"
-            class="fixed top-0 left-0 right-0 z-[60] h-[72px] bg-[var(--bg-card)]/95 backdrop-blur-md border-b border-[var(--border-base)] shadow-nav flex items-center">
-            <div class="max-w-content mx-auto w-full px-6 flex items-center gap-3">
-                <svg class="w-4 h-4 flex-shrink-0 text-[var(--text-muted)]" fill="none" viewBox="0 0 24 24">
-                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                        d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2"/>
-                </svg>
-                <span class="text-sm font-semibold text-[var(--text-heading)] truncate">{{ article.title }}</span>
-            </div>
-        </div>
-    </Transition>
 
     <!-- 文章标题、标签、Meta 信息 -->
-    <div class="bg-[var(--bg-card)] border-b border-[var(--border-base)]">
-        <div class="max-w-content flex flex-col mx-auto px-6 pb-10 pt-8">
+    <div class="article-hero">
+        <div class="article-hero__inner max-w-content flex flex-col mx-auto px-6 pb-10 pt-8">
             <!-- 标签集合 -->
             <div v-if="article.tags && article.tags.length > 0" class="flex flex-wrap gap-1.5 mb-4">
                 <span @click="goTagArticleListPage(tag.id, tag.name)" v-for="(tag, index) in article.tags" :key="index"
@@ -36,27 +23,10 @@
             </div>
 
             <!-- 文章标题 -->
-            <h1 class="font-bold text-3xl md:text-4xl mb-5 text-[var(--text-heading)] leading-snug">{{ article.title }}</h1>
+            <h1 class="article-title">{{ article.title }}</h1>
 
             <!-- Meta 信息 -->
             <div class="flex flex-wrap gap-4 text-[var(--text-muted)] items-center text-sm">
-                <!-- 字数 -->
-                <span class="flex items-center gap-1" title="总字数">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24">
-                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                            d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2"/>
-                    </svg>
-                    {{ article.totalWords }}
-                </span>
-
-                <!-- 阅读时长 -->
-                <span class="hidden md:flex items-center gap-1" title="阅读时长">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24">
-                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                            d="M12 6v6l4 2m6-2a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z"/>
-                    </svg>
-                    {{ article.readTime }}
-                </span>
 
                 <!-- 发布时间 -->
                 <span class="flex items-center gap-1" title="发布时间">
@@ -89,25 +59,17 @@
                     {{ article.readNum }}
                 </span>
 
-                <!-- 评论数 -->
-                <span class="flex items-center gap-1" title="评论数">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24">
-                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 0 1-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z"/>
-                    </svg>
-                    {{ article.commentNum }}
-                </span>
             </div>
         </div>
     </div>
 
     <!-- 主内容区域 -->
-    <main class="max-w-content mx-auto px-6 py-6">
-        <div class="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
+    <main class="article-main max-w-content mx-auto px-6 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_280px] gap-6">
             <!-- 左边：文章内容 -->
             <div class="min-w-0">
                 <!-- 文章卡片 -->
-                <div class="bg-[var(--bg-card)] border border-[var(--border-base)] rounded-card shadow-card p-6 mb-5">
+                <div class="article-card">
                     <article>
                         <!-- AI 摘要 -->
                         <AiSummaryCard ref="aiSummaryRef" :content="article.content" :ready="articleRenderReady" />
@@ -118,14 +80,11 @@
                         </div>
 
                         <!-- 上下篇 -->
-                        <nav class="flex flex-row mt-8 gap-3">
+                        <nav class="article-pager">
                             <div class="basis-1/2">
                                 <a v-if="article.preArticle"
                                     @click="router.push('/article/' + article.preArticle.articleId)"
-                                    class="cursor-pointer flex flex-col h-full p-4 text-sm font-medium
-                                           text-[var(--text-secondary)] bg-[var(--bg-hover)] border border-[var(--border-base)]
-                                           rounded-card hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]
-                                           hover:bg-[var(--bg-active)] transition-all duration-200">
+                                    class="article-pager-link">
                                     <div class="flex items-center gap-1 mb-1 text-xs text-[var(--text-muted)]">
                                         <svg class="w-3 h-3" fill="none" viewBox="0 0 14 10">
                                             <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
@@ -139,10 +98,7 @@
                             <div class="basis-1/2">
                                 <a v-if="article.nextArticle"
                                     @click="router.push('/article/' + article.nextArticle.articleId)"
-                                    class="cursor-pointer flex flex-col h-full text-right p-4 text-sm font-medium
-                                           text-[var(--text-secondary)] bg-[var(--bg-hover)] border border-[var(--border-base)]
-                                           rounded-card hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]
-                                           hover:bg-[var(--bg-active)] transition-all duration-200">
+                                    class="article-pager-link article-pager-link--next">
                                     <div class="flex items-center justify-end gap-1 mb-1 text-xs text-[var(--text-muted)]">
                                         下一篇
                                         <svg class="w-3 h-3" fill="none" viewBox="0 0 14 10">
@@ -163,15 +119,8 @@
 
             <!-- 右边侧边栏 -->
             <aside class="hidden lg:block w-[280px] flex-shrink-0">
-                <!-- 博主信息、分类、标签：随页面正常滚动 -->
-                <div class="space-y-4 mb-4">
-                    <UserInfoCard></UserInfoCard>
-                    <CategoryListCard></CategoryListCard>
-                    <TagListCard></TagListCard>
-                </div>
-                <!-- 文章目录：固定在视口顶部，随页面滚动到位后吸附 -->
                 <div class="sticky top-[80px]">
-                    <Toc></Toc>
+                    <Toc :ready="articleRenderReady"></Toc>
                 </div>
             </aside>
         </div>
@@ -186,9 +135,6 @@
 <script setup>
 import Header from '@/layouts/frontend/components/Header.vue'
 import Footer from '@/layouts/frontend/components/Footer.vue'
-import UserInfoCard from '@/layouts/frontend/components/UserInfoCard.vue'
-import TagListCard from '@/layouts/frontend/components/TagListCard.vue'
-import CategoryListCard from '@/layouts/frontend/components/CategoryListCard.vue'
 import ScrollToTopButton from '@/layouts/frontend/components/ScrollToTopButton.vue'
 import Toc from '@/layouts/frontend/components/Toc.vue'
 import { getArticleDetail, clearArticleDetailCache } from '@/api/frontend/article'
@@ -206,10 +152,6 @@ const isDark = ref(document.documentElement.classList.contains('dark'))
 const darkObserver = new MutationObserver(() => {
     isDark.value = document.documentElement.classList.contains('dark')
 })
-
-// 阅读标题栏：标题滚出视口时展示
-const showReadingTitle = ref(false)
-let titleObserver = null
 
 // 阅读进度
 const readingProgress = ref(0)
@@ -299,18 +241,6 @@ refreshArticleDetail(route.params.articleId)
 onMounted(() => {
     darkObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
 
-    // 监听文章标题是否滚出视口，控制阅读标题栏
-    nextTick(() => {
-        const titleEl = document.querySelector('h1')
-        if (titleEl) {
-            titleObserver = new IntersectionObserver(
-                ([entry]) => { showReadingTitle.value = !entry.isIntersecting },
-                { rootMargin: '-72px 0px 0px 0px' }
-            )
-            titleObserver.observe(titleEl)
-        }
-    })
-
     // 阅读进度监听
     scrollHandler = () => {
         const scrollTop = window.scrollY
@@ -321,7 +251,6 @@ onMounted(() => {
 })
 onBeforeUnmount(() => {
     darkObserver.disconnect()
-    titleObserver?.disconnect()
     if (scrollHandler) window.removeEventListener('scroll', scrollHandler)
 })
 
@@ -374,6 +303,84 @@ const handleMouseLeave = (event) => {
 </script>
 
 <style scoped>
+.article-hero {
+    position: relative;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 18% 0%, rgba(59, 130, 246, 0.10), transparent 34%),
+        linear-gradient(180deg, var(--bg-card), var(--bg-body));
+    border-bottom: 1px solid var(--border-base);
+}
+
+.article-hero::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.42), transparent);
+}
+
+.article-hero__inner {
+    position: relative;
+    z-index: 1;
+}
+
+.article-title {
+    max-width: 920px;
+    margin-bottom: 20px;
+    color: var(--text-heading);
+    font-size: 34px;
+    font-weight: 800;
+    line-height: 1.24;
+    letter-spacing: 0;
+}
+
+.article-card {
+    margin-bottom: 20px;
+    padding: 30px;
+    border-radius: 18px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-base);
+    box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+}
+
+.article-pager {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 32px;
+}
+
+.article-pager-link {
+    display: flex;
+    min-height: 88px;
+    height: 100%;
+    cursor: pointer;
+    flex-direction: column;
+    justify-content: center;
+    padding: 16px;
+    border-radius: 14px;
+    background: var(--bg-hover);
+    border: 1px solid var(--border-base);
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 600;
+    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.article-pager-link:hover {
+    transform: translateY(-2px);
+    color: var(--color-primary);
+    background: var(--bg-active);
+    border-color: var(--color-primary);
+}
+
+.article-pager-link--next {
+    text-align: right;
+}
+
 /* h1, h2, h3, h4, h5, h6 标题样式 */
 ::v-deep(.article-content h1,
 .article-content h2,
@@ -554,8 +561,10 @@ const handleMouseLeave = (event) => {
     max-width: 100%;
     overflow: hidden;
     display: block;
-    margin: 0 auto;
-    border-radius: 8px;
+    margin: 24px auto;
+    border-radius: 14px;
+    border: 1px solid var(--border-base);
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.10);
 }
 
 ::v-deep(.article-content img:hover,
@@ -606,8 +615,9 @@ img:focus) {
     margin-bottom: 20px;
     padding-top: 30px;
     background: #21252b;
-    border-radius: 6px;
+    border-radius: 12px;
     position: relative;
+    box-shadow: 0 18px 38px rgba(15, 23, 42, 0.18);
 }
 
 ::v-deep(pre code.hljs) {
@@ -759,5 +769,29 @@ img:focus) {
 .reading-bar-leave-to {
     transform: translateY(100%);
     opacity: 0;
+}
+
+@media (max-width: 768px) {
+    .article-title {
+        font-size: 28px;
+    }
+
+    .article-main {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .article-card {
+        padding: 20px;
+        border-radius: 14px;
+    }
+
+    .article-pager {
+        grid-template-columns: 1fr;
+    }
+
+    .article-pager-link--next {
+        text-align: left;
+    }
 }
 </style>

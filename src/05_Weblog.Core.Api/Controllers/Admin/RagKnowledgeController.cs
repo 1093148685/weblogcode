@@ -37,6 +37,7 @@ public class RagKnowledgeController : ControllerBase
             EmbeddingProvider = k.EmbeddingProvider,
             EmbeddingModel = k.EmbeddingModel,
             ChunkSize = k.ChunkSize,
+            ChunkOverlap = k.ChunkOverlap,
             IsEnabled = k.IsEnabled,
             CreatedAt = k.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")
         }).ToList();
@@ -58,6 +59,7 @@ public class RagKnowledgeController : ControllerBase
             EmbeddingProvider = kb.EmbeddingProvider,
             EmbeddingModel = kb.EmbeddingModel,
             ChunkSize = kb.ChunkSize,
+            ChunkOverlap = kb.ChunkOverlap,
             IsEnabled = kb.IsEnabled,
             CreatedAt = kb.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")
         });
@@ -99,28 +101,45 @@ public class RagKnowledgeController : ControllerBase
     public async Task<Result<ImportResult>> ImportArticles(
         long kbId, [FromBody] ImportArticlesRequest req)
     {
-        var imported = 0;
-        foreach (var articleId in req.ArticleIds)
+        if (req.ArticleIds.Count == 0)
+            return Result<ImportResult>.Ok(new ImportResult { Imported = 0, Total = 0 });
+
+        // 批量查询，避免 N 次串行数据库请求
+        var articles = await _db.Queryable<Article>()
+            .Where(a => req.ArticleIds.Contains(a.Id))
+            .ToListAsync();
+        var contents = await _db.Queryable<ArticleContent>()
+            .Where(c => req.ArticleIds.Contains(c.ArticleId))
+            .ToListAsync();
+
+        var contentMap = contents.ToDictionary(c => c.ArticleId, c => c.Content ?? "");
+
+        var docIds = new List<long>();
+        foreach (var article in articles)
         {
             try
             {
-                var article = await _db.Queryable<Article>().FirstAsync(a => a.Id == articleId);
-                var content = await _db.Queryable<ArticleContent>().FirstAsync(c => c.ArticleId == articleId);
-                if (article == null || content == null) continue;
-
-                var doc = await _rag.AddDocumentAsync(
-                    kbId, article.Title, content.Content ?? "", "article", articleId);
-
-                // 后台异步索引（不阻塞请求）
-                _ = Task.Run(() => _rag.IndexDocumentAsync(doc.Id));
-                imported++;
+                if (!contentMap.TryGetValue(article.Id, out var text)) continue;
+                var doc = await _rag.AddDocumentAsync(kbId, article.Title, text, "article", article.Id);
+                docIds.Add(doc.Id);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Import article {ArticleId} failed", articleId);
+                _logger.LogWarning(ex, "Import article {ArticleId} failed", article.Id);
             }
         }
-        return Result<ImportResult>.Ok(new ImportResult { Imported = imported, Total = req.ArticleIds.Count });
+
+        // 后台串行索引：避免同时并发 N 个 Embedding 请求触发限流
+        _ = Task.Run(async () =>
+        {
+            foreach (var docId in docIds)
+            {
+                try { await _rag.IndexDocumentAsync(docId); }
+                catch (Exception ex) { _logger.LogWarning(ex, "Background indexing failed for doc {DocId}", docId); }
+            }
+        });
+
+        return Result<ImportResult>.Ok(new ImportResult { Imported = docIds.Count, Total = req.ArticleIds.Count });
     }
 
     [HttpPost("knowledge-base/{kbId:long}/import/wiki")]
@@ -236,7 +255,10 @@ public class RagKnowledgeController : ControllerBase
             {
                 Chunks          = results,
                 RetrievalTimeMs = sw.ElapsedMilliseconds,
-                TotalFound      = results.Count
+                TotalFound      = results.Count,
+                Query           = req.Query,
+                VectorWeight    = req.VectorWeight > 0 ? req.VectorWeight : 0.7f,
+                KeywordWeight   = req.KeywordWeight > 0 ? req.KeywordWeight : 0.3f
             });
         }
         catch (Exception ex)
@@ -331,6 +353,7 @@ public class KbListItem
     public string EmbeddingProvider { get; set; } = string.Empty;
     public string EmbeddingModel { get; set; } = string.Empty;
     public int ChunkSize { get; set; }
+    public int ChunkOverlap { get; set; }
     public bool IsEnabled { get; set; }
     public string CreatedAt { get; set; } = string.Empty;
 }
@@ -378,4 +401,7 @@ public class RetrievalTestResult
     public List<RetrievedChunk> Chunks { get; set; } = new();
     public long RetrievalTimeMs { get; set; }
     public int TotalFound { get; set; }
+    public string Query { get; set; } = string.Empty;
+    public float VectorWeight { get; set; }
+    public float KeywordWeight { get; set; }
 }

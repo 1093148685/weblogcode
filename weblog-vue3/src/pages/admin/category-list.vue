@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <div>
         <!-- 表头分页查询条件， shadow="never" 指定 card 卡片组件没有阴影 -->
         <el-card shadow="never" class="mb-5">
@@ -92,7 +92,6 @@ const datepickerChange = (e) => {
     startDate.value = moment(e[0]).format('YYYY-MM-DD')
     endDate.value = moment(e[1]).format('YYYY-MM-DD')
 
-    console.log('开始时间：' + startDate.value + ', 结束时间：' + endDate.value)
 }
 
 const shortcuts = [
@@ -165,7 +164,6 @@ onMounted(() => {
 
 // 每页展示数量变更事件
 const handleSizeChange = (chooseSize) => {
-    console.log('选择的页码' + chooseSize)
     size.value = chooseSize
     getTableData()
 }
@@ -217,7 +215,6 @@ const onSubmit = () => {
     // 先验证 form 表单字段
     formRef.value.validate((valid) => {
         if (!valid) {
-            console.log('表单验证不通过')
             return false
         }
         
@@ -245,7 +242,6 @@ const onSubmit = () => {
 
 // 删除分类
 const deleteCategorySubmit = (row) => {
-    console.log(row)
     showModel('是否确定要删除该分类？').then(() => {
         deleteCategory(row.id).then((res) => {
             if (res.success == true) {
@@ -261,7 +257,6 @@ const deleteCategorySubmit = (row) => {
             }
         })
     }).catch(() => {
-        console.log('取消了')
     })
 }
 

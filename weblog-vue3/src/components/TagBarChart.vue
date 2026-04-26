@@ -26,6 +26,11 @@ function initChart() {
     }
 
     myChart = echarts.init(chartRef.value)
+    const rootStyle = getComputedStyle(chartRef.value)
+    const textColor = rootStyle.getPropertyValue('--admin-text-muted').trim() || '#94a3b8'
+    const lineColor = 'rgba(148, 163, 184, 0.26)'
+    const accent = rootStyle.getPropertyValue('--admin-accent').trim() || '#60a5fa'
+    const accent2 = rootStyle.getPropertyValue('--admin-accent-2').trim() || '#22d3ee'
 
     const data = [...props.value].reverse()
 
@@ -45,8 +50,11 @@ function initChart() {
         xAxis: {
             type: 'value',
             axisLabel: {
-                fontSize: 11
-            }
+                fontSize: 11,
+                color: textColor
+            },
+            axisLine: { lineStyle: { color: lineColor } },
+            splitLine: { lineStyle: { color: lineColor } }
         },
         yAxis: {
             type: 'category',
@@ -54,8 +62,11 @@ function initChart() {
             axisLabel: {
                 fontSize: 11,
                 width: 60,
-                overflow: 'truncate'
-            }
+                overflow: 'truncate',
+                color: textColor
+            },
+            axisLine: { lineStyle: { color: lineColor } },
+            axisTick: { lineStyle: { color: lineColor } }
         },
         series: [
             {
@@ -64,8 +75,8 @@ function initChart() {
                 data: data.map(item => item.count),
                 itemStyle: {
                     color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-                        { offset: 0, color: '#73c0de' },
-                        { offset: 1, color: '#5470c6' }
+                        { offset: 0, color: accent2 },
+                        { offset: 1, color: accent }
                     ])
                 },
                 barWidth: '60%'

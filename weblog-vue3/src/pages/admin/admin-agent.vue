@@ -1,13 +1,13 @@
 <template>
-    <div class="agent-page-root flex flex-col bg-slate-100/80">
+    <div class="agent-page-root flex flex-col">
         <!-- 顶部标题栏 -->
-        <header class="flex justify-between items-center px-5 py-3 bg-white border-b border-slate-200">
+        <header class="agent-topbar flex justify-between items-center px-5 py-3">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center">
                     <el-icon :size="20" class="text-white"><MagicStick /></el-icon>
                 </div>
                 <div>
-                    <h1 class="text-base font-semibold text-gray-800 m-0">AI 管理助手</h1>
+                    <h1 class="text-base font-semibold m-0">AI 管理助手</h1>
                     <span class="flex items-center gap-1.5 text-xs" :class="connected ? 'text-emerald-500' : 'text-gray-500'">
                         <span class="w-2 h-2 rounded-full bg-current animate-pulse"></span>
                         {{ connected ? '运行中' : '连接中...' }}
@@ -45,12 +45,31 @@
             <!-- 消息区域 -->
             <div class="flex-1 flex flex-col overflow-hidden">
                 <!-- 欢迎页 -->
-                <div v-if="messages.length === 0" class="flex-1 flex flex-col items-center justify-center p-10 text-center">
+                <div v-if="messages.length === 0" class="agent-welcome flex-1 flex flex-col items-center justify-center p-10 text-center">
                     <div class="w-20 h-20 rounded-2xl bg-slate-800 flex items-center justify-center mb-6 shadow-lg">
                         <el-icon :size="48" class="text-white"><MagicStick /></el-icon>
                     </div>
                     <h2 class="text-2xl font-semibold text-slate-800 mb-2">您好，我是您的博客管理助手</h2>
                     <p class="text-slate-500 mb-8">我可以帮您管理文章、分类、标签和评论</p>
+
+                    <div class="agent-readiness-grid">
+                        <div class="agent-readiness-card">
+                            <span>当前模型</span>
+                            <strong>{{ currentModelName || '未配置' }}</strong>
+                        </div>
+                        <div class="agent-readiness-card">
+                            <span>配置文件</span>
+                            <strong>{{ configFiles.length }} 个</strong>
+                        </div>
+                        <div class="agent-readiness-card">
+                            <span>历史会话</span>
+                            <strong>{{ sessionList.length }} 条</strong>
+                        </div>
+                        <div class="agent-readiness-card">
+                            <span>操作日志</span>
+                            <strong>{{ logTotal }} 条</strong>
+                        </div>
+                    </div>
 
                     <!-- 快捷操作 -->
                     <div class="mb-8">
@@ -952,8 +971,8 @@ onMounted(async () => {
                 settings.model = availableModels.value[0].id
             }
         }
-    } catch (e) {
-        console.error('Failed to fetch models:', e)
+    } catch {
+        ElMessage.warning('模型列表加载失败，请检查 Provider 配置')
     }
 
     loadConfigs()
@@ -981,6 +1000,69 @@ watch(activeTab, (tab) => {
 .agent-page-root {
     height: calc(100vh - 64px - 44px);
     overflow: hidden;
+    background:
+        radial-gradient(circle at 20% 0%, rgba(34, 211, 238, 0.12), transparent 34%),
+        radial-gradient(circle at 88% 12%, rgba(139, 92, 246, 0.16), transparent 32%),
+        var(--admin-bg-page);
+    color: var(--admin-text);
+}
+
+.agent-readiness-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    width: min(760px, 100%);
+    margin: 0 auto 28px;
+}
+
+.agent-readiness-card {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px 16px;
+    border: 1px solid var(--admin-border);
+    border-radius: 14px;
+    background: var(--admin-bg-card);
+    box-shadow: var(--admin-shadow-soft);
+    text-align: left;
+}
+
+.agent-readiness-card span {
+    color: var(--admin-text-muted);
+    font-size: 12px;
+}
+
+.agent-readiness-card strong {
+    overflow: hidden;
+    color: var(--admin-text);
+    font-size: 14px;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.agent-topbar {
+    background: rgba(8, 13, 24, 0.82);
+    border-bottom: 1px solid var(--admin-border);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.24);
+    backdrop-filter: blur(18px);
+}
+
+.agent-topbar h1 {
+    color: var(--admin-text);
+}
+
+.agent-welcome {
+    color: var(--admin-text);
+}
+
+.agent-welcome h2 {
+    color: var(--admin-text);
+}
+
+.agent-welcome p {
+    color: var(--admin-text-muted);
 }
 
 /* 输入框原生样式 */
@@ -1033,21 +1115,24 @@ watch(activeTab, (tab) => {
 }
 
 .agent-page-root .flex.gap-3.max-w-\[85\%\].self-start > div:last-child:not(.w-9) {
-    background: var(--bg-card);
-    border: 1px solid var(--border-base);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    background: var(--admin-bg-card);
+    border: 1px solid var(--admin-border);
+    box-shadow: var(--admin-shadow-soft);
+    color: var(--admin-text);
 }
 
 /* 工具调用卡片样式 */
 .agent-page-root .bg-white.rounded-2xl.overflow-hidden.shadow-sm.border.border-slate-200 {
+    background: var(--admin-bg-card) !important;
+    border-color: var(--admin-border) !important;
     border-radius: 16px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--admin-shadow-soft);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .agent-page-root .bg-white.rounded-2xl.overflow-hidden.shadow-sm.border.border-slate-200:hover {
     transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--admin-shadow);
 }
 
 /* 工具头部渐变 */
@@ -1246,5 +1331,17 @@ watch(activeTab, (tab) => {
 
 .agent-md :deep(> :last-child) {
     margin-bottom: 0;
+}
+
+@media (max-width: 960px) {
+    .agent-readiness-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 560px) {
+    .agent-readiness-grid {
+        grid-template-columns: 1fr;
+    }
 }
 </style>

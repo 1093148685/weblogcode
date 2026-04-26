@@ -140,6 +140,10 @@ const menus = [
         'path': '/admin/ai',
         'children': [
             {
+                'name': 'AI 模型',
+                'path': '/admin/ai-model',
+            },
+            {
                 'name': 'AI Provider',
                 'path': '/admin/ai-provider',
             },
@@ -169,11 +173,12 @@ const menus = [
 </script>
 
 <style>
-/* ===== 侧边栏容器（参考 FeiTwnd 简约深色风格） ===== */
 .menu-container {
-    background: linear-gradient(180deg, #1a1a1a 0%, #242424 60%, #1a1a1a 100%);
-    border-right: 1px solid rgba(255, 255, 255, 0.06);
-    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.3);
+    background:
+        radial-gradient(circle at 20% 0%, rgba(99, 102, 241, 0.22), transparent 35%),
+        linear-gradient(180deg, #0a0f1c 0%, #0d1320 52%, #070b14 100%);
+    border-right: 1px solid rgba(148, 163, 184, 0.14);
+    box-shadow: 14px 0 45px rgba(0, 0, 0, 0.32);
     display: flex;
     flex-direction: column;
     z-index: 100;
@@ -183,17 +188,17 @@ const menus = [
 
 /* ===== Logo 区域 ===== */
 .logo-area {
-    background: rgba(255, 255, 255, 0.03);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.025);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.12);
     transition: background 0.2s ease;
 }
 
 .logo-area:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(99, 102, 241, 0.12);
 }
 
 .logo-text {
-    background: linear-gradient(135deg, #e5e5e5 0%, #a3a3a3 100%);
+    background: linear-gradient(135deg, #f8fafc 0%, #67e8f9 48%, #a78bfa 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -203,7 +208,7 @@ const menus = [
 /* ===== 分割线 ===== */
 .menu-divider {
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+    background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.18), transparent);
 }
 
 /* ===== 菜单整体 ===== */
@@ -214,8 +219,8 @@ const menus = [
 
 /* ===== 一级菜单项 ===== */
 .el-menu-item {
-    color: #8899a6 !important;
-    border-radius: 10px !important;
+    color: #94a3b8 !important;
+    border-radius: 12px !important;
     margin: 3px 6px !important;
     height: 44px !important;
     line-height: 44px !important;
@@ -232,15 +237,15 @@ const menus = [
     transform: translateY(-50%) scaleY(0);
     width: 3px;
     height: 0;
-    background: linear-gradient(180deg, #3b82f6, #60a5fa);
+    background: linear-gradient(180deg, #22d3ee, #8b5cf6);
     border-radius: 0 3px 3px 0;
     transition: all 0.2s ease;
     opacity: 0;
 }
 
 .el-menu-item:hover {
-    background: rgba(255, 255, 255, 0.06) !important;
-    color: #d4d4d4 !important;
+    background: rgba(99, 102, 241, 0.14) !important;
+    color: #f8fafc !important;
 }
 
 .el-menu-item:hover::before {
@@ -250,8 +255,9 @@ const menus = [
 }
 
 .el-menu-item.is-active {
-    background: rgba(255, 255, 255, 0.1) !important;
-    color: #e5e5e5 !important;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.22), rgba(34, 211, 238, 0.12)) !important;
+    color: #ffffff !important;
+    box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
 }
 
 .el-menu-item.is-active::before {
@@ -261,13 +267,13 @@ const menus = [
 }
 
 .el-menu-item.is-active:hover {
-    background: rgba(255, 255, 255, 0.14) !important;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.28), rgba(34, 211, 238, 0.16)) !important;
 }
 
 /* ===== 子菜单标题 ===== */
 .el-sub-menu__title {
-    color: #8899a6 !important;
-    border-radius: 10px !important;
+    color: #94a3b8 !important;
+    border-radius: 12px !important;
     margin: 3px 6px !important;
     height: 44px !important;
     line-height: 44px !important;
@@ -275,12 +281,12 @@ const menus = [
 }
 
 .el-sub-menu__title:hover {
-    background: rgba(255, 255, 255, 0.06) !important;
-    color: #d4d4d4 !important;
+    background: rgba(99, 102, 241, 0.14) !important;
+    color: #f8fafc !important;
 }
 
 .el-sub-menu.is-opened > .el-sub-menu__title {
-    color: #d4d4d4 !important;
+    color: #f8fafc !important;
 }
 
 /* ===== 子菜单容器 ===== */
@@ -292,7 +298,7 @@ const menus = [
 
 /* ===== 子菜单项 ===== */
 .el-sub-menu .el-menu-item {
-    color: #657786 !important;
+    color: #7f8da3 !important;
     font-size: 13px !important;
     min-width: unset !important;
     height: 38px !important;
@@ -303,13 +309,13 @@ const menus = [
 }
 
 .el-sub-menu .el-menu-item:hover {
-    background: rgba(255, 255, 255, 0.06) !important;
-    color: #d4d4d4 !important;
+    background: rgba(99, 102, 241, 0.12) !important;
+    color: #f8fafc !important;
 }
 
 .el-sub-menu .el-menu-item.is-active {
-    background: rgba(255, 255, 255, 0.1) !important;
-    color: #e5e5e5 !important;
+    background: rgba(34, 211, 238, 0.12) !important;
+    color: #ffffff !important;
 }
 
 /* ===== 图标 ===== */
@@ -322,7 +328,7 @@ const menus = [
 .el-menu-item.is-active .menu-icon,
 .el-sub-menu.is-opened .menu-icon {
     opacity: 1;
-    color: #e5e5e5;
+    color: #67e8f9;
 }
 
 /* ===== 菜单标签文字 ===== */
@@ -344,8 +350,8 @@ const menus = [
 
 /* ===== 底部信息 ===== */
 .menu-footer {
-    background: rgba(0, 0, 0, 0.2);
-    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    background: rgba(2, 6, 23, 0.42);
+    border-top: 1px solid rgba(148, 163, 184, 0.12);
 }
 
 /* ===== 菜单项悬停和激活时的图标动画 ===== */
@@ -364,7 +370,7 @@ const menus = [
 .el-menu-item.is-active .menu-icon,
 .el-sub-menu.is-opened .menu-icon {
     opacity: 1;
-    color: #e5e5e5;
+    color: #67e8f9;
 }
 
 /* ===== 激活菜单项的左侧指示器动画 ===== */

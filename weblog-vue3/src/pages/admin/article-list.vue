@@ -103,17 +103,21 @@
         </el-card>
 
 <!-- 写博客 -->
-        <el-dialog v-model="isArticlePublishEditorShow" :fullscreen="true" :show-close="false"
+        <el-dialog v-model="isArticlePublishEditorShow" class="article-editor-dialog" :fullscreen="true" :show-close="false"
             :close-on-press-escape="false">
             <template #header="{ close, titleId, titleClass }">
                 <!-- 固钉组件，固钉到顶部 -->
                 <el-affix :offset="20" style="width: 100%;">
                     <!-- 指定 flex 布局， 高度为 10， 背景色为白色 -->
-                    <div class="flex h-10 bg-white">
+                    <div class="article-editor-header">
                         <!-- 字体加粗 -->
                         <h4 class="font-bold">写文章</h4>
                         <!-- 靠右对齐 -->
                         <div class="ml-auto flex">
+                            <el-button class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('draft'))">
+                                <el-icon class="mr-1"><MagicStick /></el-icon>
+                                AI 写作
+                            </el-button>
                             <el-button @click="isArticlePublishEditorShow = false">取消</el-button>
                             <el-button type="primary" @click="publishArticleSubmit">
                                 <el-icon class="mr-1">
@@ -132,8 +136,42 @@
                         clearable />
                 </el-form-item>
                 <el-form-item label="内容" prop="content">
+                    <div class="article-ai-toolbar">
+                        <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('continue'))">
+                            <el-icon><MagicStick /></el-icon>
+                            续写
+                        </el-button>
+                        <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('outline'))">
+                            <el-icon><MagicStick /></el-icon>
+                            大纲
+                        </el-button>
+                        <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('title'))">
+                            <el-icon><MagicStick /></el-icon>
+                            标题
+                        </el-button>
+                        <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('polish'))">
+                            <el-icon><MagicStick /></el-icon>
+                            润色
+                        </el-button>
+                        <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('summary'))">
+                            <el-icon><MagicStick /></el-icon>
+                            生成摘要
+                        </el-button>
+                        <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('seo'))">
+                            <el-icon><MagicStick /></el-icon>
+                            SEO
+                        </el-button>
+                        <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('keywords'))">
+                            <el-icon><MagicStick /></el-icon>
+                            关键词
+                        </el-button>
+                        <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('review'))">
+                            <el-icon><MagicStick /></el-icon>
+                            检查
+                        </el-button>
+                    </div>
                     <!-- Markdown 编辑器 -->
-                    <MdEditor v-model="form.content" @onUploadImg="onUploadImg" editorId="publishArticleEditor" :no-upload-img="true" />
+                    <MdEditor v-model="form.content" theme="dark" @onUploadImg="onUploadImg" editorId="publishArticleEditor" :no-upload-img="true" />
                 </el-form-item>
                 <el-form-item label="封面" prop="cover">
                     <el-upload class="avatar-uploader" action="#" :on-change="handleCoverChange" :auto-upload="false"
@@ -170,17 +208,21 @@
         </el-dialog>
 
 <!-- 编辑博客 -->
-        <el-dialog v-model="isArticleUpdateEditorShow" :fullscreen="true" :show-close="false"
+        <el-dialog v-model="isArticleUpdateEditorShow" class="article-editor-dialog" :fullscreen="true" :show-close="false"
             :close-on-press-escape="false">
             <template #header="{ close, titleId, titleClass }">
                 <!-- 固钉组件，固钉到顶部 -->
                 <el-affix :offset="20" style="width: 100%;">
                     <!-- 指定 flex 布局， 高度为 10， 背景色为白色 -->
-                    <div class="flex h-10 bg-white">
+                    <div class="article-editor-header">
                         <!-- 字体加粗 -->
                         <h4 class="font-bold">编辑文章</h4>
                         <!-- 靠右对齐 -->
                         <div class="ml-auto flex">
+                            <el-button class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('draft'))">
+                                <el-icon class="mr-1"><MagicStick /></el-icon>
+                                AI 写作
+                            </el-button>
                             <el-button @click="isArticleUpdateEditorShow = false">取消</el-button>
                             <el-button type="primary" @click="updateSubmit">
                                 <el-icon class="mr-1">
@@ -199,8 +241,42 @@
                         show-word-limit clearable />
                 </el-form-item>
                 <el-form-item label="内容" prop="content">
+                    <div class="article-ai-toolbar">
+                        <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('continue'))">
+                            <el-icon><MagicStick /></el-icon>
+                            续写
+                        </el-button>
+                        <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('outline'))">
+                            <el-icon><MagicStick /></el-icon>
+                            大纲
+                        </el-button>
+                        <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('title'))">
+                            <el-icon><MagicStick /></el-icon>
+                            标题
+                        </el-button>
+                        <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('polish'))">
+                            <el-icon><MagicStick /></el-icon>
+                            润色
+                        </el-button>
+                        <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('summary'))">
+                            <el-icon><MagicStick /></el-icon>
+                            生成摘要
+                        </el-button>
+                        <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('seo'))">
+                            <el-icon><MagicStick /></el-icon>
+                            SEO
+                        </el-button>
+                        <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('keywords'))">
+                            <el-icon><MagicStick /></el-icon>
+                            关键词
+                        </el-button>
+                        <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('review'))">
+                            <el-icon><MagicStick /></el-icon>
+                            检查
+                        </el-button>
+                    </div>
                     <!-- Markdown 编辑器 -->
-                    <MdEditor v-model="updateArticleForm.content" @onUploadImg="onUploadImg"
+                    <MdEditor v-model="updateArticleForm.content" theme="dark" @onUploadImg="onUploadImg"
                         editorId="updateArticleEditor" :no-upload-img="true" />
                 </el-form-item>
                 <el-form-item label="封面" prop="cover">
@@ -238,7 +314,7 @@
         </el-dialog>
 
         <!-- AI 助手弹窗 -->
-        <AiAssistantDialog v-model="isAiAssistantShow" @insert-content="handleAiInsertContent" />
+        <AiAssistantDialog v-model="isAiAssistantShow" :initial-prompt="aiAssistantPreset" @insert-content="handleAiInsertContent" />
     </div>
 </template>
 
@@ -264,10 +340,38 @@ const router = useRouter()
 // AI 助手弹窗
 const isAiAssistantShow = ref(false)
 const aiAssistantTarget = ref('')
+const aiAssistantPreset = ref('')
 
-const showAiAssistant = (target) => {
+const showAiAssistant = (target, preset = '') => {
     aiAssistantTarget.value = target
+    aiAssistantPreset.value = preset
     isAiAssistantShow.value = true
+}
+
+const getActiveArticleForm = () => aiAssistantTarget.value === 'update' ? updateArticleForm : form
+
+const buildAiPrompt = (type) => {
+    const current = isArticleUpdateEditorShow.value ? updateArticleForm : form
+    const title = current.title || '未命名文章'
+    const content = (current.content || '').trim()
+    const summary = current.summary || ''
+
+    const contentBlock = content ? `\n\n当前正文：\n${content.slice(0, 3500)}` : ''
+    const summaryBlock = summary ? `\n\n当前摘要：${summary}` : ''
+
+    const prompts = {
+        outline: `请为这篇博客生成一份可直接使用的 Markdown 大纲。标题：${title}。要求包含 4-6 个一级/二级小节，每节给出写作要点和建议示例。${summaryBlock}${contentBlock}`,
+        title: `请为下面文章生成 8 个适合技术博客的标题。要求标题清晰、有搜索价值、不夸张，每行一个标题，不要编号外的解释。当前标题：${title}${summaryBlock}${contentBlock}`,
+        draft: `请帮我写一篇博客文章。标题：${title}。要求结构清晰、适合技术博客阅读，包含小标题、重点说明和必要的示例。${summaryBlock}${contentBlock}`,
+        continue: `请基于下面已有正文继续写，保持原有语气和结构，不要重复已有内容。标题：${title}${contentBlock}`,
+        polish: `请润色下面这篇博客文章，使表达更清晰、更有技术深度，保留 Markdown 结构。标题：${title}${contentBlock}`,
+        summary: `请为下面文章生成 80-140 字摘要。只输出摘要正文，不要输出标题建议或额外解释。标题：${title}${contentBlock}`,
+        seo: `请为下面文章生成 SEO 优化建议。标题：${title}。请输出：1. 5 个 SEO 标题；2. 8-12 个关键词；3. meta description；4. 可优化的小标题建议。${summaryBlock}${contentBlock}`,
+        keywords: `请根据下面文章生成 8-12 个中文或英文 SEO 关键词。只输出关键词，用逗号分隔，不要解释。标题：${title}${summaryBlock}${contentBlock}`,
+        review: `请审查下面这篇文章，重点检查结构完整性、技术准确性、表达清晰度、SEO、读者体验。请给出分点问题和可执行修改建议。标题：${title}${summaryBlock}${contentBlock}`
+    }
+
+    return prompts[type] || prompts.draft
 }
 
 // AI 摘要状态管理
@@ -374,12 +478,111 @@ const generateAiSummary = async (row) => {
     }
 }
 
-const handleAiInsertContent = (content) => {
-    if (aiAssistantTarget.value === 'publish') {
-        form.content = form.content ? form.content + '\n\n' + content : content
-    } else if (aiAssistantTarget.value === 'update') {
-        updateArticleForm.content = updateArticleForm.content ? updateArticleForm.content + '\n\n' + content : content
+const normalizeAiPayload = (payload) => {
+    if (typeof payload === 'string') {
+        return { action: 'append', content: payload }
     }
+    return {
+        action: payload?.action || 'append',
+        content: payload?.content || ''
+    }
+}
+
+const cleanAiSummary = (content) => {
+    return (content || '')
+        .replace(/^#+\s*摘要[:：]?\s*/i, '')
+        .replace(/^摘要[:：]\s*/i, '')
+        .replace(/\*\*/g, '')
+        .trim()
+        .slice(0, 220)
+}
+
+const stripMarkdownLine = (line) => {
+    return (line || '')
+        .replace(/^#{1,6}\s*/, '')
+        .replace(/^[-*]\s*/, '')
+        .replace(/^\d+[.、)]\s*/, '')
+        .replace(/^标题\s*[:：]\s*/i, '')
+        .replace(/^SEO\s*标题\s*[:：]\s*/i, '')
+        .replace(/\*\*/g, '')
+        .replace(/["'“”]/g, '')
+        .trim()
+}
+
+const extractAiTitle = (content) => {
+    const lines = (content || '')
+        .split(/\r?\n/)
+        .map(stripMarkdownLine)
+        .filter(Boolean)
+
+    const candidate = lines.find(line => {
+        if (/^(关键词|meta\s*description|摘要|说明|理由|建议)[:：]/i.test(line)) return false
+        return line.length >= 4 && line.length <= 40
+    })
+
+    return candidate || ''
+}
+
+const extractMetaDescription = (content) => {
+    const text = (content || '').replace(/\r/g, '')
+    const match = text.match(/meta\s*description\s*[:：]\s*([^\n]+)/i)
+        || text.match(/描述\s*[:：]\s*([^\n]+)/i)
+        || text.match(/摘要\s*[:：]\s*([^\n]+)/i)
+
+    return cleanAiSummary(match?.[1] || '')
+}
+
+const extractKeywords = (content) => {
+    const text = (content || '').replace(/\r/g, '')
+    const match = text.match(/关键词\s*[:：]\s*([^\n]+)/i)
+        || text.match(/keywords\s*[:：]\s*([^\n]+)/i)
+
+    const raw = match?.[1] || text
+    return raw
+        .split(/[，,、\n]/)
+        .map(stripMarkdownLine)
+        .filter(Boolean)
+        .slice(0, 12)
+}
+
+const handleAiInsertContent = (payload) => {
+    const { action, content } = normalizeAiPayload(payload)
+    if (!content) return
+
+    const target = getActiveArticleForm()
+    if (action === 'replace') {
+        target.content = content
+        return
+    }
+
+    if (action === 'summary') {
+        target.summary = cleanAiSummary(content)
+        return
+    }
+
+    if (action === 'title') {
+        const title = extractAiTitle(content)
+        if (title) {
+            target.title = title
+            return
+        }
+    }
+
+    if (action === 'seo') {
+        const title = extractAiTitle(content)
+        const description = extractMetaDescription(content)
+        const keywords = extractKeywords(content)
+
+        if (title) target.title = title
+        if (description) target.summary = description
+        if (keywords.length > 0) {
+            const seoNote = `\n\n<!-- AI SEO 关键词：${keywords.join('，')} -->`
+            target.content = target.content ? target.content + seoNote : seoNote.trim()
+        }
+        return
+    }
+
+    target.content = target.content ? target.content + '\n\n' + content : content
 }
 
 // 模糊搜索的文章标题
@@ -396,7 +599,6 @@ const datepickerChange = (e) => {
     startDate.value = moment(e[0]).format('YYYY-MM-DD')
     endDate.value = moment(e[1]).format('YYYY-MM-DD')
 
-    console.log('开始时间：' + startDate.value + ', 结束时间：' + endDate.value)
 }
 
 const shortcuts = [
@@ -475,14 +677,12 @@ getTableData()
 
 // 每页展示数量变更事件
 const handleSizeChange = (chooseSize) => {
-    console.log('选择的页码' + chooseSize)
     size.value = chooseSize
     getTableData()
 }
 
 // 删除文章
 const deleteArticleSubmit = (row) => {
-    console.log(row)
     showModel('是否确定要删除该文章？').then(() => {
         deleteArticle(row.id).then((res) => {
             if (res.success == false) {
@@ -498,7 +698,6 @@ const deleteArticleSubmit = (row) => {
             getTableData()
         })
     }).catch(() => {
-        console.log('取消了')
     })
 }
 
@@ -587,14 +786,11 @@ const handleUpdateCoverChange = (file) => {
 const onUploadImg = async (files, callback) => {
     const resList = []
     for (const file of files) {
-        console.log('==> 编辑器开始上传文件...', file.name)
         let formData = new FormData()
         formData.append("file", file)
         try {
             const res = await uploadFile(formData)
-            console.log('上传结果:', res)
             if (res.success && res.data) {
-                console.log('访问路径：' + res.data)
                 resList.push(res.data)
             } else {
                 showMessage('图片上传失败: ' + (res.message || '未知错误'), 'error')
@@ -611,7 +807,6 @@ const onUploadImg = async (files, callback) => {
 // 文章分类
 const categories = ref([])
 getCategorySelectList().then((e) => {
-    console.log('获取分类数据')
     categories.value = e.data
 })
 
@@ -627,7 +822,6 @@ getTagSelectList().then(res => {
 
 // 根据用户输入的标签名称，远程模糊查询
 const remoteMethod = (query) => {
-    console.log('远程搜索：' + tags.value)
     // 如果用户的查询关键词不为空
     if (query) {
         // 显示 loading
@@ -644,7 +838,6 @@ const remoteMethod = (query) => {
 
 // 发布文章
 const publishArticleSubmit = () => {
-    console.log('提交 md 内容：' + form.content)
     // 校验表单
     publishArticleFormRef.value.validate((valid) => {
         if (!valid) {
@@ -706,7 +899,6 @@ const showArticleUpdateEditor = (row) => {
 
 // 保存文章
 const updateSubmit = () => {
-    console.log('tijiao')
     updateArticleFormRef.value.validate((valid) => {
         // 校验表单
         if (!valid) {
@@ -790,9 +982,102 @@ const handleIsTopChange = (row) => {
     background: linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%);
     color: #fff;
 }
+
+.article-ai-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+    margin: 0 0 10px;
+    padding: 10px;
+    border: 1px solid rgba(125, 211, 252, 0.14);
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(14, 165, 233, 0.06));
+}
 </style>
 
 <style>
+.article-editor-dialog.el-dialog.is-fullscreen {
+    background:
+        radial-gradient(circle at 18% 0%, rgba(34, 211, 238, 0.10), transparent 30%),
+        var(--admin-bg-page) !important;
+}
+
+.article-editor-dialog .el-dialog__header {
+    padding: 0 24px !important;
+    background: rgba(8, 13, 24, 0.92) !important;
+    border-bottom: 1px solid var(--admin-border) !important;
+}
+
+.article-editor-dialog .el-dialog__body {
+    padding: 18px 24px 32px !important;
+    color: var(--admin-text);
+}
+
+.article-editor-header {
+    display: flex;
+    align-items: center;
+    height: 58px;
+    width: 100%;
+    gap: 16px;
+    color: var(--admin-text);
+    background: transparent;
+}
+
+.article-editor-header h4 {
+    margin: 0;
+    color: var(--admin-text);
+    font-size: 20px;
+    font-weight: 800;
+}
+
+.article-editor-header .ml-auto {
+    gap: 12px;
+}
+
+.article-editor-dialog .el-form-item {
+    margin-bottom: 20px;
+}
+
+.article-editor-dialog .el-form-item__label {
+    color: var(--admin-text) !important;
+    font-weight: 700;
+}
+
+.article-editor-dialog .md-editor {
+    overflow: hidden;
+    border: 1px solid var(--admin-border);
+    border-radius: 14px;
+    background: var(--admin-bg-card);
+    box-shadow: var(--admin-shadow-soft);
+}
+
+.article-editor-dialog .md-editor-dark {
+    --md-bk-color: var(--admin-bg-card);
+    --md-bk-color-outstand: var(--admin-bg-soft);
+    --md-border-color: var(--admin-border);
+    --md-scrollbar-bg-color: rgba(148, 163, 184, 0.18);
+    --md-scrollbar-thumb-color: rgba(148, 163, 184, 0.36);
+    --md-theme-color: var(--admin-accent);
+    color: var(--admin-text);
+}
+
+.article-editor-dialog .md-editor-toolbar-wrapper,
+.article-editor-dialog .md-editor-footer {
+    background: rgba(8, 13, 24, 0.88) !important;
+    border-color: var(--admin-border) !important;
+}
+
+.article-editor-dialog .md-editor-input-wrapper,
+.article-editor-dialog .md-editor-preview-wrapper {
+    background: var(--admin-bg-card) !important;
+}
+
+.article-editor-dialog .md-editor-input,
+.article-editor-dialog .md-editor-preview {
+    color: var(--admin-text) !important;
+}
+
 .md-editor-footer {
     height: 40px;
 }

@@ -28,9 +28,9 @@
                 <template v-else>
                     <div v-for="(archive, index) in archives" :key="index" class="p-5 mb-4 border border-[var(--border-base)] rounded-lg bg-[var(--bg-card)] shadow-card">
                         <time class="text-lg font-semibold text-[var(--text-heading)]">{{ archive.month }}</time>
-                        <ol class="mt-3 divide-y divide-[var(--border-base)]">
-                            <li v-for="(article, index2) in archive.articles" :key="index2">
-                                <a @click="goArticleDetailPage(article.id)" class="items-center block p-3 sm:flex hover:bg-[var(--bg-hover)] hover:rounded-lg cursor-pointer">
+                        <ol class="mt-3 space-y-4">
+                            <li v-for="(article, index2) in archive.articles" :key="index2" class="border border-[var(--border-base)] rounded-xl overflow-hidden bg-[var(--bg-card)]">
+                                <a @click="goArticleDetailPage(article.id)" class="items-center block p-4 sm:flex gap-4 hover:bg-[var(--bg-hover)] cursor-pointer">
                                     <img v-if="article.cover" class="w-24 h-12 mb-3 mr-3 rounded-lg sm:mb-0 object-cover flex-shrink-0"
                                         :src="article.cover"/>
                                     <div v-else class="w-24 h-12 mb-3 mr-3 rounded-lg sm:mb-0 bg-[var(--bg-hover)] flex items-center justify-center flex-shrink-0">

@@ -84,6 +84,24 @@
   --el-border-radius-base: 6px;
   --el-border-radius-small: 4px;
   --el-border-radius-round: 12px;
+
+  /* === Admin dark-console design tokens === */
+  --admin-bg-page: #f4f7fb;
+  --admin-bg-shell: #ffffff;
+  --admin-bg-card: rgba(255, 255, 255, 0.92);
+  --admin-bg-soft: #f8fafc;
+  --admin-bg-hover: #eef2ff;
+  --admin-border: #e2e8f0;
+  --admin-border-strong: #cbd5e1;
+  --admin-text: #1e293b;
+  --admin-text-muted: #64748b;
+  --admin-accent: #6366f1;
+  --admin-accent-2: #06b6d4;
+  --admin-success: #10b981;
+  --admin-warning: #f59e0b;
+  --admin-danger: #ef4444;
+  --admin-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+  --admin-shadow-soft: 0 10px 28px rgba(15, 23, 42, 0.06);
 }
 
 /* === 暗色模式 - 深空黑蓝 === */
@@ -139,6 +157,20 @@ html.dark {
   --el-bg-color-page: #0f1419;
   --el-fill-color: #253341;
   --el-fill-color-light: #1c2732;
+
+  --admin-bg-page: #070b14;
+  --admin-bg-shell: #0d1320;
+  --admin-bg-card: rgba(15, 23, 42, 0.88);
+  --admin-bg-soft: rgba(30, 41, 59, 0.72);
+  --admin-bg-hover: rgba(99, 102, 241, 0.15);
+  --admin-border: rgba(148, 163, 184, 0.16);
+  --admin-border-strong: rgba(148, 163, 184, 0.28);
+  --admin-text: #e5edf7;
+  --admin-text-muted: #94a3b8;
+  --admin-accent: #8b5cf6;
+  --admin-accent-2: #22d3ee;
+  --admin-shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+  --admin-shadow-soft: 0 16px 48px rgba(0, 0, 0, 0.25);
 }
 
 /* === 全局基础样式 === */
@@ -240,6 +272,203 @@ html.dark ::selection {
 /* ============================================
    Admin 后台 - Element Plus 全局精细调整
    ============================================ */
+
+/* ============================================
+ Shared page layout tokens
+ ============================================ */
+
+.page-shell {
+ min-height:100%;
+ padding:1.25rem;
+ color: var(--admin-text);
+}
+
+.page-hero {
+ display: flex;
+ align-items: flex-start;
+ justify-content: space-between;
+ gap:1rem;
+ margin-bottom:1.25rem;
+ flex-wrap: wrap;
+ padding: 1.125rem;
+ border: 1px solid var(--admin-border);
+ border-radius: 1.125rem;
+ background:
+   radial-gradient(circle at top left, rgba(99, 102, 241, 0.14), transparent 34%),
+   linear-gradient(135deg, var(--admin-bg-card), var(--admin-bg-soft));
+ box-shadow: var(--admin-shadow-soft);
+ backdrop-filter: blur(14px);
+}
+
+.page-hero__main {
+ display: flex;
+ align-items: flex-start;
+ gap:0.875rem;
+ min-width:0;
+}
+
+.page-hero__icon,
+.page-header__icon {
+ width:2.5rem;
+ height:2.5rem;
+ border-radius:0.875rem;
+ background: linear-gradient(135deg, var(--admin-accent), var(--admin-accent-2));
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ color: #fff;
+ flex-shrink:0;
+ box-shadow: 0 10px 24px rgba(79, 70, 229, 0.18);
+}
+
+.page-hero__title {
+ margin:0;
+ font-size:1.125rem;
+ font-weight:700;
+ line-height:1.25;
+ color: var(--admin-text);
+}
+
+.page-hero__desc {
+ margin: 0.25rem 0 0;
+ font-size:0.875rem;
+ line-height:1.5;
+ color: var(--admin-text-muted);
+}
+
+.page-hero__actions {
+ display: flex;
+ align-items: center;
+ gap:0.75rem;
+ flex-wrap: wrap;
+ margin-left: auto;
+}
+
+.page-stats {
+ display: grid;
+ grid-template-columns: repeat(3, minmax(0,1fr));
+ gap:1rem;
+ margin-bottom:1.25rem;
+}
+
+.mini-stat {
+ border-radius:1rem;
+ padding: 1rem 1.125rem;
+ display: flex;
+ flex-direction: column;
+ gap:0.35rem;
+ min-height:5.75rem;
+ border:1px solid transparent;
+ box-shadow: var(--shadow-sm);
+}
+
+.mini-stat__num {
+ font-size:1.75rem;
+ font-weight:700;
+ line-height:1;
+}
+
+.mini-stat__label {
+ font-size:0.75rem;
+ line-height:1.4;
+ opacity:0.78;
+}
+
+.mini-stat--blue {
+ background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+ color: #4338ca;
+ border-color: #c7d2fe;
+}
+
+.mini-stat--green {
+ background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+ color: #15803d;
+ border-color: #bbf7d0;
+}
+
+.mini-stat--violet {
+ background: linear-gradient(135deg, #faf5ff, #f3e8ff);
+ color: #9333ea;
+ border-color: #e9d5ff;
+}
+
+.section-toolbar {
+ display: flex;
+ align-items: center;
+ gap:0.75rem;
+ flex-wrap: wrap;
+ margin-bottom:1.25rem;
+}
+
+.section-toolbar__meta {
+ margin-left: auto;
+ font-size:0.875rem;
+ color: var(--text-secondary);
+}
+
+.panel-card {
+ background: var(--bg-card);
+ border:1px solid var(--border-base);
+ border-radius:1rem;
+ box-shadow: var(--shadow-sm);
+}
+
+.table-actions {
+ display: inline-flex;
+ align-items: center;
+ gap:0.25rem;
+ flex-wrap: wrap;
+}
+
+.dialog-footer-actions {
+ width:100%;
+ display: flex;
+ justify-content: flex-end;
+ gap:0.75rem;
+}
+
+.dialog-footer-actions--split {
+ justify-content: space-between;
+}
+
+html.dark .mini-stat--blue {
+ background: rgba(67,56,202,0.15) !important;
+ border-color: rgba(99,102,241,0.3) !important;
+ color: #a5b4fc !important;
+}
+
+html.dark .mini-stat--green {
+ background: rgba(21,128,61,0.18) !important;
+ border-color: rgba(74,222,128,0.28) !important;
+ color: #4ade80 !important;
+}
+
+html.dark .mini-stat--violet {
+ background: rgba(147,51,234,0.16) !important;
+ border-color: rgba(192,132,252,0.28) !important;
+ color: #d8b4fe !important;
+}
+
+@media (max-width:1024px) {
+ .page-stats {
+ grid-template-columns:1fr;
+ }
+}
+
+@media (max-width:768px) {
+ .page-shell {
+ padding:1rem;
+ }
+
+ .page-hero__actions,
+ .section-toolbar__meta {
+ margin-left:0;
+ }
+
+ .page-hero__actions {
+ width:100%;
+ }
+}
 
 /* === el-card 卡片（参考 FeiTwnd 简约风格） === */
 .el-card {
@@ -408,13 +637,32 @@ html.dark ::selection {
 }
 
 /* === el-date-picker / el-range-editor === */
-.el-date-editor,
-.el-range-editor {
+/* 单日期：border 交由内层 .el-input__wrapper 控制，外层清除 */
+.el-date-editor {
   border: none !important;
   box-shadow: none !important;
   background: transparent !important;
   width: auto !important;
   display: inline-flex !important;
+}
+
+/* 日期区间：无内层 wrapper，border 直接加在外层容器上 */
+.el-range-editor {
+  border: 1px solid #d1d5db !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  width: auto !important;
+  display: inline-flex !important;
+}
+
+.el-range-editor:hover {
+  border-color: #9ca3af !important;
+}
+
+.el-range-editor.is-active {
+  border-color: #374151 !important;
+  box-shadow: none !important;
 }
 
 .el-date-picker__editor.el-input,
@@ -433,8 +681,7 @@ html.dark ::selection {
   box-shadow: none !important;
 }
 
-.el-date-editor .el-input__wrapper,
-.el-range-editor .el-input__wrapper {
+.el-date-editor .el-input__wrapper {
   border: 1px solid #d1d5db !important;
   border-radius: 6px !important;
   box-shadow: none !important;
@@ -845,21 +1092,33 @@ html.dark .el-input__wrapper.is-focus .el-input__inner {
 }
 
 /* ── el-date-picker / el-range-editor 暗色 ── */
-html.dark .el-date-editor .el-input__wrapper,
-html.dark .el-range-editor .el-input__wrapper {
+html.dark .el-date-editor .el-input__wrapper {
   background-color: #1a1a1a !important;
   border: 1px solid #333333 !important;
   box-shadow: none !important;
 }
 
-html.dark .el-date-editor .el-input__wrapper:hover,
-html.dark .el-range-editor .el-input__wrapper:hover {
+html.dark .el-range-editor {
+  background-color: #1a1a1a !important;
+  border: 1px solid #333333 !important;
+  box-shadow: none !important;
+}
+
+html.dark .el-date-editor .el-input__wrapper:hover {
+  border-color: #525252 !important;
+}
+
+html.dark .el-range-editor:hover {
   border-color: #525252 !important;
 }
 
 html.dark .el-date-editor .el-input__wrapper.is-focus,
-html.dark .el-range-editor.is-active .el-input__wrapper,
 html.dark .el-date-editor.is-active .el-input__wrapper {
+  border-color: #737373 !important;
+  box-shadow: none !important;
+}
+
+html.dark .el-range-editor.is-active {
   border-color: #737373 !important;
   box-shadow: none !important;
 }
@@ -1305,6 +1564,21 @@ html.dark .glass-card:hover {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
+/* Frontend sidebar spacing */
+main aside .sticky > * + * {
+  margin-top: 20px;
+}
+
+main aside .sticky {
+  display: block;
+}
+
+@media (min-width: 1024px) {
+  main aside {
+    padding-left: 8px;
+  }
+}
+
 /* ============================================
    全局滚动条优化
    ============================================ */
@@ -1384,4 +1658,300 @@ html.dark .el-button--primary:hover {
   box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4) !important;
 }
 
+/* ============================================
+   Admin polish layer - dark premium console
+   Keep at the end so it wins over older page-level rules.
+   ============================================ */
+.admin-layout,
+.right-container,
+.admin-main {
+  --admin-bg-page: #070b14;
+  --admin-bg-soft: rgba(15, 23, 42, 0.72);
+  --admin-bg-card: rgba(15, 23, 42, 0.88);
+  --admin-bg-hover: rgba(30, 41, 59, 0.76);
+  --admin-border: rgba(148, 163, 184, 0.18);
+  --admin-text: #e5edf7;
+  --admin-text-muted: #94a3b8;
+  --admin-text-faint: #64748b;
+  --admin-accent: #6366f1;
+  --admin-accent-2: #22d3ee;
+  --admin-grid-line: rgba(45, 58, 82, 0.82);
+  --admin-shadow: 0 24px 60px rgba(0, 0, 0, 0.36);
+  --admin-shadow-soft: 0 14px 38px rgba(0, 0, 0, 0.22);
+  --el-border-color: var(--admin-grid-line);
+  --el-border-color-light: var(--admin-grid-line);
+  --el-border-color-lighter: var(--admin-grid-line);
+}
 
+html.dark .admin-layout,
+html.dark .right-container,
+html.dark .admin-main {
+  --admin-bg-page: #030712;
+  --admin-bg-soft: rgba(8, 13, 24, 0.82);
+  --admin-bg-card: rgba(8, 13, 24, 0.92);
+  --admin-bg-hover: rgba(15, 23, 42, 0.88);
+  --admin-border: rgba(71, 85, 105, 0.34);
+  --admin-text: #f1f5f9;
+  --admin-text-muted: #a8b3c7;
+  --admin-text-faint: #748096;
+  --admin-accent: #60a5fa;
+  --admin-accent-2: #22d3ee;
+  --admin-grid-line: rgba(38, 50, 72, 0.72);
+  --admin-shadow: 0 26px 70px rgba(0, 0, 0, 0.52);
+  --admin-shadow-soft: 0 16px 42px rgba(0, 0, 0, 0.36);
+  --el-border-color: var(--admin-grid-line);
+  --el-border-color-light: var(--admin-grid-line);
+  --el-border-color-lighter: var(--admin-grid-line);
+}
+
+.right-container,
+.admin-layout,
+.admin-main {
+  background:
+    radial-gradient(circle at top right, rgba(99, 102, 241, 0.12), transparent 30%),
+    radial-gradient(circle at 18% 8%, rgba(34, 211, 238, 0.10), transparent 28%),
+    var(--admin-bg-page) !important;
+}
+
+html.dark .right-container,
+html.dark .admin-layout,
+html.dark .admin-main {
+  background:
+    radial-gradient(circle at top right, rgba(139, 92, 246, 0.18), transparent 32%),
+    radial-gradient(circle at 18% 8%, rgba(34, 211, 238, 0.11), transparent 30%),
+    linear-gradient(180deg, #080c16 0%, #0b1020 48%, #070b14 100%) !important;
+}
+
+.glass-panel,
+.admin-table-panel,
+.ai-card,
+.panel-card,
+.el-card {
+  background: var(--admin-bg-card) !important;
+  border: 1px solid var(--admin-border) !important;
+  border-radius: 16px !important;
+  box-shadow: var(--admin-shadow-soft) !important;
+  backdrop-filter: blur(14px);
+}
+
+.el-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--admin-shadow) !important;
+}
+
+.el-card__header {
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), transparent) !important;
+  border-bottom: 1px solid var(--admin-border) !important;
+  color: var(--admin-text) !important;
+}
+
+.el-card__body,
+.el-dialog__body {
+  color: var(--admin-text);
+}
+
+.card-title,
+.section-title {
+  color: var(--admin-text) !important;
+  font-weight: 700;
+}
+
+.muted-text,
+.section-desc {
+  color: var(--admin-text-muted) !important;
+}
+
+.el-table {
+  --el-table-bg-color: transparent;
+  --el-table-tr-bg-color: transparent;
+  --el-table-header-bg-color: var(--admin-bg-soft);
+  --el-table-row-hover-bg-color: var(--admin-bg-hover);
+  --el-table-border-color: var(--admin-grid-line);
+  --el-table-border: 1px solid var(--el-table-border-color);
+  background: transparent !important;
+  border-radius: 14px !important;
+  overflow: hidden;
+}
+
+.el-table th.el-table__cell {
+  background: var(--admin-bg-soft) !important;
+  color: var(--admin-text-muted) !important;
+  border-bottom: 1px solid var(--admin-border) !important;
+  border-right-color: rgba(148, 163, 184, 0.12) !important;
+}
+
+.el-table td.el-table__cell {
+  background: transparent !important;
+  color: var(--admin-text) !important;
+  border-bottom: 1px solid var(--admin-border) !important;
+  border-right-color: rgba(148, 163, 184, 0.11) !important;
+}
+
+.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+  background: rgba(148, 163, 184, 0.045) !important;
+}
+
+.el-table__body tr:hover > td.el-table__cell {
+  background: var(--admin-bg-hover) !important;
+}
+
+.el-table,
+.el-table__inner-wrapper,
+.el-table__body-wrapper,
+.el-table__body,
+.el-table__footer-wrapper,
+.el-table__header-wrapper,
+.el-table tr {
+  background: transparent !important;
+}
+
+.el-table .el-table__fixed-right,
+.el-table .el-table__fixed {
+  background: var(--admin-bg-card) !important;
+}
+
+.el-table__fixed-right::before,
+.el-table__fixed::before {
+  background-color: var(--admin-border) !important;
+}
+
+.admin-main .el-table--border,
+.admin-main .el-table--group {
+  border-color: var(--el-table-border-color) !important;
+}
+
+.admin-main .el-table--border::before,
+.admin-main .el-table--border::after,
+.admin-main .el-table--border .el-table__inner-wrapper::before,
+.admin-main .el-table--border .el-table__inner-wrapper::after,
+.admin-main .el-table__inner-wrapper::before {
+  background-color: rgba(148, 163, 184, 0.12) !important;
+}
+
+.admin-main .el-table--border .el-table__cell,
+.admin-main .el-table__border-left-patch {
+  border-color: var(--el-table-border-color) !important;
+}
+
+.admin-main .el-table--border .el-table__inner-wrapper {
+  border: 1px solid var(--el-table-border-color) !important;
+  border-radius: 14px !important;
+}
+
+.admin-main .el-table--border .el-table__cell:first-child {
+  border-left-color: transparent !important;
+}
+
+html.dark .admin-main .el-table th.el-table__cell {
+  border-right-color: rgba(71, 85, 105, 0.24) !important;
+}
+
+html.dark .admin-main .el-table td.el-table__cell {
+  border-right-color: rgba(71, 85, 105, 0.22) !important;
+}
+
+.el-button--primary,
+html.dark .el-button--primary {
+  background: linear-gradient(135deg, var(--admin-accent), var(--admin-accent-2)) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+  box-shadow: 0 10px 24px rgba(99, 102, 241, 0.22) !important;
+}
+
+.el-button--primary:hover,
+html.dark .el-button--primary:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 14px 32px rgba(99, 102, 241, 0.28) !important;
+}
+
+.el-input__wrapper,
+.el-textarea__inner,
+.el-select__wrapper {
+  background: var(--admin-bg-soft) !important;
+  border: 1px solid var(--admin-border) !important;
+  box-shadow: none !important;
+}
+
+.el-input__inner,
+.el-textarea__inner,
+.el-select__placeholder,
+.el-select__selected-item {
+  color: var(--admin-text) !important;
+}
+
+.el-dialog,
+html.dark .el-dialog {
+  background: var(--admin-bg-card) !important;
+  border: 1px solid var(--admin-border) !important;
+  border-radius: 18px !important;
+  box-shadow: var(--admin-shadow) !important;
+}
+
+.el-dialog__header,
+.el-dialog__footer,
+html.dark .el-dialog__header,
+html.dark .el-dialog__footer {
+  background: transparent !important;
+  border-color: var(--admin-border) !important;
+}
+
+.el-dialog__title {
+  color: var(--admin-text) !important;
+}
+
+.el-empty__description p,
+.el-form-item__label {
+  color: var(--admin-text-muted) !important;
+}
+
+.tag-nav,
+.el-footer {
+  background: rgba(8, 13, 24, 0.88) !important;
+  border-color: var(--admin-border) !important;
+  color: var(--admin-text-muted) !important;
+  box-shadow: 0 1px 0 rgba(148, 163, 184, 0.12) inset !important;
+}
+
+.nav-tabs .el-tabs__item {
+  background: rgba(15, 23, 42, 0.82) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+  color: var(--admin-text-muted) !important;
+}
+
+.nav-tabs .el-tabs__item:hover {
+  background: var(--admin-bg-hover) !important;
+  border-color: rgba(96, 165, 250, 0.42) !important;
+  color: var(--admin-text) !important;
+}
+
+.nav-tabs .el-tabs__item.is-active {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.95), rgba(34, 211, 238, 0.72)) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+}
+
+.mini-stat {
+  background:
+    radial-gradient(circle at top right, rgba(255,255,255,0.24), transparent 36%),
+    var(--admin-bg-card) !important;
+  border-color: var(--admin-border) !important;
+  box-shadow: var(--admin-shadow-soft);
+}
+
+.mini-stat__num {
+  color: var(--admin-text) !important;
+}
+
+.mini-stat__label {
+  color: var(--admin-text-muted) !important;
+}
+
+@media (max-width: 768px) {
+  .page-hero {
+    padding: 1rem;
+  }
+
+  .page-stats {
+    gap: 0.75rem;
+  }
+}

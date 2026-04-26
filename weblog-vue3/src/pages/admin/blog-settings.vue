@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <div>
         <!-- 卡片组件， shadow="never" 指定 card 卡片组件没有阴影 -->
         <el-card shadow="never">
@@ -404,7 +404,6 @@ const onSubmit = () => {
     // 先验证 form 表单字段
     formRef.value.validate((valid) => {
         if (!valid) {
-            console.log('表单验证不通过')
             return false
         }
 

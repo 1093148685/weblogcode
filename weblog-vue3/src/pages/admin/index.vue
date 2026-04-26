@@ -189,21 +189,24 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ===== 统计卡片（参考 FeiTwnd 简约白卡风格） ===== */
+/* ===== 统计卡片：接入后台深色控制台主题 ===== */
 .stat-card {
     position: relative;
     overflow: hidden;
     padding: 20px 16px;
-    border-radius: 8px;
+    border-radius: 16px;
     display: flex;
     align-items: center;
     gap: 14px;
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
     cursor: default;
-    border: 1px solid #e4e7ed;
-    background: #ffffff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    border: 1px solid var(--admin-border);
+    background:
+        radial-gradient(circle at top right, rgba(255, 255, 255, 0.10), transparent 36%),
+        var(--admin-bg-card);
+    box-shadow: var(--admin-shadow-soft);
     height: 88px;
+    backdrop-filter: blur(14px);
 }
 
 .stat-card::after {
@@ -217,8 +220,9 @@ onMounted(() => {
 }
 
 .stat-card:hover {
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-    transform: translateY(-1px);
+    border-color: rgba(96, 165, 250, 0.38);
+    box-shadow: var(--admin-shadow);
+    transform: translateY(-2px);
 }
 
 .stat-card--article::after { background: linear-gradient(180deg, #0ea5e9, #38bdf8); }
@@ -230,11 +234,12 @@ onMounted(() => {
     flex-shrink: 0;
     width: 48px;
     height: 48px;
-    border-radius: 8px;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f5f7fa;
+    background: rgba(148, 163, 184, 0.10);
+    border: 1px solid rgba(148, 163, 184, 0.12);
 }
 
 .stat-card--article .stat-icon-wrap { background: rgba(14, 165, 233, 0.08); color: #0ea5e9; }
@@ -251,7 +256,7 @@ onMounted(() => {
 
 .stat-label {
     font-size: 12px;
-    color: #909399;
+    color: var(--admin-text-muted);
     margin-bottom: 4px;
     letter-spacing: 0.02em;
     font-weight: 500;
@@ -262,7 +267,7 @@ onMounted(() => {
     font-weight: 700;
     line-height: 1.2;
     letter-spacing: -0.02em;
-    color: #303133;
+    color: var(--admin-text);
 }
 
 .stat-card--article :deep(.stat-value) { color: #0ea5e9; }
@@ -270,21 +275,25 @@ onMounted(() => {
 .stat-card--tag :deep(.stat-value) { color: #6366f1; }
 .stat-card--pv :deep(.stat-value) { color: #8b5cf6; }
 
-/* ===== 图表卡片（参考 FeiTwnd 简约白卡风格） ===== */
+/* ===== 图表卡片 ===== */
 .chart-card {
-    background: #ffffff;
-    border: 1px solid #e4e7ed;
-    border-radius: 8px;
+    background:
+        radial-gradient(circle at 100% 0%, rgba(96, 165, 250, 0.10), transparent 32%),
+        var(--admin-bg-card);
+    border: 1px solid var(--admin-border);
+    border-radius: 18px;
     padding: 20px 24px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    box-shadow: var(--admin-shadow-soft);
+    transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
     position: relative;
     overflow: hidden;
+    backdrop-filter: blur(14px);
 }
 
 .chart-card:hover {
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-    transform: translateY(-1px);
+    border-color: rgba(96, 165, 250, 0.34);
+    box-shadow: var(--admin-shadow);
+    transform: translateY(-2px);
 }
 
 .chart-card__header {
@@ -299,7 +308,7 @@ onMounted(() => {
     gap: 8px;
     font-size: 14px;
     font-weight: 600;
-    color: #303133;
+    color: var(--admin-text);
     letter-spacing: 0.01em;
 }
 

@@ -1,5 +1,5 @@
 <template>
-    <div class="flex h-full chat-panel">
+    <div class="flex h-full chat-panel panel-card overflow-hidden">
         <!-- 侧边栏 -->
         <transition name="slide">
             <div
@@ -7,7 +7,7 @@
                 class="w-[280px] flex-shrink-0 flex flex-col bg-[var(--bg-card)] border-r border-[var(--border-base)] h-full"
             >
                 <!-- 侧边栏头部：Logo + 操作按钮 -->
-                <div class="flex items-center justify-between px-5 py-4">
+                <div class="flex items-center justify-between px-5 py-4 border-b border-[var(--border-base)] bg-[var(--bg-card)]/90">
                     <div class="flex items-center gap-2.5">
                         <div class="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-sm">
                             <span class="text-white text-sm font-bold">J</span>
@@ -25,7 +25,7 @@
                 <!-- 新对话按钮 -->
                 <div class="px-4 mb-4">
                     <button @click="createNewChat"
-                        class="sidebar-item sidebar-item-new w-full">
+                        class="sidebar-item sidebar-item-new w-full justify-center">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24">
                             <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m-7-7h14"/>
                         </svg>
@@ -51,14 +51,45 @@
                     </button>
                 </div>
 
-                <!-- 知识库选择（RAG） -->
+                <!-- AI 对话模式 -->
                 <div class="px-4 mb-4">
-                    <div class="text-xs text-[var(--text-muted)] mb-1 px-1">知识库</div>
+                    <div class="text-xs text-[var(--text-muted)] mb-1 px-1">AI 模式</div>
+                    <div class="chat-mode-switch">
+                        <button
+                            type="button"
+                            class="chat-mode-option"
+                            :class="{ 'chat-mode-option-active': selectedChatMode === 'normal' }"
+                            @click="setChatMode('normal')"
+                        >
+                            普通聊天
+                        </button>
+                        <button
+                            type="button"
+                            class="chat-mode-option"
+                            :class="{ 'chat-mode-option-active': selectedChatMode === 'rag' }"
+                            @click="setChatMode('rag')"
+                        >
+                            知识库问答
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 知识库选择（RAG） -->
+                <div class="px-4 mb-4" :class="{ 'opacity-55': selectedChatMode !== 'rag' }">
+                    <div class="flex items-center justify-between text-xs text-[var(--text-muted)] mb-1 px-1">
+                        <span>知识库</span>
+                        <span v-if="selectedKb" class="text-[var(--color-primary)]">RAG 已启用</span>
+                    </div>
                     <select v-model="selectedKbId"
+                        :disabled="selectedChatMode !== 'rag'"
+                        @change="handleKbChange"
                         class="w-full text-sm rounded-lg px-3 py-2 bg-[var(--bg-card)] border border-[var(--border-light)] text-[var(--text-body)] focus:outline-none focus:ring-2 focus:ring-violet-400">
-                        <option :value="null">不使用知识库</option>
+                        <option value="">不使用知识库</option>
                         <option v-for="kb in kbList" :key="kb.id" :value="kb.id">{{ kb.name }}</option>
                     </select>
+                    <p v-if="selectedKb?.description" class="mt-1.5 px-1 text-xs text-[var(--text-placeholder)] line-clamp-2">
+                        {{ selectedKb.description }}
+                    </p>
                 </div>
 
                 <!-- 最近对话标题 -->
@@ -143,6 +174,14 @@
                     </div>
                     <div class="flex items-center gap-2">
                         <el-button
+                            v-if="currentSessionId && displayMessages.length"
+                            size="small"
+                            @click="clearCurrentSession"
+                            title="清空当前上下文"
+                        >
+                            清空
+                        </el-button>
+                        <el-button
                             v-if="currentSessionId"
                             size="small"
                             @click="exportSession(chatSessions.find(s => s.id === currentSessionId))"
@@ -208,6 +247,13 @@
                                 </div>
                                 <div class="min-w-0 flex-1">
                                     <div class="chat-ai-bubble">
+                                        <div v-if="chat.mode || chat.kbName" class="chat-answer-meta">
+                                            <span class="chat-answer-mode" :class="chat.mode === 'rag' ? 'chat-answer-mode-rag' : 'chat-answer-mode-normal'">
+                                                {{ chat.mode === 'rag' ? '知识库问答' : '普通聊天' }}
+                                            </span>
+                                            <span v-if="chat.kbName" class="chat-answer-kb">{{ chat.kbName }}</span>
+                                        </div>
+
                                         <!-- 流式加载中 -->
                                         <div v-if="!chat.content && index === displayMessages.length - 1 && isStreaming" class="flex items-center gap-2 py-1">
                                             <span class="typing-dot" style="animation-delay:0s"></span>
@@ -216,8 +262,70 @@
                                         </div>
                                         <StreamMarkdownRender v-else :content="chat.content" />
 
+                                        <div v-if="chat.ragStatus && (!chat.sources || chat.sources.length === 0)" class="rag-status mt-3">
+                                            <span class="rag-dot"></span>
+                                            <span>{{ chat.ragStatus }}</span>
+                                        </div>
+
+                                        <div v-if="chat.ragSteps && chat.ragSteps.length" class="rag-step-list mt-3">
+                                            <div
+                                                v-for="step in chat.ragSteps"
+                                                :key="step.key"
+                                                class="rag-step-item"
+                                                :class="`rag-step-${step.status || 'pending'}`"
+                                            >
+                                                <span class="rag-step-dot"></span>
+                                                <span class="rag-step-label">{{ step.message }}</span>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            v-if="canUseNormalFallback(chat)"
+                                            type="button"
+                                            class="rag-fallback-btn mt-3"
+                                            @click="answerWithoutKnowledgeBase(index)"
+                                        >
+                                            用普通 AI 回答
+                                        </button>
+
+                                        <div v-if="isConservativeRagAnswer(chat)" class="rag-warning mt-3">
+                                            知识库已命中来源，但模型回答偏保守。可以点击重试重新生成。
+                                        </div>
+
+                                        <div v-if="chat.sources && chat.sources.length" class="rag-source-panel mt-4">
+                                            <button class="rag-source-title" @click="toggleSourcePanel(chat)" type="button">
+                                                <span>引用来源</span>
+                                                <span class="rag-source-toggle">
+                                                    {{ chat.sources.length }} 条
+                                                    <svg class="w-3.5 h-3.5 transition-transform" :class="{ 'rotate-180': chat.sourcesExpanded }" fill="none" viewBox="0 0 24 24">
+                                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 9 6 6 6-6"/>
+                                                    </svg>
+                                                </span>
+                                            </button>
+                                            <div v-if="chat.sourcesExpanded" class="rag-source-list">
+                                                <div v-for="source in normalizeSources(chat.sources)" :key="source.chunkId || source.index" class="rag-source-item">
+                                                    <div class="rag-source-head">
+                                                        <span class="rag-source-index">[{{ source.index }}]</span>
+                                                        <span class="rag-source-name">{{ source.title || '未知文档' }}</span>
+                                                        <span v-if="source.score !== undefined" class="rag-source-score">{{ formatScore(source.score) }}</span>
+                                                    </div>
+                                                    <p>{{ source.content }}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <!-- 操作按钮 -->
                                         <div v-if="chat.content && !isStreaming" class="mt-3 flex items-center justify-end gap-2 border-t border-[var(--border-base)] pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                @click="copyMessage(chat.content)"
+                                                class="flex items-center gap-1.5 px-2 py-1 text-xs text-[var(--text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--bg-hover)] rounded-md transition-colors"
+                                                title="复制回复"
+                                            >
+                                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16h8M8 12h8m-7 8h6a2 2 0 0 0 2-2V7.828a2 2 0 0 0-.586-1.414l-2.828-2.828A2 2 0 0 0 12.172 3H9a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+                                                </svg>
+                                                复制
+                                            </button>
                                             <button
                                                 v-if="index === displayMessages.length - 1"
                                                 @click="regenerateResponse(index)"
@@ -255,7 +363,7 @@
             </Transition>
 
             <!-- 输入区域 -->
-            <div class="px-4 sm:px-6 lg:px-8 pb-5 pt-3 bg-[var(--bg-base)]">
+            <div class="chat-composer px-4 sm:px-6 lg:px-8 pb-5 pt-3">
                 <div class="max-w-4xl mx-auto">
                     <!-- 使用次数提示 -->
                     <div
@@ -307,6 +415,9 @@
                                 </svg>
                             </button>
                             <span class="text-xs text-[var(--text-placeholder)] tabular-nums">{{ inputText.length }}/2000</span>
+                            <span v-if="selectedKb" class="hidden sm:inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full rag-chip" title="将优先检索知识库后回答">
+                                RAG
+                            </span>
                             <span v-if="inputTokenCount > 0" class="text-xs px-1.5 py-0.5 rounded-full" :class="inputTokenCount > 3000 ? 'bg-red-100 text-red-500' : 'bg-slate-100 text-slate-500'" title="预估 Token 消耗">
                                 ≈{{ inputTokenCount }}
                             </span>
@@ -424,13 +535,15 @@ const selectedModelId = ref('deepseek-chat')
 
 // ──────── 知识库 RAG ────────
 const kbList = ref([])
-const selectedKbId = ref(null)
+const selectedKbId = ref('')
+const selectedChatMode = ref('normal')
 
 onMounted(async () => {
     try {
         const res = await getPublicKbList()
         if (res.success && res.data?.length) {
             kbList.value = res.data
+            restoreModeFromSession()
         }
     } catch (_) { /* 忽略，知识库不是必须的 */ }
 })
@@ -455,7 +568,44 @@ const currentModelName = computed(() => {
     return m?.name || selectedModelId.value
 })
 
-const quickPrompts = ['推荐几篇技术文章', '帮我解释一个概念', '有什么编程建议？', '帮我写一首诗']
+const selectedKbOption = computed(() => {
+    const id = Number(selectedKbId.value || 0)
+    return kbList.value.find(kb => Number(kb.id) === id) || null
+})
+
+const selectedKb = computed(() => selectedChatMode.value === 'rag' ? selectedKbOption.value : null)
+
+const activeKbId = computed(() => {
+    if (selectedChatMode.value !== 'rag') return null
+    const id = Number(selectedKbId.value)
+    return Number.isFinite(id) && id > 0 ? id : null
+})
+
+const chatMode = computed(() => activeKbId.value ? 'rag' : 'normal')
+
+const setChatMode = (mode) => {
+    if (mode === 'rag' && kbList.value.length === 0) {
+        ElMessage.warning('暂无可用知识库')
+        selectedChatMode.value = 'normal'
+        return
+    }
+    selectedChatMode.value = mode
+    if (mode === 'rag' && !selectedKbId.value && kbList.value.length > 0) {
+        selectedKbId.value = String(kbList.value[0].id)
+    }
+}
+
+const handleKbChange = () => {
+    selectedChatMode.value = selectedKbId.value ? 'rag' : 'normal'
+}
+
+const quickPrompts = computed(() => selectedChatMode.value === 'rag'
+    ? ['总结知识库重点', '这篇文章讲了什么？', '根据知识库解释这个概念', '列出引用来源']
+    : ['讲一个笑话', '帮我写一段代码', '解释一个技术概念', '帮我润色一段文字'])
+
+const welcomeDescription = computed(() => selectedChatMode.value === 'rag'
+    ? '知识库问答模式会先检索选中的知识库，再基于命中的来源回答。'
+    : '普通聊天模式不会检索知识库，适合闲聊、写作、代码解释和通用问题。')
 
 // ──────── 计算属性 ────────
 const currentSessionTitle = computed(() => {
@@ -470,6 +620,36 @@ const displayMessages = computed(() => {
     const session = chatSessions.value.find(s => s.id === currentSessionId.value)
     return session?.messages || []
 })
+
+const restoreModeFromSession = (sessionId = currentSessionId.value) => {
+    const session = chatSessions.value.find(s => s.id === sessionId)
+    const messages = session?.messages || []
+    const lastModeMessage = [...messages].reverse().find(m => m.mode || m.kbId)
+
+    if (!lastModeMessage) return
+
+    if (lastModeMessage.mode === 'rag' || lastModeMessage.kbId) {
+        if (lastModeMessage.kbId) {
+            const kbExists = kbList.value.some(kb => Number(kb.id) === Number(lastModeMessage.kbId))
+            if (!kbExists && kbList.value.length > 0) {
+                selectedKbId.value = String(kbList.value[0].id)
+            } else if (kbExists) {
+                selectedKbId.value = String(lastModeMessage.kbId)
+            }
+        }
+
+        if (selectedKbId.value || kbList.value.length > 0) {
+            selectedChatMode.value = 'rag'
+        } else {
+            selectedChatMode.value = 'normal'
+        }
+        return
+    }
+
+    if (lastModeMessage.mode === 'normal') {
+        selectedChatMode.value = 'normal'
+    }
+}
 
 const filteredArticles = computed(() => {
     const keyword = articleSearch.value.toLowerCase().trim()
@@ -486,6 +666,7 @@ onMounted(async () => {
     await loadSessionsFromDb()
     await loadUsageInfo()
     await loadArticles()
+    scrollToBottom(true)
 })
 
 const loadModels = async () => {
@@ -538,6 +719,8 @@ const loadSessionsFromDb = async () => {
             if (chatSessions.value.length > 0 && !currentSessionId.value) {
                 currentSessionId.value = chatSessions.value[0].id
             }
+            restoreModeFromSession()
+            scrollToBottom(true)
         }
     } catch (e) {
         console.error('加载历史会话失败:', e)
@@ -574,7 +757,13 @@ const saveSessionToDb = async (sessionId, messages, model) => {
                 role: m.role,
                 content: m.content,
                 timestamp: m.timestamp,
-                quotedArticleTitle: m.quotedArticleTitle || null
+                quotedArticleTitle: m.quotedArticleTitle || null,
+                sources: m.sources || [],
+                ragStatus: m.ragStatus || null,
+                ragSteps: m.ragSteps || [],
+                kbId: m.kbId || null,
+                kbName: m.kbName || null,
+                mode: m.mode || null
             }))),
             model: model || selectedModelId.value,
             provider: ''
@@ -602,6 +791,28 @@ const createNewChat = () => {
 const switchSession = (sessionId) => {
     if (isStreaming.value) return
     currentSessionId.value = sessionId
+    restoreModeFromSession(sessionId)
+    scrollToBottom(true)
+}
+
+const clearCurrentSession = async () => {
+    if (isStreaming.value || !currentSessionId.value) return
+    const session = chatSessions.value.find(s => s.id === currentSessionId.value)
+    if (!session || !session.messages?.length) return
+
+    try {
+        await ElMessageBox.confirm('确定清空当前会话上下文吗？', '提示', { type: 'warning' })
+        session.messages = []
+        session.title = '新会话'
+        session.time = new Date().toLocaleString('zh-CN', {
+            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        })
+        await saveSessionToDb(session.id, session.messages, session.model)
+        ElMessage.success('已清空当前上下文')
+        scrollToBottom(true)
+    } catch (e) {
+        if (e !== 'cancel') ElMessage.error('清空失败')
+    }
 }
 
 const deleteSession = async (sessionId) => {
@@ -611,6 +822,7 @@ const deleteSession = async (sessionId) => {
         chatSessions.value = chatSessions.value.filter(s => s.id !== sessionId)
         if (currentSessionId.value === sessionId) {
             currentSessionId.value = chatSessions.value[0]?.id || null
+            restoreModeFromSession()
         }
         ElMessage.success('删除成功')
     } catch (e) {
@@ -692,19 +904,200 @@ const updateSessionLocally = (sessionId, messages) => {
     }
 }
 
+const currentAssistantMessage = () => {
+    const list = streamingMessages.value || []
+    return list[list.length - 1]
+}
+
+const finishRagStatusIfNeeded = () => {
+    const lastMsg = currentAssistantMessage()
+    if (!lastMsg?.kbId || (lastMsg.sources && lastMsg.sources.length > 0)) return
+
+    const waitingMessages = ['准备检索知识库...', '正在检索知识库...']
+    if (lastMsg.content && (!lastMsg.ragStatus || waitingMessages.includes(lastMsg.ragStatus))) {
+        lastMsg.ragStatus = '知识库未返回引用来源，已按普通对话回答'
+        updateRagStep(lastMsg, 'sources', lastMsg.ragStatus, 'warning')
+    }
+}
+
+const normalizeSource = (source = {}, index = 0) => ({
+    index: source.index ?? source.Index ?? index + 1,
+    documentId: source.documentId ?? source.DocumentId ?? null,
+    chunkId: source.chunkId ?? source.ChunkId ?? `${source.DocumentId || 'source'}-${index}`,
+    title: source.title ?? source.Title ?? '未知文档',
+    content: source.content ?? source.Content ?? '',
+    score: source.score ?? source.Score
+})
+
+const normalizeSources = (sources = []) => sources.map(normalizeSource)
+
+const toggleSourcePanel = (chat) => {
+    chat.sourcesExpanded = !chat.sourcesExpanded
+}
+
+const updateRagStep = (chat, key, message, status = 'running') => {
+    if (!chat || !key) return
+    if (!Array.isArray(chat.ragSteps)) {
+        chat.ragSteps = []
+    }
+
+    if (status === 'running') {
+        chat.ragSteps.forEach(step => {
+            if (step.status === 'running' && step.key !== key) {
+                step.status = 'completed'
+            }
+        })
+    }
+
+    const existing = chat.ragSteps.find(step => step.key === key)
+    if (existing) {
+        existing.message = message || existing.message
+        existing.status = status
+        return
+    }
+
+    chat.ragSteps.push({
+        key,
+        message: message || key,
+        status
+    })
+}
+
+const isConservativeRagAnswer = (chat) => {
+    if (!chat?.content || !chat.sources?.length) return false
+    return /没有.*(相关|找到|资料|内容|信息)|未找到|无法.*(回答|确定)/.test(chat.content)
+}
+
+const canUseNormalFallback = (chat) => {
+    if (isStreaming.value || !chat?.kbId) return false
+    const noSources = !chat.sources || chat.sources.length === 0
+    const noHitStatus = /没有命中|未命中|没有找到|检索失败/.test(chat.ragStatus || '')
+    const conservativeAnswer = /知识库.*没有|没有.*相关内容|未找到/.test(chat.content || '')
+    return noSources && (noHitStatus || conservativeAnswer)
+}
+
+const findPreviousUserMessage = (index) => {
+    const messages = displayMessages.value || []
+    for (let i = index - 1; i >= 0; i--) {
+        if (messages[i]?.role === 'user') return messages[i]
+    }
+    return null
+}
+
+const answerWithoutKnowledgeBase = async (index) => {
+    const userMessage = findPreviousUserMessage(index)
+    if (!userMessage?.content) {
+        ElMessage.warning('没有找到上一条问题')
+        return
+    }
+    await sendMessage({
+        content: userMessage.content,
+        forceMode: 'normal',
+        freshContext: true
+    })
+}
+
+const buildOutgoingMessages = (messages, mode, freshContext = false) => {
+    const cleanMessages = (messages || []).filter(m => ['system', 'user', 'assistant'].includes(m.role))
+    const lastUserMessage = [...cleanMessages].reverse().find(m => m.role === 'user')
+    let scopedMessages = cleanMessages
+
+    if (freshContext && lastUserMessage) {
+        scopedMessages = [lastUserMessage]
+    } else if (mode === 'rag') {
+        const systemMessages = cleanMessages.filter(m => m.role === 'system')
+        const recentMessages = cleanMessages.filter(m => m.role !== 'system').slice(-6)
+        scopedMessages = [...systemMessages, ...recentMessages]
+    } else {
+        scopedMessages = cleanMessages
+            .filter(m => !(m.role === 'assistant' && m.kbId && /知识库|检索|命中|引用来源|相关内容|没有找到/.test(m.content || m.ragStatus || '')))
+            .slice(-10)
+    }
+
+    const outgoingMessages = scopedMessages.map(m => ({ role: m.role, content: m.content }))
+    if (mode === 'normal') {
+        outgoingMessages.unshift({
+            role: 'system',
+            content: '当前是普通聊天模式，未启用知识库。请像正常 AI 助手一样回答用户，不要因为知识库没有命中或没有启用而拒绝回答。'
+        })
+    }
+
+    return outgoingMessages
+}
+
+const handleStreamPayload = async (raw, appendContent) => {
+    if (!raw || raw === '[DONE]') {
+        finishRagStatusIfNeeded()
+        return
+    }
+
+    const parsed = JSON.parse(raw)
+    const lastMsg = currentAssistantMessage()
+    if (!lastMsg) return
+
+    if (parsed.type === 'rag_status') {
+        const payload = parsed.payload || {}
+        lastMsg.ragStatus = payload.message || '正在检索知识库...'
+        updateRagStep(lastMsg, payload.step || 'status', lastMsg.ragStatus, payload.status || 'running')
+        return
+    }
+
+    if (parsed.type === 'rag_sources') {
+        const sources = parsed.payload?.sources || []
+        lastMsg.sources = normalizeSources(sources)
+        lastMsg.ragStatus = sources.length
+            ? parsed.payload?.message || `命中 ${sources.length} 条知识库来源`
+            : parsed.payload?.message || '没有命中足够相关的知识库内容'
+        updateRagStep(lastMsg, 'sources', lastMsg.ragStatus, sources.length ? 'completed' : 'warning')
+        return
+    }
+
+    if (parsed.type === 'rag_error') {
+        const payload = parsed.payload || {}
+        lastMsg.ragStatus = payload.message || '知识库检索失败，已切换为普通对话'
+        updateRagStep(lastMsg, payload.step || 'error', lastMsg.ragStatus, payload.status || 'error')
+        return
+    }
+
+    if (parsed.content) {
+        if (lastMsg.kbId) {
+            updateRagStep(lastMsg, 'generate', '正在生成回答...', 'running')
+        }
+        appendContent(parsed.content)
+        finishRagStatusIfNeeded()
+        scrollToBottom()
+    }
+
+    if (parsed.error) {
+        lastMsg.content = '❌ ' + parsed.error
+        lastMsg.ragStatus = ''
+        await loadUsageInfo()
+    }
+}
+
 // ──────── 发送消息 ────────
-const sendMessage = async () => {
-    if (!inputText.value.trim() || isStreaming.value) return
+const sendMessage = async (options = {}) => {
+    const forcedContent = typeof options.content === 'string' ? options.content.trim() : ''
+    if ((!forcedContent && !inputText.value.trim()) || isStreaming.value) return
 
     // 如果没有会话，先创建一个
     if (!currentSessionId.value) {
         createNewChat()
     }
 
-    let userContent = inputText.value.trim()
+    const originalChatMode = selectedChatMode.value
+    if (options.forceMode) {
+        selectedChatMode.value = options.forceMode
+    }
+    const effectiveMode = chatMode.value
+    const effectiveKb = selectedKb.value
+
+    let userContent = forcedContent || inputText.value.trim()
     const currentQuotedArticle = quotedArticle.value
     quotedArticle.value = null
-    inputText.value = ''
+    if (!forcedContent) {
+        inputText.value = ''
+    }
     if (textareaRef.value) {
         textareaRef.value.style.height = 'auto'
     }
@@ -722,11 +1115,20 @@ const sendMessage = async () => {
         role: 'user',
         content: userContent,
         quotedArticleTitle: currentQuotedArticle?.title || null,
+        mode: effectiveMode,
         timestamp: Date.now()
     })
     sessionMessages.push({
         role: 'assistant',
         content: '',
+        sources: [],
+        ragStatus: effectiveKb ? '准备检索知识库...' : '',
+        ragSteps: effectiveKb
+            ? [{ key: 'queued', message: '准备检索知识库...', status: 'running' }]
+            : [],
+        kbId: effectiveKb?.id || null,
+        kbName: effectiveKb?.name || null,
+        mode: effectiveMode,
         timestamp: Date.now()
     })
 
@@ -750,6 +1152,7 @@ const sendMessage = async () => {
 
     try {
         const token = getToken() || ''
+        const outgoingMessages = buildOutgoingMessages(sessionMessages.slice(0, -1), effectiveMode, options.freshContext)
         const response = await fetch('/api/ai/chat', {
             method: 'POST',
             headers: {
@@ -758,51 +1161,64 @@ const sendMessage = async () => {
             },
             signal: abortController.signal,
             body: JSON.stringify({
-                messages: sessionMessages.slice(0, -1).map(m => ({ role: m.role, content: m.content })),
+                messages: outgoingMessages,
                 model: selectedModelId.value,
+                mode: effectiveMode,
                 sessionId: sessionId,
                 clientId: clientId,
                 articleContent: currentQuotedArticle
                     ? (currentQuotedArticle.content || currentQuotedArticle.Content || currentQuotedArticle.summary || '')
                     : null,
                 articleTitle: currentQuotedArticle?.title || currentQuotedArticle?.Title || null,
-                kbId: selectedKbId.value || null
+                kbId: effectiveKb?.id || null
             })
         })
+
+        if (!response.ok || !response.body) {
+            throw new Error(`请求失败：${response.status}`)
+        }
 
         const reader = response.body.getReader()
         const decoder = new TextDecoder()
         let responseText = ''
+        let pendingLine = ''
 
         while (true) {
             const { done, value } = await reader.read()
             if (done) break
 
-            for (const line of decoder.decode(value, { stream: true }).split('\n')) {
+            const text = pendingLine + decoder.decode(value, { stream: true })
+            const lines = text.split('\n')
+            pendingLine = lines.pop() || ''
+
+            for (const line of lines) {
                 if (!line.startsWith('data: ')) continue
                 const raw = line.slice(6)
-                if (raw === '[DONE]') continue
                 try {
-                    const parsed = JSON.parse(raw)
-                    if (parsed.content) {
-                        responseText += parsed.content
-                        streamingMessages.value[streamingMessages.value.length - 1].content = responseText
-                        scrollToBottom()
-                    }
-                    if (parsed.error) {
-                        streamingMessages.value[streamingMessages.value.length - 1].content = '❌ ' + parsed.error
-                        await loadUsageInfo()
-                    }
+                    await handleStreamPayload(raw, (content) => {
+                        responseText += content
+                        currentAssistantMessage().content = responseText
+                    })
                 } catch { /* 忽略解析错误 */ }
             }
         }
+
+        if (pendingLine.startsWith('data: ')) {
+            try {
+                await handleStreamPayload(pendingLine.slice(6), (content) => {
+                    responseText += content
+                    currentAssistantMessage().content = responseText
+                })
+            } catch { /* 忽略最后一段不完整事件 */ }
+        }
+        finishRagStatusIfNeeded()
     } catch (error) {
         if (error.name === 'AbortError') {
             const lastMsg = streamingMessages.value[streamingMessages.value.length - 1]
             lastMsg.content += (lastMsg.content ? '\n\n' : '') + '[ 已停止生成 ]'
         } else {
             console.error('流式请求出错:', error)
-            streamingMessages.value[streamingMessages.value.length - 1].content = '抱歉，请求出错了，请稍后重试。'
+            streamingMessages.value[streamingMessages.value.length - 1].content = `抱歉，请求出错了，请稍后重试。\n\n${error.message || ''}`.trim()
         }
     } finally {
         isStreaming.value = false
@@ -818,6 +1234,9 @@ const sendMessage = async () => {
 
         scrollToBottom()
         await loadUsageInfo()
+        if (options.forceMode) {
+            selectedChatMode.value = originalChatMode
+        }
     }
 }
 
@@ -854,6 +1273,12 @@ const regenerateResponse = async (index) => {
     if (userMsgIndex < 0) return
 
     const userMsg = session.messages[userMsgIndex]
+    if (userMsg.mode === 'rag' || userMsg.kbId) {
+        selectedChatMode.value = 'rag'
+        if (userMsg.kbId) selectedKbId.value = String(userMsg.kbId)
+    } else if (userMsg.mode === 'normal') {
+        selectedChatMode.value = 'normal'
+    }
 
     // 如果之前有引用文章，恢复引用状态
     if (userMsg.quotedArticleTitle) {
@@ -890,11 +1315,23 @@ const handleScroll = () => {
     showScrollBtn.value = scrollHeight - scrollTop - clientHeight > 200
 }
 
-const scrollToBottom = async () => {
+const scrollToBottom = async (force = false) => {
     await nextTick()
     if (chatContainer.value) {
         chatContainer.value.scrollTop = chatContainer.value.scrollHeight
         showScrollBtn.value = false
+        if (force) {
+            requestAnimationFrame(() => {
+                if (!chatContainer.value) return
+                chatContainer.value.scrollTop = chatContainer.value.scrollHeight
+                showScrollBtn.value = false
+            })
+            setTimeout(() => {
+                if (!chatContainer.value) return
+                chatContainer.value.scrollTop = chatContainer.value.scrollHeight
+                showScrollBtn.value = false
+            }, 120)
+        }
     }
 }
 
@@ -913,6 +1350,21 @@ const handleShiftEnter = () => {
 const formatTime = (timestamp) => {
     if (!timestamp) return ''
     return new Date(timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+}
+
+const formatScore = (score) => {
+    const value = Number(score)
+    if (!Number.isFinite(value)) return ''
+    return value >= 1 ? `${value.toFixed(1)} 命中` : `${Math.round(value * 100)}%`
+}
+
+const copyMessage = async (content) => {
+    try {
+        await navigator.clipboard.writeText(content || '')
+        ElMessage.success('已复制')
+    } catch {
+        ElMessage.error('复制失败')
+    }
 }
 
 const usePrompt = (prompt) => {
@@ -1079,6 +1531,308 @@ const selectArticle = async (article) => {
     background-color: #1c2732;
 }
 
+.rag-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.35rem 0.65rem;
+    border-radius: 999px;
+    color: var(--text-muted);
+    background: var(--bg-hover);
+    border: 1px solid var(--border-base);
+    font-size: 0.75rem;
+}
+
+.chat-mode-switch {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.35rem;
+    padding: 0.25rem;
+    border-radius: 0.85rem;
+    background: var(--bg-hover);
+    border: 1px solid var(--border-base);
+}
+
+.chat-mode-option {
+    min-height: 2.15rem;
+    border: 0;
+    border-radius: 0.65rem;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 700;
+    transition: all 0.18s ease;
+}
+
+.chat-mode-option:hover {
+    color: var(--text-heading);
+    background: rgba(59, 130, 246, 0.08);
+}
+
+.chat-mode-option-active {
+    color: #fff;
+    background: linear-gradient(135deg, #4f7cff, #20c7df);
+    box-shadow: 0 8px 22px rgba(59, 130, 246, 0.22);
+}
+
+.chat-mode-option-active:hover {
+    color: #fff;
+    background: linear-gradient(135deg, #4f7cff, #20c7df);
+}
+
+.chat-answer-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 0.65rem;
+}
+
+.chat-answer-mode,
+.chat-answer-kb {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.45rem;
+    padding: 0 0.5rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.chat-answer-mode-normal {
+    color: #475569;
+    background: rgba(100, 116, 139, 0.10);
+    border: 1px solid rgba(100, 116, 139, 0.18);
+}
+
+.chat-answer-mode-rag {
+    color: var(--color-primary);
+    background: rgba(59, 130, 246, 0.10);
+    border: 1px solid rgba(59, 130, 246, 0.20);
+}
+
+.chat-answer-kb {
+    color: #64748b;
+    background: var(--bg-hover);
+    border: 1px solid var(--border-base);
+}
+
+.dark .chat-answer-mode-normal,
+.dark .chat-answer-kb {
+    color: #94a3b8;
+}
+
+.rag-fallback-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2rem;
+    padding: 0 0.8rem;
+    border-radius: 999px;
+    border: 1px solid rgba(59, 130, 246, 0.24);
+    background: rgba(59, 130, 246, 0.10);
+    color: var(--color-primary);
+    font-size: 0.76rem;
+    font-weight: 700;
+    transition: all 0.18s ease;
+}
+
+.rag-fallback-btn:hover {
+    transform: translateY(-1px);
+    background: rgba(59, 130, 246, 0.16);
+}
+
+.rag-step-list {
+    display: grid;
+    gap: 0.4rem;
+    padding: 0.6rem 0.7rem;
+    border-radius: 0.9rem;
+    background: var(--bg-hover);
+    border: 1px solid var(--border-base);
+}
+
+.rag-step-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    line-height: 1.4;
+}
+
+.rag-step-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 999px;
+    background: var(--text-placeholder);
+    flex-shrink: 0;
+}
+
+.rag-step-running .rag-step-dot {
+    background: var(--color-primary);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+    animation: ragPulse 1.15s ease-in-out infinite;
+}
+
+.rag-step-completed .rag-step-dot {
+    background: #10b981;
+}
+
+.rag-step-warning .rag-step-dot {
+    background: #f59e0b;
+}
+
+.rag-step-error .rag-step-dot {
+    background: #ef4444;
+}
+
+.rag-step-completed .rag-step-label {
+    color: var(--text-body);
+}
+
+.rag-step-warning .rag-step-label {
+    color: #b45309;
+}
+
+.rag-step-error .rag-step-label {
+    color: #dc2626;
+}
+
+.dark .rag-step-warning .rag-step-label {
+    color: #fbbf24;
+}
+
+.dark .rag-step-error .rag-step-label {
+    color: #f87171;
+}
+
+@keyframes ragPulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(0.72);
+        opacity: 0.72;
+    }
+}
+
+.rag-warning {
+    padding: 0.55rem 0.75rem;
+    border-radius: 0.85rem;
+    border: 1px solid rgba(245, 158, 11, 0.26);
+    background: rgba(245, 158, 11, 0.08);
+    color: #b45309;
+    font-size: 0.76rem;
+    line-height: 1.5;
+}
+
+.dark .rag-warning {
+    color: #fbbf24;
+    background: rgba(245, 158, 11, 0.10);
+    border-color: rgba(245, 158, 11, 0.24);
+}
+
+.rag-dot {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 999px;
+    background: var(--color-primary);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+}
+
+.rag-source-panel {
+    border: 1px solid var(--border-base);
+    border-radius: 0.9rem;
+    background: var(--bg-hover);
+    overflow: hidden;
+}
+
+.rag-source-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.65rem 0.8rem;
+    border-bottom: 1px solid var(--border-base);
+    color: var(--text-heading);
+    font-size: 0.78rem;
+    font-weight: 700;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+}
+
+.rag-source-title:hover {
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.rag-source-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--text-muted);
+}
+
+.rag-source-list {
+    display: grid;
+    gap: 0.55rem;
+    padding: 0.65rem;
+}
+
+.rag-source-item {
+    padding: 0.65rem;
+    border-radius: 0.75rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+}
+
+.rag-source-head {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+    margin-bottom: 0.35rem;
+}
+
+.rag-source-index {
+    color: var(--color-primary);
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+.rag-source-name {
+    color: var(--text-heading);
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rag-source-score {
+    margin-left: auto;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    background: rgba(59, 130, 246, 0.12);
+    color: var(--color-primary);
+    font-size: 0.7rem;
+    flex-shrink: 0;
+}
+
+.rag-source-item p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    line-height: 1.55;
+}
+
+.rag-chip {
+    background: rgba(59, 130, 246, 0.12);
+    color: var(--color-primary);
+    border: 1px solid rgba(59, 130, 246, 0.22);
+}
+
 /* 打字动画圆点 */
 .typing-dot {
     width: 0.375rem;
@@ -1101,6 +1855,20 @@ const selectArticle = async (article) => {
     border: 1.5px solid var(--border-base);
     transition: all 0.2s ease;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.chat-composer {
+    background:
+        linear-gradient(180deg, transparent, rgba(15, 23, 42, 0.04)),
+        var(--bg-base);
+    border-top: 1px solid var(--border-base);
+}
+
+.dark .chat-composer {
+    background:
+        linear-gradient(180deg, rgba(15, 23, 42, 0.18), rgba(2, 6, 23, 0.72)),
+        var(--bg-base);
+    border-top-color: rgba(148, 163, 184, 0.16);
 }
 .chat-input-wrapper:focus-within {
     border-color: var(--color-primary);

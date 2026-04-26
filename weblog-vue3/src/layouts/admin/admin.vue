@@ -20,9 +20,9 @@
 
                 <!-- 主内容（根据路由动态展示不同页面） -->
                 <router-view v-slot="{ Component, route }">
-                    <Transition name="fade" mode="out-in">
-                        <KeepAlive :include="cachedViews" :max="10" :key="route.path">
-                            <component :is="Component"></component>
+                    <Transition :key="route.fullPath" name="fade" mode="out-in">
+                        <KeepAlive :include="cachedViews" :max="10">
+                            <component :is="Component" :key="route.fullPath"></component>
                         </KeepAlive>
                     </Transition>
                 </router-view>
@@ -74,11 +74,13 @@ onMounted(() => {
 .admin-layout {
     min-height: 100vh;
     background: var(--admin-bg-page);
+    color: var(--admin-text);
 }
 
 .right-container {
     min-height: 100vh;
     background: var(--admin-bg-page);
+    transition: padding-left 0.28s ease;
 }
 
 .el-header {
@@ -97,6 +99,7 @@ onMounted(() => {
     min-height: calc(100vh - 64px - 44px - 50px);
     overflow-x: visible !important;
     overflow-y: visible !important;
+    position: relative;
 }
 
 /* 内容区域过渡动画 */

@@ -253,14 +253,25 @@ public class RagService : IRagService
         var embeddingApiUrl = _selector.GetApiUrl(kb.EmbeddingProvider);
 
         List<float[]> rawVectors;
-        if (embeddingProvider is OpenAiProvider oap)
-            rawVectors = await oap.EmbedBatchAsync(chunks, apiKey, kb.EmbeddingModel, apiUrl: embeddingApiUrl);
-        else if (embeddingProvider is DeepSeekProvider dsp)
-            rawVectors = await dsp.EmbedBatchAsync(chunks, apiKey, kb.EmbeddingModel);
-        else if (embeddingProvider is IEmbeddingProvider ep)
-            rawVectors = await ep.EmbedBatchAsync(chunks, apiKey, kb.EmbeddingModel);
-        else
-            throw new Exception($"Provider {embeddingProvider.Name} 不支持 Embedding");
+        try
+        {
+            if (embeddingProvider is OpenAiProvider oap)
+                rawVectors = await oap.EmbedBatchAsync(chunks, apiKey, kb.EmbeddingModel, apiUrl: embeddingApiUrl);
+            else if (embeddingProvider is DeepSeekProvider dsp)
+                rawVectors = await dsp.EmbedBatchAsync(chunks, apiKey, kb.EmbeddingModel);
+            else if (embeddingProvider is IEmbeddingProvider ep)
+                rawVectors = await ep.EmbedBatchAsync(chunks, apiKey, kb.EmbeddingModel);
+            else
+                throw new Exception($"Provider {embeddingProvider.Name} 不支持 Embedding");
+        }
+        catch (Exception ex)
+        {
+            // 调用失败（401 / 429 / 网络等）→ 标记 Key 不健康，避免后续文档继续使用坏 Key
+            _selector.RecordFailure(embeddingProvider.Name, apiKey);
+            _logger.LogWarning("Embedding provider {Provider} key marked unhealthy: {Error}",
+                embeddingProvider.Name, ex.Message);
+            throw;
+        }
 
         _selector.RecordSuccess(embeddingProvider.Name, apiKey);
         return rawVectors.Select(v => (float[]?)v).ToList();

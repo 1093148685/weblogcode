@@ -181,6 +181,11 @@ public class AiChatController : ControllerBase
 
         var fullResponse = new StringBuilder();
         var model = request.Model ?? "deepseek-chat";
+        var chatMode = string.IsNullOrWhiteSpace(request.Mode)
+            ? (request.KbId.HasValue && request.KbId.Value > 0 ? "rag" : "normal")
+            : request.Mode.Trim().ToLowerInvariant();
+        var ragKbId = request.KbId.GetValueOrDefault();
+        var useRag = chatMode == "rag" && ragKbId > 0;
 
         var pluginConfig = await LoadPluginConfigAsync("chat_assistant");
         var systemPrompt = pluginConfig.GetValueOrDefault("systemPrompt")?.ToString();
@@ -195,6 +200,23 @@ public class AiChatController : ControllerBase
                 Role = m.Role,
                 Content = m.Content
             }).ToList();
+            var ragSources = new List<PortalRagSource>();
+
+            if (useRag)
+            {
+                var systemMessages = messages.Where(m => m.Role == "system").ToList();
+                var recentMessages = messages.Where(m => m.Role != "system").TakeLast(6).ToList();
+                messages = systemMessages.Concat(recentMessages).ToList();
+            }
+
+            if (!useRag)
+            {
+                messages.Insert(0, new AiChatMessage
+                {
+                    Role = "system",
+                    Content = "当前是普通聊天模式，未启用知识库检索。请直接回答用户问题，不要以“知识库中没有相关内容”作为拒答理由，也不要提及知识库命中情况。"
+                });
+            }
 
             // ── 上下文压缩：超过20条时将早期消息压缩为摘要 ──
             if (request.CompressContext && messages.Count > 20)
@@ -243,14 +265,17 @@ public class AiChatController : ControllerBase
             }
 
             // ── RAG 知识库检索增强 ──
-            if (request.KbId.HasValue && request.KbId.Value > 0)
+            if (useRag)
             {
                 try
                 {
+                    await SendEvent("rag_status", new { step = "analyze", status = "running", message = "正在理解问题..." });
                     var userQuery = messages.LastOrDefault(m => m.Role == "user")?.Content ?? "";
                     if (!string.IsNullOrEmpty(userQuery))
                     {
-                        var retrieved = await _ragService.RetrieveAsync(request.KbId.Value, userQuery, topK: 5);
+                        await SendEvent("rag_status", new { step = "retrieve", status = "running", message = "正在检索知识库..." });
+                        var retrieved = await _ragService.RetrieveAsync(ragKbId, userQuery, topK: 5);
+                        await SendEvent("rag_status", new { step = "filter", status = "running", message = $"正在筛选 {retrieved.Count} 条候选内容..." });
                         // 向量检索：余弦相似度>=0.3；关键词检索：score 为命中词数，>=1 表示命中
                         var relevantChunks = retrieved.Where(c =>
                             c.Score >= 1f ||    // 关键词检索
@@ -259,21 +284,61 @@ public class AiChatController : ControllerBase
 
                         if (relevantChunks.Count > 0)
                         {
+                            await SendEvent("rag_status", new { step = "filter", status = "completed", message = $"筛选出 {relevantChunks.Count} 条可引用来源" });
+                            ragSources = relevantChunks.Select((chunk, index) => new PortalRagSource
+                            {
+                                Index = index + 1,
+                                DocumentId = chunk.DocumentId,
+                                ChunkId = chunk.ChunkId,
+                                Title = chunk.DocumentTitle,
+                                Content = chunk.Content.Length > 180 ? chunk.Content[..180] + "..." : chunk.Content,
+                                Score = (float)Math.Round(chunk.Score, 3)
+                            }).ToList();
+
+                            await SendEvent("rag_sources", new
+                            {
+                                message = $"命中 {ragSources.Count} 条知识库来源",
+                                sources = ragSources.Select(s => new
+                                {
+                                    index = s.Index,
+                                    documentId = s.DocumentId,
+                                    chunkId = s.ChunkId,
+                                    title = s.Title,
+                                    content = s.Content,
+                                    score = s.Score
+                                })
+                            });
+                            await SendEvent("rag_status", new { step = "sources", status = "completed", message = $"已准备 {ragSources.Count} 条引用来源" });
+
                             var ragContext = new StringBuilder();
                             ragContext.AppendLine("【知识库参考内容】");
-                            ragContext.AppendLine("你是一个只基于以下提供的知识库内容进行回答的助手。");
+                            ragContext.AppendLine($"用户问题：{userQuery}");
+                            ragContext.AppendLine("你是一个严格基于以下知识库检索结果回答的助手。");
                             ragContext.AppendLine("规则：");
-                            ragContext.AppendLine("1. 只根据下面的知识库内容回答，不要使用你自己的训练知识");
-                            ragContext.AppendLine("2. 如果知识库内容中没有问题的答案，请直接说明：没有找到相关信息");
-                            ragContext.AppendLine("3. 不要编造或推测知识库中没有的内容");
+                            ragContext.AppendLine("1. 下面的内容是检索系统已经命中的相关资料，不要忽略它们。");
+                            ragContext.AppendLine("2. 如果资料标题或正文与用户问题的主题相同或相近，例如大小写不同的 FastAPI / fastapi，也应视为相关。");
+                            ragContext.AppendLine("3. 必须优先基于这些资料提炼回答，并在要点后用 [1]、[2] 这样的编号标出来源。");
+                            ragContext.AppendLine("4. 只有当所有检索资料都完全无法支撑问题时，才说明没有找到相关信息。");
+                            ragContext.AppendLine("5. 不要编造资料中没有的版本号、步骤或结论；可以说“资料中提到”。");
                             ragContext.AppendLine();
                             ragContext.AppendLine("知识库内容如下：");
                             ragContext.AppendLine();
                             for (var i = 0; i < relevantChunks.Count; i++)
                             {
-                                ragContext.AppendLine($"[{i + 1}] 来源：{relevantChunks[i].DocumentTitle}");
+                                ragContext.AppendLine($"[{i + 1}] 来源标题：{relevantChunks[i].DocumentTitle}");
+                                ragContext.AppendLine($"相关度：{Math.Round(relevantChunks[i].Score, 3)}");
                                 ragContext.AppendLine(relevantChunks[i].Content);
                                 ragContext.AppendLine();
+                            }
+
+                            var lastUserMessage = messages.LastOrDefault(m => m.Role == "user");
+                            if (lastUserMessage != null)
+                            {
+                                lastUserMessage.Content = ragContext + "\n\n"
+                                    + "请基于以上已经命中的知识库资料回答用户问题。"
+                                    + "注意：这些资料已经被检索系统判定为相关，不能回答“知识库没有相关内容”。"
+                                    + "如果资料只覆盖部分内容，请总结已覆盖的部分，并说明资料未覆盖的部分。\n\n"
+                                    + $"用户问题：{userQuery}";
                             }
 
                             if (messages.First().Role == "system")
@@ -285,11 +350,21 @@ public class AiChatController : ControllerBase
                                 messages.Insert(0, new AiChatMessage { Role = "system", Content = ragContext.ToString() });
                             }
                         }
+                        else
+                        {
+                            await SendEvent("rag_status", new { step = "filter", status = "warning", message = "没有筛选出足够相关的知识库内容" });
+                            await SendEvent("rag_sources", new
+                            {
+                                message = "没有命中足够相关的知识库内容",
+                                sources = ragSources
+                            });
+                        }
                     }
                 }
                 catch (Exception ragEx)
                 {
                     _logger.LogWarning(ragEx, "RAG retrieval failed for kb {KbId}, continuing without RAG", request.KbId);
+                    await SendEvent("rag_error", new { step = "retrieve", status = "error", message = "知识库检索失败，已切换为普通对话", detail = ragEx.Message });
                 }
             }
 
@@ -327,6 +402,11 @@ public class AiChatController : ControllerBase
                 return;
             }
 
+            if (useRag)
+            {
+                await SendEvent("rag_status", new { step = "generate", status = "running", message = ragSources.Count > 0 ? "正在基于引用来源生成回答..." : "正在生成回答..." });
+            }
+
             await foreach (var chunk in provider.ChatStreamAsync(aiRequest, apiKey, ct))
             {
                 if (string.IsNullOrEmpty(chunk))
@@ -334,6 +414,11 @@ public class AiChatController : ControllerBase
 
                 fullResponse.Append(chunk);
                 await SendChunk(chunk);
+            }
+
+            if (useRag)
+            {
+                await SendEvent("rag_status", new { step = "generate", status = "completed", message = "回答生成完成" });
             }
 
             await SendDone();
@@ -389,6 +474,13 @@ public class AiChatController : ControllerBase
     private async Task SendChunk(string content)
     {
         var data = JsonSerializer.Serialize(new { content });
+        await Response.WriteAsync($"data: {data}\n\n");
+        await Response.Body.FlushAsync();
+    }
+
+    private async Task SendEvent(string type, object payload)
+    {
+        var data = JsonSerializer.Serialize(new { type, payload });
         await Response.WriteAsync($"data: {data}\n\n");
         await Response.Body.FlushAsync();
     }
@@ -719,6 +811,8 @@ public class PortalChatRequest
     public string? SessionId { get; set; }
     public string? ClientId { get; set; }
     public string? Model { get; set; }
+    /// <summary>对话模式：normal 普通聊天；rag 知识库问答。为空时兼容旧逻辑：有 KbId 则 rag，否则 normal。</summary>
+    public string? Mode { get; set; }
     public string? ArticleContent { get; set; }
     public string? ArticleTitle { get; set; }
     /// <summary>可选：指定知识库 ID，传入后自动检索并注入上下文（RAG）</summary>
@@ -731,6 +825,16 @@ public class PortalChatMessageItem
 {
     public string Role { get; set; } = "user";
     public string Content { get; set; } = string.Empty;
+}
+
+public class PortalRagSource
+{
+    public int Index { get; set; }
+    public long DocumentId { get; set; }
+    public long ChunkId { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+    public float Score { get; set; }
 }
 
 public class AiModelInfo
