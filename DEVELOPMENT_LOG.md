@@ -251,6 +251,178 @@ VITE_API_BASE_URL=https://你的后端域名.com/api
 
 ---
 
+---
+
+## 2026-04-03
+
+### 前端 Docker 容器样式不更新问题修复
+
+#### 问题描述
+重新构建并推送 Docker 镜像后，部署的前端容器显示的仍然是旧样式，CSS/页面变更没有生效。
+
+#### 根本原因（两个叠加问题）
+
+**原因 1：Dockerfile 没有在容器内构建前端**
+
+原始 Dockerfile 直接 `COPY ./dist`，依赖本地已经存在的构建产物：
+
+```dockerfile
+# 旧 Dockerfile（有问题）
+FROM nginx:alpine
+COPY ./dist /usr/share/nginx/html   # 直接拷贝本地 dist，不在容器内构建
+COPY ./nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+这意味着如果本地 `dist/` 是旧的（或根本没运行过 `npm run build`），Docker 镜像里就是旧代码。
+
+**原因 2：docker tag 指向了旧镜像，push 推送了错误版本**
+
+执行流程存在 tag 不一致问题：
+
+```bash
+docker build -t weblog-web:latest .          # 构建新镜像，tag 为 weblog-web:latest
+docker tag weblog-web-v2:latest xxx/...      # ❌ tag 的是旧镜像 weblog-web-v2，不是刚构建的
+docker push xxx/weblog-web-v2:latest         # 推送了旧内容
+```
+
+正确的应该是：
+
+```bash
+docker build -t weblog-web:latest .
+docker tag weblog-web:latest xxx/weblog-web:latest   # ✅ tag 刚构建的那个
+docker push xxx/weblog-web:latest
+```
+
+#### 解决方案
+
+**修复 1：改为多阶段构建，`npm run build` 在容器内自动执行**
+
+```dockerfile
+# ── 阶段一：构建前端 ──
+FROM node:18-alpine AS builder
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm install --frozen-lockfile
+COPY . .
+RUN npm run build                              # 在容器内编译，不依赖本地 dist
+
+# ── 阶段二：Nginx 托管 ──
+FROM nginx:alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY ./nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+**修复 2：build / tag / push 保持镜像名一致**
+
+```bash
+docker build -t weblog-web:latest .
+docker tag weblog-web:latest 你的用户名/weblog-web:latest
+docker push 你的用户名/weblog-web:latest
+```
+
+**修复 3：新增 `.dockerignore` 避免 node_modules 被打入构建上下文**
+
+```
+node_modules
+dist
+.git
+.gitignore
+*.md
+```
+
+#### 优点对比
+
+| | 旧方式 | 新方式（多阶段） |
+|---|---|---|
+| 是否依赖本地 dist | 是，必须手动 `npm run build` | 否，容器内自动构建 |
+| 样式是否保证最新 | 不保证（本地忘了 build 就是旧的） | 保证（每次 docker build 都重新编译） |
+| 镜像大小 | 只含 nginx + dist，小 | 最终镜像同样只含 nginx + dist，小 |
+| 构建上下文大小 | 如不忽略 node_modules 会很大 | `.dockerignore` 后只传源码，快 |
+
+#### 修改文件
+- `weblog-vue3/Dockerfile` - 改为多阶段构建
+- `weblog-vue3/.dockerignore` - 新增，排除无关文件
+
+---
+
+### AI 插件市场无效插件移除
+
+#### 问题描述
+插件市场中展示了"翻译插件"、"标签推荐"、"编辑器助手"三个插件，但后端实际未实现对应功能，配置了也无法生效，给用户造成误导。
+
+#### 解决方案
+从 `ai-plugin.vue` 中移除这三个插件的相关逻辑：
+1. 删除分类筛选中的 `editor`（编辑辅助）选项
+2. 删除抽屉配置表单中三个插件专属的 `<template>` 配置块
+3. 删除 `drawerForm` 中 `tagCount`、`defaultTargetLanguage` 字段
+4. 删除 `openDrawer()` 和 `buildConfigJson()` 中对应的三个分支
+5. 删除 `categoryMeta` 中的 `editor` 分类定义
+
+#### 修改文件
+- `weblog-vue3/src/pages/admin/ai-plugin.vue`
+
+---
+
+### 后台日期选择器输入框无边框修复
+
+#### 问题描述
+后台管理页面中所有日期选择器（单日期、日期区间）的输入框没有可见边框，视觉上无法识别为可交互的输入框。
+
+#### 根本原因
+Element Plus 的 `el-date-editor`（单日期）和 `el-range-editor`（日期区间）DOM 结构不同：
+
+- **`el-date-editor`**：外层容器 + 内层 `.el-input__wrapper`，边框应加在**内层 `.el-input__wrapper`** 上
+- **`el-range-editor`**：没有内层 wrapper，边框必须加在**外层容器自身** 上
+
+原 CSS 将两者都设为 `border: none !important`，导致日期区间选择器完全没有边框。
+
+```css
+/* 旧代码（有问题）—— 两者都清除了边框 */
+.el-date-editor {
+  border: none !important;
+}
+.el-range-editor {
+  border: none !important;  /* ❌ 区间选择器边框消失 */
+}
+```
+
+#### 解决方案
+拆分为两条独立规则，区间选择器保留边框：
+
+```css
+/* 单日期：外层清除，边框由内层 .el-input__wrapper 控制 */
+.el-date-editor {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  width: auto !important;
+  display: inline-flex !important;
+}
+
+/* 日期区间：边框直接加在外层容器上 */
+.el-range-editor {
+  border: 1px solid #d1d5db !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  width: auto !important;
+  display: inline-flex !important;
+}
+.el-range-editor:hover { border-color: #9ca3af !important; }
+.el-range-editor.is-active { border-color: #374151 !important; box-shadow: none !important; }
+```
+
+暗色模式同样按此逻辑拆分。
+
+#### 修改文件
+- `weblog-vue3/src/assets/main.css` - 拆分 `el-date-editor` 和 `el-range-editor` 的 CSS 规则
+
+---
+
 ## 历史记录
 
 ### 2026-03-XX (之前的修复)

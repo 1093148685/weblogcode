@@ -1,0 +1,14 @@
+.git
+.vs
+.vscode
+**/obj
+**/bin
+*.user
+*.suo
+*.log
+publish
+weblog-vue3
+weblog-vue3-2
+weblog-springboot
+docs
+*.md
