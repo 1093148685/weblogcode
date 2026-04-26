@@ -30,15 +30,15 @@
             </div>
 
             <!-- 分页列表 -->
-            <el-table :data="tableData" border stripe v-loading="tableLoading" table-layout="auto">
-                <el-table-column type="index" label="序号" width="60" />
-                <el-table-column prop="title" label="标题"  />
-                <el-table-column prop="cover" label="封面" >
+            <el-table :data="tableData" border stripe v-loading="tableLoading" table-layout="auto" class="admin-table compact-admin-table">
+                <el-table-column type="index" label="序号" width="80" align="center" />
+                <el-table-column prop="title" label="标题" min-width="220" show-overflow-tooltip />
+                <el-table-column prop="cover" label="封面" width="160" align="center">
                     <template #default="scope">
                         <el-image style="width: 100px;" :src="scope.row.cover" />
                     </template>
                 </el-table-column>
-                <el-table-column prop="isTop" label="是否置顶" >
+                <el-table-column prop="isTop" label="是否置顶" width="120" align="center">
                     <template #default="scope">
                         <el-switch
                             @change="handleIsTopChange(scope.row)"
@@ -49,8 +49,8 @@
                         />
                     </template>
                 </el-table-column>
-                <el-table-column prop="createTime" label="发布时间" />
-                <el-table-column prop="isPublish" label="是否发布" >
+                <el-table-column prop="createTime" label="发布时间" width="190" show-overflow-tooltip />
+                <el-table-column prop="isPublish" label="是否发布" width="120" align="center">
                     <template #default="scope">
                         <el-switch
                             @change="handleIsPublishChange(scope.row)"

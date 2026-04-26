@@ -114,7 +114,9 @@
                 </div>
 
                 <!-- 评论组件 -->
-                <Comment></Comment>
+                <div id="comments">
+                    <Comment></Comment>
+                </div>
             </div>
 
             <!-- 右边侧边栏 -->
@@ -127,7 +129,7 @@
     </main>
 
     <!-- 返回顶部 -->
-    <ScrollToTopButton></ScrollToTopButton>
+    <ScrollToTopButton :show-comment-button="true"></ScrollToTopButton>
 
     <Footer></Footer>
 </template>

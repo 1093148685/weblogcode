@@ -30,10 +30,10 @@
             </div>
 
             <!-- 分页列表 -->
-            <el-table :data="tableData" border stripe style="width: 100%" v-loading="tableLoading">
-                <el-table-column prop="id" label="ID" width="50" />
-                <el-table-column prop="title" label="标题" width="300" />
-                <el-table-column prop="cover" label="封面" width="120">
+            <el-table :data="tableData" border stripe style="width: 100%" class="admin-table compact-admin-table" v-loading="tableLoading">
+                <el-table-column prop="id" label="ID" width="72" align="center" />
+                <el-table-column prop="title" label="标题" min-width="320" show-overflow-tooltip />
+                <el-table-column prop="cover" label="封面" width="140" align="center">
                     <template #default="scope">
                         <el-image style="width: 100px;" :src="scope.row.cover" />
                     </template>
@@ -49,7 +49,7 @@
                         />
                     </template>
                 </el-table-column>
-                <el-table-column prop="createTime" label="发布时间" width="180" />
+                <el-table-column prop="createTime" label="发布时间" width="190" show-overflow-tooltip />
                 <el-table-column label="AI摘要" width="110" align="center">
                     <template #default="scope">
                         <el-tag v-if="aiSummaryStatus[scope.row.id]?.hasSummary" type="success" size="small" effect="plain">
@@ -66,7 +66,7 @@
                         </el-tag>
                     </template>
                 </el-table-column>
-                <el-table-column label="操作">
+                <el-table-column label="操作" min-width="320" fixed="right">
                     <template #default="scope">
                         <el-button size="small" @click="showArticleUpdateEditor(scope.row)">
                             <el-icon class="mr-1"><Edit /></el-icon>
@@ -1004,14 +1004,23 @@ const handleIsTopChange = (row) => {
 }
 
 .article-editor-dialog .el-dialog__header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
     padding: 0 24px !important;
     background: rgba(8, 13, 24, 0.92) !important;
     border-bottom: 1px solid var(--admin-border) !important;
 }
 
 .article-editor-dialog .el-dialog__body {
-    padding: 18px 24px 32px !important;
+    padding: 22px 24px 32px !important;
     color: var(--admin-text);
+}
+
+.article-editor-dialog .el-affix--fixed {
+    position: static !important;
+    width: 100% !important;
+    transform: none !important;
 }
 
 .article-editor-header {

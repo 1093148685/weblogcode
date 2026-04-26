@@ -729,7 +729,7 @@ const generateContent = async () => {
 .dialog-title {
     font-weight: 600;
     font-size: 16px;
-    color: #1f2937;
+    color: var(--admin-text);
 }
 
 .header-actions {
@@ -783,8 +783,8 @@ const generateContent = async () => {
 
 /* 对话区域 - 竖长形 */
 .conversation-area {
-    background: #fafbfc;
-    border: 1px solid #e5e7eb;
+    background: var(--admin-bg-soft);
+    border: 1px solid var(--admin-border);
     border-radius: 16px;
     height: 420px;
     min-height: 420px;
@@ -815,7 +815,7 @@ const generateContent = async () => {
 
 .empty-text {
     font-size: 15px;
-    color: #374151;
+    color: var(--admin-text);
     margin: 0 0 6px 0;
     font-weight: 500;
 }
@@ -891,9 +891,9 @@ const generateContent = async () => {
 }
 
 .assistant .message-bubble {
-    background: #ffffff;
-    color: #374151;
-    border: 1px solid #e5e7eb;
+    background: var(--admin-bg-card);
+    color: var(--admin-text);
+    border: 1px solid var(--admin-border);
     border-bottom-left-radius: 6px;
 }
 
@@ -1015,8 +1015,8 @@ const generateContent = async () => {
     cursor: pointer;
     white-space: nowrap;
     border: none;
-    background: #f3f4f6;
-    color: #6b7280;
+    background: var(--admin-bg-soft);
+    color: var(--admin-text-muted);
     transition: all 0.2s;
     font-size: 12px;
     padding: 6px 12px;
@@ -1024,8 +1024,8 @@ const generateContent = async () => {
 }
 
 .template-tag:hover {
-    background: #e8eaf0;
-    color: #667eea;
+    background: var(--admin-bg-hover);
+    color: var(--admin-accent);
 }
 
 /* 输入区域 */
@@ -1041,7 +1041,9 @@ const generateContent = async () => {
     padding: 12px 14px;
     font-size: 14px;
     line-height: 1.5;
-    border: 1px solid #e5e7eb;
+    color: var(--admin-text);
+    background: var(--admin-bg-soft);
+    border: 1px solid var(--admin-border);
 }
 
 .input-section :deep(.el-textarea__inner:focus) {
@@ -1139,6 +1141,10 @@ const generateContent = async () => {
 }
 
 .ai-assistant-dialog .el-dialog {
+    background:
+        radial-gradient(circle at 20% 0%, rgba(99, 102, 241, 0.10), transparent 32%),
+        var(--admin-bg-card) !important;
+    border: 1px solid var(--admin-border) !important;
     border-radius: 16px;
     overflow: hidden;
 }
@@ -1146,7 +1152,8 @@ const generateContent = async () => {
 .ai-assistant-dialog .el-dialog__header {
     padding: 16px 20px;
     margin: 0;
-    background: #fff;
+    background: var(--admin-bg-soft) !important;
+    border-bottom: 1px solid var(--admin-border);
 }
 
 .ai-assistant-dialog .el-dialog__headerbtn {
@@ -1160,7 +1167,7 @@ const generateContent = async () => {
 
 .ai-assistant-dialog .el-dialog__body {
     padding: 16px 20px;
-    background: #fff;
+    background: var(--admin-bg-card) !important;
 }
 
 .ai-assistant-dialog .el-dialog__footer {
