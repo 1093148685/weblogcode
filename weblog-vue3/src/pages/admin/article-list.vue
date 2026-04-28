@@ -32,7 +32,24 @@
             <!-- 分页列表 -->
             <el-table :data="tableData" border stripe style="width: 100%" class="admin-table compact-admin-table" v-loading="tableLoading">
                 <el-table-column prop="id" label="ID" width="72" align="center" />
-                <el-table-column prop="title" label="标题" min-width="320" show-overflow-tooltip />
+                <el-table-column prop="title" label="标题" min-width="360" show-overflow-tooltip>
+                    <template #default="scope">
+                        <div class="article-title-cell">
+                            <span class="article-title-text">{{ scope.row.title }}</span>
+                            <span
+                                :class="[
+                                    'article-summary-chip',
+                                    aiSummaryStatus[scope.row.id]?.hasSummary ? 'is-ready' : 'is-empty'
+                                ]"
+                            >
+                                <el-icon v-if="aiSummaryStatus[scope.row.id]?.loading" class="is-loading"><Loading /></el-icon>
+                                <el-icon v-else-if="aiSummaryStatus[scope.row.id]?.hasSummary"><CircleCheck /></el-icon>
+                                <el-icon v-else><CircleClose /></el-icon>
+                                {{ aiSummaryStatus[scope.row.id]?.loading ? '摘要生成中' : aiSummaryStatus[scope.row.id]?.hasSummary ? '已有 AI 摘要' : '暂无 AI 摘要' }}
+                            </span>
+                        </div>
+                    </template>
+                </el-table-column>
                 <el-table-column prop="cover" label="封面" width="140" align="center">
                     <template #default="scope">
                         <el-image style="width: 100px;" :src="scope.row.cover" />
@@ -49,46 +66,50 @@
                         />
                     </template>
                 </el-table-column>
-                <el-table-column prop="createTime" label="发布时间" width="190" show-overflow-tooltip />
-                <el-table-column label="AI摘要" width="110" align="center">
+                <el-table-column prop="status" label="发布状态" width="120" align="center">
                     <template #default="scope">
-                        <el-tag v-if="aiSummaryStatus[scope.row.id]?.hasSummary" type="success" size="small" effect="plain">
-                            <el-icon class="mr-1"><CircleCheck /></el-icon>
-                            有
-                        </el-tag>
-                        <el-tag v-else-if="aiSummaryStatus[scope.row.id]?.loading" type="warning" size="small" effect="plain">
-                            <el-icon class="is-loading"><Loading /></el-icon>
-                            生成中
-                        </el-tag>
-                        <el-tag v-else type="info" size="small" effect="plain">
-                            <el-icon class="mr-1"><CircleClose /></el-icon>
-                            无
-                        </el-tag>
+                        <el-switch
+                            :model-value="scope.row.status === 1"
+                            inline-prompt
+                            active-text="发布"
+                            inactive-text="草稿"
+                            @change="value => handleArticleStatusChange(scope.row, value)"
+                        />
                     </template>
                 </el-table-column>
-                <el-table-column label="操作" min-width="320" fixed="right">
+                <el-table-column prop="createTime" label="发布时间" width="190" show-overflow-tooltip />
+                <el-table-column label="操作" width="230" fixed="right">
                     <template #default="scope">
-                        <el-button size="small" @click="showArticleUpdateEditor(scope.row)">
-                            <el-icon class="mr-1"><Edit /></el-icon>
-                            编辑
-                        </el-button>
-                        <el-button size="small" @click="goArticleDetailPage(scope.row.id)">
-                            <el-icon class="mr-1"><View /></el-icon>
-                            预览
-                        </el-button>
-                        <el-button
-                            type="warning"
-                            size="small"
-                            @click="generateAiSummary(scope.row)"
-                            :disabled="aiSummaryStatus[scope.row.id]?.loading"
-                        >
-                            <el-icon class="mr-1"><MagicStick /></el-icon>
-                            {{ aiSummaryStatus[scope.row.id]?.loading ? '生成中' : 'AI摘要' }}
-                        </el-button>
-                        <el-button type="danger" size="small" @click="deleteArticleSubmit(scope.row)">
-                            <el-icon class="mr-1"><Delete /></el-icon>
-                            删除
-                        </el-button>
+                        <div class="table-action-group">
+                            <el-button size="small" @click="showArticleUpdateEditor(scope.row)">
+                                <el-icon class="mr-1"><Edit /></el-icon>
+                                编辑
+                            </el-button>
+                            <el-button size="small" @click="goArticleDetailPage(scope.row.id)">
+                                <el-icon class="mr-1"><View /></el-icon>
+                                预览
+                            </el-button>
+                            <el-dropdown trigger="click" placement="bottom-end">
+                                <el-button size="small" class="more-action-btn">
+                                    更多
+                                </el-button>
+                                <template #dropdown>
+                                    <el-dropdown-menu>
+                                        <el-dropdown-item
+                                            :disabled="aiSummaryStatus[scope.row.id]?.loading"
+                                            @click="generateAiSummary(scope.row)"
+                                        >
+                                            <el-icon><MagicStick /></el-icon>
+                                            {{ aiSummaryStatus[scope.row.id]?.loading ? '摘要生成中' : '生成 AI 摘要' }}
+                                        </el-dropdown-item>
+                                        <el-dropdown-item class="danger-dropdown-item" @click="deleteArticleSubmit(scope.row)">
+                                            <el-icon><Delete /></el-icon>
+                                            删除文章
+                                        </el-dropdown-item>
+                                    </el-dropdown-menu>
+                                </template>
+                            </el-dropdown>
+                        </div>
                     </template>
                 </el-table-column>
             </el-table>
@@ -106,104 +127,102 @@
         <el-dialog v-model="isArticlePublishEditorShow" class="article-editor-dialog" :fullscreen="true" :show-close="false"
             :close-on-press-escape="false">
             <template #header="{ close, titleId, titleClass }">
-                <!-- 固钉组件，固钉到顶部 -->
-                <el-affix :offset="20" style="width: 100%;">
-                    <!-- 指定 flex 布局， 高度为 10， 背景色为白色 -->
-                    <div class="article-editor-header">
-                        <!-- 字体加粗 -->
-                        <h4 class="font-bold">写文章</h4>
-                        <!-- 靠右对齐 -->
-                        <div class="ml-auto flex">
-                            <el-button class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('draft'))">
-                                <el-icon class="mr-1"><MagicStick /></el-icon>
-                                AI 写作
-                            </el-button>
-                            <el-button @click="isArticlePublishEditorShow = false">取消</el-button>
-                            <el-button type="primary" @click="publishArticleSubmit">
-                                <el-icon class="mr-1">
-                                    <Promotion />
-                                </el-icon>
-                                发布
-                            </el-button>
-                        </div>
+                <div class="article-editor-header">
+                    <h4 class="font-bold">写文章</h4>
+                    <div class="ml-auto flex">
+                        <el-button class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('draft'))">
+                            <el-icon class="mr-1"><MagicStick /></el-icon>
+                            AI 写作
+                        </el-button>
+                        <el-button @click="isArticlePublishEditorShow = false">取消</el-button>
+                        <el-button type="primary" @click="publishArticleSubmit">
+                            <el-icon class="mr-1">
+                                <Promotion />
+                            </el-icon>
+                            发布
+                        </el-button>
                     </div>
-                </el-affix>
+                </div>
             </template>
-            <!-- label-position="top" 用于指定 label 元素在上面 -->
-            <el-form :model="form" ref="publishArticleFormRef" label-position="top" size="large" :rules="rules">
-                <el-form-item label="标题" prop="title">
-                    <el-input v-model="form.title" autocomplete="off" size="large" maxlength="40" show-word-limit
-                        clearable />
-                </el-form-item>
-                <el-form-item label="内容" prop="content">
-                    <div class="article-ai-toolbar">
-                        <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('continue'))">
-                            <el-icon><MagicStick /></el-icon>
-                            续写
-                        </el-button>
-                        <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('outline'))">
-                            <el-icon><MagicStick /></el-icon>
-                            大纲
-                        </el-button>
-                        <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('title'))">
-                            <el-icon><MagicStick /></el-icon>
-                            标题
-                        </el-button>
-                        <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('polish'))">
-                            <el-icon><MagicStick /></el-icon>
-                            润色
-                        </el-button>
-                        <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('summary'))">
-                            <el-icon><MagicStick /></el-icon>
-                            生成摘要
-                        </el-button>
-                        <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('seo'))">
-                            <el-icon><MagicStick /></el-icon>
-                            SEO
-                        </el-button>
-                        <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('keywords'))">
-                            <el-icon><MagicStick /></el-icon>
-                            关键词
-                        </el-button>
-                        <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('review'))">
-                            <el-icon><MagicStick /></el-icon>
-                            检查
-                        </el-button>
-                    </div>
-                    <!-- Markdown 编辑器 -->
-                    <MdEditor v-model="form.content" theme="dark" @onUploadImg="onUploadImg" editorId="publishArticleEditor" :no-upload-img="true" />
-                </el-form-item>
-                <el-form-item label="封面" prop="cover">
-                    <el-upload class="avatar-uploader" action="#" :on-change="handleCoverChange" :auto-upload="false"
-                        :show-file-list="false">
-                        <img v-if="form.cover" :src="form.cover" class="avatar" />
-                        <el-icon v-else class="avatar-uploader-icon">
-                            <Plus />
-                        </el-icon>
-                    </el-upload>
-                </el-form-item>
-                <el-form-item label="摘要" prop="summary">
-                    <!-- :rows="3" 指定 textarea 默认显示 3 行 -->
-                    <el-input v-model="form.summary" :rows="3" type="textarea" placeholder="请输入文章摘要" />
-                </el-form-item>
-<el-form-item label="分类" prop="categoryId">
-                    <el-select v-model="form.categoryId" clearable placeholder="---请选择---" size="large">
-                        <el-option v-for="item in categories" :key="item.id" :label="item.name" :value="item.id" />
-                    </el-select>
-                </el-form-item>
-                <el-form-item label="标签" prop="tags">
-                    <span class="w-60">
-                        <!-- 标签选择 -->
-                        <el-select v-model="form.tags" multiple filterable remote reserve-keyword placeholder="请输入文章标签"
-                            remote-show-suffix allow-create default-first-option :remote-method="remoteMethod"
-                            :loading="tagSelectLoading" size="large">
-                            <el-option v-for="item in tags" :key="item.id" :label="item.name" :value="item.id" />
-                        </el-select>
-                    </span>
-                </el-form-item>
-                <el-form-item label="是否发布">
-                    <el-switch v-model="form.isPublish" inline-prompt active-text="发布" inactive-text="草稿" />
-                </el-form-item>
+            <el-form :model="form" ref="publishArticleFormRef" label-position="top" size="large" :rules="rules"
+                class="article-editor-form">
+                <div class="article-editor-grid">
+                    <section class="article-editor-main">
+                        <el-form-item label="标题" prop="title" class="article-title-item">
+                            <el-input v-model="form.title" autocomplete="off" size="large" maxlength="40" show-word-limit
+                                clearable placeholder="输入一个清晰、有搜索价值的文章标题" />
+                        </el-form-item>
+                        <el-form-item label="内容" prop="content" class="article-content-item">
+                            <div class="article-ai-toolbar">
+                                <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('continue'))">
+                                    <el-icon><MagicStick /></el-icon>
+                                    续写
+                                </el-button>
+                                <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('outline'))">
+                                    <el-icon><MagicStick /></el-icon>
+                                    大纲
+                                </el-button>
+                                <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('title'))">
+                                    <el-icon><MagicStick /></el-icon>
+                                    标题
+                                </el-button>
+                                <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('polish'))">
+                                    <el-icon><MagicStick /></el-icon>
+                                    润色
+                                </el-button>
+                                <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('summary'))">
+                                    <el-icon><MagicStick /></el-icon>
+                                    摘要
+                                </el-button>
+                                <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('seo'))">
+                                    <el-icon><MagicStick /></el-icon>
+                                    SEO
+                                </el-button>
+                                <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('keywords'))">
+                                    <el-icon><MagicStick /></el-icon>
+                                    关键词
+                                </el-button>
+                                <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('review'))">
+                                    <el-icon><MagicStick /></el-icon>
+                                    检查
+                                </el-button>
+                            </div>
+                            <MdEditor v-model="form.content" :theme="editorTheme" @onUploadImg="onUploadImg" editorId="publishArticleEditor" :no-upload-img="true" />
+                        </el-form-item>
+                    </section>
+
+                    <aside class="article-meta-panel">
+                        <div class="meta-panel-title">发布设置</div>
+                        <el-form-item label="封面" prop="cover">
+                            <el-upload class="avatar-uploader" action="#" :on-change="handleCoverChange" :auto-upload="false"
+                                :show-file-list="false">
+                                <img v-if="form.cover" :src="form.cover" class="avatar" />
+                                <el-icon v-else class="avatar-uploader-icon">
+                                    <Plus />
+                                </el-icon>
+                            </el-upload>
+                        </el-form-item>
+                        <el-form-item label="摘要" prop="summary">
+                            <el-input v-model="form.summary" :rows="4" type="textarea" placeholder="用于首页卡片和 SEO 描述" />
+                        </el-form-item>
+                        <el-form-item label="分类" prop="categoryId">
+                            <el-select v-model="form.categoryId" clearable placeholder="请选择分类" size="large">
+                                <el-option v-for="item in categories" :key="item.id" :label="item.name" :value="item.id" />
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="标签" prop="tags">
+                            <el-select v-model="form.tags" multiple filterable remote reserve-keyword placeholder="输入或选择标签"
+                                remote-show-suffix allow-create default-first-option :remote-method="remoteMethod"
+                                :loading="tagSelectLoading" size="large">
+                                <el-option v-for="item in tags" :key="item.id" :label="item.name" :value="item.id" />
+                            </el-select>
+                        </el-form-item>
+                        <div class="editor-stats">
+                            <span>正文 {{ countPlainText(form.content) }} 字</span>
+                            <span>摘要 {{ countPlainText(form.summary) }} 字</span>
+                        </div>
+                    </aside>
+                </div>
             </el-form>
         </el-dialog>
 
@@ -211,118 +230,116 @@
         <el-dialog v-model="isArticleUpdateEditorShow" class="article-editor-dialog" :fullscreen="true" :show-close="false"
             :close-on-press-escape="false">
             <template #header="{ close, titleId, titleClass }">
-                <!-- 固钉组件，固钉到顶部 -->
-                <el-affix :offset="20" style="width: 100%;">
-                    <!-- 指定 flex 布局， 高度为 10， 背景色为白色 -->
-                    <div class="article-editor-header">
-                        <!-- 字体加粗 -->
-                        <h4 class="font-bold">编辑文章</h4>
-                        <!-- 靠右对齐 -->
-                        <div class="ml-auto flex">
-                            <el-button class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('draft'))">
-                                <el-icon class="mr-1"><MagicStick /></el-icon>
-                                AI 写作
-                            </el-button>
-                            <el-button @click="isArticleUpdateEditorShow = false">取消</el-button>
-                            <el-button type="primary" @click="updateSubmit">
-                                <el-icon class="mr-1">
-                                    <Promotion />
-                                </el-icon>
-                                保存
-                            </el-button>
-                        </div>
+                <div class="article-editor-header">
+                    <h4 class="font-bold">编辑文章</h4>
+                    <div class="ml-auto flex">
+                        <el-button class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('draft'))">
+                            <el-icon class="mr-1"><MagicStick /></el-icon>
+                            AI 写作
+                        </el-button>
+                        <el-button @click="isArticleUpdateEditorShow = false">取消</el-button>
+                        <el-button type="primary" @click="updateSubmit">
+                            <el-icon class="mr-1">
+                                <Promotion />
+                            </el-icon>
+                            保存
+                        </el-button>
                     </div>
-                </el-affix>
+                </div>
             </template>
-            <!-- label-position="top" 用于指定 label 元素在上面 -->
-            <el-form :model="updateArticleForm" ref="updateArticleFormRef" label-position="top" size="large" :rules="rules">
-                <el-form-item label="标题" prop="title">
-                    <el-input v-model="updateArticleForm.title" autocomplete="off" size="large" maxlength="40"
-                        show-word-limit clearable />
-                </el-form-item>
-                <el-form-item label="内容" prop="content">
-                    <div class="article-ai-toolbar">
-                        <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('continue'))">
-                            <el-icon><MagicStick /></el-icon>
-                            续写
-                        </el-button>
-                        <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('outline'))">
-                            <el-icon><MagicStick /></el-icon>
-                            大纲
-                        </el-button>
-                        <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('title'))">
-                            <el-icon><MagicStick /></el-icon>
-                            标题
-                        </el-button>
-                        <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('polish'))">
-                            <el-icon><MagicStick /></el-icon>
-                            润色
-                        </el-button>
-                        <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('summary'))">
-                            <el-icon><MagicStick /></el-icon>
-                            生成摘要
-                        </el-button>
-                        <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('seo'))">
-                            <el-icon><MagicStick /></el-icon>
-                            SEO
-                        </el-button>
-                        <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('keywords'))">
-                            <el-icon><MagicStick /></el-icon>
-                            关键词
-                        </el-button>
-                        <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('review'))">
-                            <el-icon><MagicStick /></el-icon>
-                            检查
-                        </el-button>
-                    </div>
-                    <!-- Markdown 编辑器 -->
-                    <MdEditor v-model="updateArticleForm.content" theme="dark" @onUploadImg="onUploadImg"
-                        editorId="updateArticleEditor" :no-upload-img="true" />
-                </el-form-item>
-                <el-form-item label="封面" prop="cover">
-                    <el-upload class="avatar-uploader" action="#" :on-change="handleUpdateCoverChange" :auto-upload="false"
-                        :show-file-list="false">
-                        <img v-if="updateArticleForm.cover" :src="updateArticleForm.cover" class="avatar" />
-                        <el-icon v-else class="avatar-uploader-icon">
-                            <Plus />
-                        </el-icon>
-                    </el-upload>
-                </el-form-item>
-                <el-form-item label="摘要" prop="summary">
-                    <!-- :rows="3" 指定 textarea 默认显示 3 行 -->
-                    <el-input v-model="updateArticleForm.summary" :rows="3" type="textarea" placeholder="请输入文章摘要" />
-                </el-form-item>
-<el-form-item label="分类" prop="categoryId">
-                    <el-select v-model="updateArticleForm.categoryId" clearable placeholder="---请选择---" size="large">
-                        <el-option v-for="item in categories" :key="item.id" :label="item.name" :value="item.id" />
-                    </el-select>
-                </el-form-item>
-                <el-form-item label="标签" prop="tags">
-                    <span class="w-60">
-                        <!-- 标签选择 -->
-                        <el-select v-model="updateArticleForm.tags" multiple filterable remote reserve-keyword
-                            placeholder="请输入文章标签" remote-show-suffix allow-create default-first-option
-                            :remote-method="remoteMethod" :loading="tagSelectLoading" size="large">
-                            <el-option v-for="item in tags" :key="item.id" :label="item.name" :value="item.id" />
-                        </el-select>
-                    </span>
-                </el-form-item>
-                <el-form-item label="是否发布">
-                    <el-switch v-model="updateArticleForm.isPublish" inline-prompt active-text="发布" inactive-text="草稿" />
-                </el-form-item>
+            <el-form :model="updateArticleForm" ref="updateArticleFormRef" label-position="top" size="large" :rules="rules"
+                class="article-editor-form">
+                <div class="article-editor-grid">
+                    <section class="article-editor-main">
+                        <el-form-item label="标题" prop="title" class="article-title-item">
+                            <el-input v-model="updateArticleForm.title" autocomplete="off" size="large" maxlength="40"
+                                show-word-limit clearable placeholder="输入一个清晰、有搜索价值的文章标题" />
+                        </el-form-item>
+                        <el-form-item label="内容" prop="content" class="article-content-item">
+                            <div class="article-ai-toolbar">
+                                <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('continue'))">
+                                    <el-icon><MagicStick /></el-icon>
+                                    续写
+                                </el-button>
+                                <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('outline'))">
+                                    <el-icon><MagicStick /></el-icon>
+                                    大纲
+                                </el-button>
+                                <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('title'))">
+                                    <el-icon><MagicStick /></el-icon>
+                                    标题
+                                </el-button>
+                                <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('polish'))">
+                                    <el-icon><MagicStick /></el-icon>
+                                    润色
+                                </el-button>
+                                <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('summary'))">
+                                    <el-icon><MagicStick /></el-icon>
+                                    摘要
+                                </el-button>
+                                <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('seo'))">
+                                    <el-icon><MagicStick /></el-icon>
+                                    SEO
+                                </el-button>
+                                <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('keywords'))">
+                                    <el-icon><MagicStick /></el-icon>
+                                    关键词
+                                </el-button>
+                                <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('review'))">
+                                    <el-icon><MagicStick /></el-icon>
+                                    检查
+                                </el-button>
+                            </div>
+                            <MdEditor v-model="updateArticleForm.content" :theme="editorTheme" @onUploadImg="onUploadImg"
+                                editorId="updateArticleEditor" :no-upload-img="true" />
+                        </el-form-item>
+                    </section>
+
+                    <aside class="article-meta-panel">
+                        <div class="meta-panel-title">发布设置</div>
+                        <el-form-item label="封面" prop="cover">
+                            <el-upload class="avatar-uploader" action="#" :on-change="handleUpdateCoverChange" :auto-upload="false"
+                                :show-file-list="false">
+                                <img v-if="updateArticleForm.cover" :src="updateArticleForm.cover" class="avatar" />
+                                <el-icon v-else class="avatar-uploader-icon">
+                                    <Plus />
+                                </el-icon>
+                            </el-upload>
+                        </el-form-item>
+                        <el-form-item label="摘要" prop="summary">
+                            <el-input v-model="updateArticleForm.summary" :rows="4" type="textarea" placeholder="用于首页卡片和 SEO 描述" />
+                        </el-form-item>
+                        <el-form-item label="分类" prop="categoryId">
+                            <el-select v-model="updateArticleForm.categoryId" clearable placeholder="请选择分类" size="large">
+                                <el-option v-for="item in categories" :key="item.id" :label="item.name" :value="item.id" />
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="标签" prop="tags">
+                            <el-select v-model="updateArticleForm.tags" multiple filterable remote reserve-keyword
+                                placeholder="输入或选择标签" remote-show-suffix allow-create default-first-option
+                                :remote-method="remoteMethod" :loading="tagSelectLoading" size="large">
+                                <el-option v-for="item in tags" :key="item.id" :label="item.name" :value="item.id" />
+                            </el-select>
+                        </el-form-item>
+                        <div class="editor-stats">
+                            <span>正文 {{ countPlainText(updateArticleForm.content) }} 字</span>
+                            <span>摘要 {{ countPlainText(updateArticleForm.summary) }} 字</span>
+                        </div>
+                    </aside>
+                </div>
             </el-form>
         </el-dialog>
 
         <!-- AI 助手弹窗 -->
-        <AiAssistantDialog v-model="isAiAssistantShow" :initial-prompt="aiAssistantPreset" @insert-content="handleAiInsertContent" />
+        <AiAssistantDialog v-model="isAiAssistantShow" :initial-prompt="aiAssistantPreset" :source-content="getActiveArticleForm().content" @insert-content="handleAiInsertContent" />
     </div>
 </template>
 
 <script setup>
 defineOptions({ name: 'AdminArticleList' })
-import { ref, reactive } from 'vue'
+import { computed, ref, reactive } from 'vue'
 import { Search, RefreshRight, Check, Close, MagicStick, CircleCheck, CircleClose, Loading } from '@element-plus/icons-vue'
-import { getArticlePageList, deleteArticle, publishArticle, getArticleDetail, updateArticle, updateArticleIsTop } from '@/api/admin/article'
+import { getArticlePageList, deleteArticle, publishArticle, getArticleDetail, updateArticle, updateArticleIsTop, updateArticleStatus } from '@/api/admin/article'
 import { uploadFile } from '@/api/admin/file'
 import { getCategorySelectList } from '@/api/admin/category'
 import { searchTags, getTagSelectList } from '@/api/admin/tag'
@@ -334,8 +351,11 @@ import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 import { useRouter } from 'vue-router'
 import AiAssistantDialog from '@/components/AiAssistantDialog.vue'
+import { useThemeStore } from '@/stores/theme'
 
 const router = useRouter()
+const themeStore = useThemeStore()
+const editorTheme = computed(() => themeStore.mode === 'dark' ? 'dark' : 'light')
 
 // AI 助手弹窗
 const isAiAssistantShow = ref(false)
@@ -349,6 +369,17 @@ const showAiAssistant = (target, preset = '') => {
 }
 
 const getActiveArticleForm = () => aiAssistantTarget.value === 'update' ? updateArticleForm : form
+
+const countPlainText = (value) => {
+    return (value || '')
+        .replace(/```[\s\S]*?```/g, '')
+        .replace(/`[^`]*`/g, '')
+        .replace(/!\[[^\]]*]\([^)]*\)/g, '')
+        .replace(/\[[^\]]*]\([^)]*\)/g, '')
+        .replace(/[#>*_\-~|]/g, '')
+        .replace(/\s/g, '')
+        .length
+}
 
 const buildAiPrompt = (type) => {
     const current = isArticleUpdateEditorShow.value ? updateArticleForm : form
@@ -948,6 +979,27 @@ const handleIsTopChange = (row) => {
         showMessage(row.isTop ? '置顶成功' : "已取消置顶")
     })
 }
+
+// 点击发布状态
+const handleArticleStatusChange = (row, isPublished) => {
+    const previousStatus = row.status
+    row.status = isPublished ? 1 : 0
+
+    updateArticleStatus({ id: row.id, status: row.status }).then((res) => {
+        if (res.success == false) {
+            row.status = previousStatus
+            let message = res.message
+            showMessage(message, 'error')
+            return
+        }
+
+        showMessage(isPublished ? '已发布到前台' : '已转为草稿')
+        getTableData()
+    }).catch(() => {
+        row.status = previousStatus
+        showMessage('更新发布状态失败', 'error')
+    })
+}
 </script>
 
 <style scoped>
@@ -967,20 +1019,18 @@ const handleIsTopChange = (row) => {
 }
 
 /* 指定 select 下拉框宽度 */
-.el-select--large {
-    width: 600px;
-}
-
 /* AI 助手按钮样式 */
 .ai-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
     border: none;
     color: #fff;
+    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.18);
 }
 
 .ai-btn:hover {
-    background: linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%);
+    background: linear-gradient(135deg, #2563eb 0%, #0891b2 100%);
     color: #fff;
+    box-shadow: 0 12px 26px rgba(37, 99, 235, 0.24);
 }
 
 .article-ai-toolbar {
@@ -994,12 +1044,168 @@ const handleIsTopChange = (row) => {
     border-radius: 12px;
     background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(14, 165, 233, 0.06));
 }
+
+.article-ai-toolbar .ai-btn {
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(59, 130, 246, 0.18);
+    color: #2563eb;
+    box-shadow: none;
+}
+
+.article-ai-toolbar .ai-btn:hover {
+    background: rgba(239, 246, 255, 0.96);
+    border-color: rgba(14, 165, 233, 0.35);
+    color: #0891b2;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.10);
+}
+
+.table-action-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.table-action-group .el-button + .el-button {
+    margin-left: 0;
+}
+
+.more-action-btn {
+    padding: 5px 10px;
+}
+
+.danger-dropdown-item {
+    color: #ef4444;
+}
+
+.article-title-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    min-width: 0;
+}
+
+.article-title-text {
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--admin-text);
+    font-weight: 600;
+    line-height: 1.45;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.article-summary-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 24px;
+    padding: 0 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.article-summary-chip.is-ready {
+    color: #16a34a;
+    background: rgba(34, 197, 94, 0.10);
+    border: 1px solid rgba(34, 197, 94, 0.26);
+}
+
+.article-summary-chip.is-empty {
+    color: #64748b;
+    background: rgba(148, 163, 184, 0.10);
+    border: 1px solid rgba(148, 163, 184, 0.24);
+}
+
+.article-editor-form {
+    width: 100%;
+}
+
+.article-editor-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 22px;
+    align-items: start;
+}
+
+.article-editor-main,
+.article-meta-panel {
+    min-width: 0;
+}
+
+.article-meta-panel {
+    position: sticky;
+    top: 82px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 18px;
+    border: 1px solid var(--admin-border);
+    border-radius: 18px;
+    background: color-mix(in srgb, var(--admin-bg-card) 92%, transparent);
+    box-shadow: var(--admin-shadow-soft);
+}
+
+.meta-panel-title {
+    margin-bottom: 8px;
+    color: var(--admin-text);
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.article-meta-panel .el-select,
+.article-meta-panel .el-input,
+.article-meta-panel .el-textarea {
+    width: 100%;
+}
+
+.publish-state-card,
+.editor-stats {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--admin-border);
+    border-radius: 14px;
+    background: var(--admin-bg-soft);
+}
+
+.publish-state-title {
+    color: var(--admin-text);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.publish-state-desc {
+    margin-top: 3px;
+    color: var(--admin-text-muted);
+    font-size: 12px;
+}
+
+.editor-stats {
+    margin-top: 10px;
+    color: var(--admin-text-muted);
+    font-size: 12px;
+}
+
+@media (max-width: 1180px) {
+    .article-editor-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .article-meta-panel {
+        position: static;
+    }
+}
 </style>
 
 <style>
 .article-editor-dialog.el-dialog.is-fullscreen {
     background:
-        radial-gradient(circle at 18% 0%, rgba(34, 211, 238, 0.10), transparent 30%),
+        radial-gradient(circle at 18% 0%, rgba(34, 211, 238, 0.08), transparent 30%),
         var(--admin-bg-page) !important;
 }
 
@@ -1008,13 +1214,19 @@ const handleIsTopChange = (row) => {
     top: 0;
     z-index: 50;
     padding: 0 24px !important;
-    background: rgba(8, 13, 24, 0.92) !important;
+    background: color-mix(in srgb, var(--admin-bg-card) 92%, transparent) !important;
     border-bottom: 1px solid var(--admin-border) !important;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
 }
 
 .article-editor-dialog .el-dialog__body {
     padding: 22px 24px 32px !important;
     color: var(--admin-text);
+}
+
+.article-editor-dialog .article-content-item .el-form-item__content {
+    display: block;
 }
 
 .article-editor-dialog .el-affix--fixed {
@@ -1045,7 +1257,16 @@ const handleIsTopChange = (row) => {
 }
 
 .article-editor-dialog .el-form-item {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
+}
+
+.article-editor-dialog .el-form-item.is-error {
+    margin-bottom: 36px;
+}
+
+.article-editor-dialog .el-form-item__error {
+    padding-top: 6px;
+    line-height: 1.35;
 }
 
 .article-editor-dialog .el-form-item__label {
@@ -1059,6 +1280,18 @@ const handleIsTopChange = (row) => {
     border-radius: 14px;
     background: var(--admin-bg-card);
     box-shadow: var(--admin-shadow-soft);
+    height: calc(100vh - 252px);
+    min-height: 560px;
+}
+
+.article-editor-dialog .md-editor-light {
+    --md-bk-color: #ffffff;
+    --md-bk-color-outstand: #f8fafc;
+    --md-border-color: #e2e8f0;
+    --md-scrollbar-bg-color: rgba(148, 163, 184, 0.16);
+    --md-scrollbar-thumb-color: rgba(100, 116, 139, 0.34);
+    --md-theme-color: var(--admin-accent);
+    color: var(--admin-text);
 }
 
 .article-editor-dialog .md-editor-dark {
@@ -1073,8 +1306,9 @@ const handleIsTopChange = (row) => {
 
 .article-editor-dialog .md-editor-toolbar-wrapper,
 .article-editor-dialog .md-editor-footer {
-    background: rgba(8, 13, 24, 0.88) !important;
+    background: var(--admin-bg-soft) !important;
     border-color: var(--admin-border) !important;
+    color: var(--admin-text-muted) !important;
 }
 
 .article-editor-dialog .md-editor-input-wrapper,
@@ -1087,13 +1321,76 @@ const handleIsTopChange = (row) => {
     color: var(--admin-text) !important;
 }
 
+.article-editor-dialog .md-editor-toolbar-wrapper svg,
+.article-editor-dialog .md-editor-footer,
+.article-editor-dialog .md-editor-footer label {
+    color: var(--admin-text-muted) !important;
+}
+
+html:not(.dark) .article-editor-dialog.el-dialog.is-fullscreen {
+    background:
+        radial-gradient(circle at 18% 0%, rgba(14, 165, 233, 0.10), transparent 30%),
+        linear-gradient(180deg, #f8fbff 0%, #f4f7fb 100%) !important;
+}
+
+html:not(.dark) .article-editor-dialog .el-dialog__header {
+    background: rgba(255, 255, 255, 0.92) !important;
+    border-bottom-color: #e2e8f0 !important;
+}
+
+html:not(.dark) .article-editor-dialog .article-ai-toolbar {
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.08), rgba(6, 182, 212, 0.08)) !important;
+    border-color: #dbeafe !important;
+}
+
+html.dark .article-editor-dialog .article-ai-toolbar .ai-btn {
+    background: rgba(15, 23, 42, 0.76);
+    border: 1px solid rgba(125, 211, 252, 0.22);
+    color: #bae6fd;
+}
+
+html.dark .article-editor-dialog .article-ai-toolbar .ai-btn:hover {
+    background: rgba(14, 165, 233, 0.15);
+    border-color: rgba(125, 211, 252, 0.38);
+    color: #e0f2fe;
+}
+
+html:not(.dark) .article-editor-dialog .md-editor {
+    background: #ffffff !important;
+    border-color: #dbe4ef !important;
+    box-shadow: 0 16px 38px rgba(15, 23, 42, 0.08) !important;
+}
+
+html:not(.dark) .article-editor-dialog .md-editor-toolbar-wrapper,
+html:not(.dark) .article-editor-dialog .md-editor-footer {
+    background: #f8fafc !important;
+    border-color: #e2e8f0 !important;
+    color: #64748b !important;
+}
+
+html:not(.dark) .article-editor-dialog .md-editor-input-wrapper,
+html:not(.dark) .article-editor-dialog .md-editor-preview-wrapper {
+    background: #ffffff !important;
+}
+
+html:not(.dark) .article-editor-dialog .md-editor-input,
+html:not(.dark) .article-editor-dialog .md-editor-preview {
+    color: #172033 !important;
+}
+
+html.dark .article-editor-dialog .md-editor-toolbar-wrapper,
+html.dark .article-editor-dialog .md-editor-footer {
+    background: rgba(8, 13, 24, 0.88) !important;
+    border-color: rgba(71, 85, 105, 0.34) !important;
+}
+
 .md-editor-footer {
     height: 40px;
 }
 
 /* 表格悬停效果 */
 .admin-table {
-    --el-table-row-hover-bg-color: rgba(59, 130, 246, 0.08);
+    --el-table-row-hover-bg-color: var(--admin-bg-hover);
     transition: all 0.2s ease;
 }
 

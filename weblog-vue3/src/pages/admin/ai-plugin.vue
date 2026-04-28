@@ -270,6 +270,34 @@
                                         <span class="text-sm text-gray-500">≈ {{ Math.round(drawerForm.maxTokens * 0.75) }} 汉字</span>
                                     </div>
                                 </el-form-item>
+
+                                <el-divider content-position="left">智能路由</el-divider>
+                                <el-form-item label="允许自动联网">
+                                    <el-switch v-model="drawerForm.allowAutoWebSearch" />
+                                    <div class="text-xs text-gray-400 mt-1">智能模式下，只有实时信息、版本、天气、热点等问题会自动走联网。</div>
+                                </el-form-item>
+                                <el-form-item label="优先知识库">
+                                    <el-switch v-model="drawerForm.preferKnowledgeBase" />
+                                    <div class="text-xs text-gray-400 mt-1">当问题明显要求“根据博客/知识库/文章”回答时，优先检索站内资料。</div>
+                                </el-form-item>
+
+                                <el-divider content-position="left">联网搜索</el-divider>
+                                <el-form-item label="Tavily API Key">
+                                    <el-input
+                                        v-model="drawerForm.tavilyApiKey"
+                                        type="password"
+                                        show-password
+                                        clearable
+                                        placeholder="留空则使用后端配置或免费兜底"
+                                    />
+                                    <div class="text-xs text-gray-400 mt-1">配置后优先使用 Tavily；适合热点新闻、趋势、政策、价格等实时问题。</div>
+                                </el-form-item>
+                                <el-form-item label="搜索结果数量">
+                                    <el-input-number v-model="drawerForm.webSearchTopK" :min="1" :max="8" class="!w-40" />
+                                </el-form-item>
+                                <el-form-item label="免费搜索兜底">
+                                    <el-switch v-model="drawerForm.enableFreeSearchFallback" />
+                                </el-form-item>
                             </template>
 
                             <!-- article_summary 专属配置 -->
@@ -495,6 +523,11 @@ const drawerForm = reactive({
     dailyLimit: 10,
     temperature: 0.7,
     maxTokens: 4096,
+    allowAutoWebSearch: true,
+    preferKnowledgeBase: true,
+    tavilyApiKey: '',
+    webSearchTopK: 5,
+    enableFreeSearchFallback: true,
     // article_summary
     maxContentLength: 8000,
     summaryLength: '200-300',
@@ -621,6 +654,11 @@ const openDrawer = (plugin) => {
         drawerForm.dailyLimit = saved.dailyLimit ?? 10
         drawerForm.temperature = saved.temperature ?? 0.7
         drawerForm.maxTokens = saved.maxTokens ?? 4096
+        drawerForm.allowAutoWebSearch = saved.allowAutoWebSearch ?? true
+        drawerForm.preferKnowledgeBase = saved.preferKnowledgeBase ?? true
+        drawerForm.tavilyApiKey = saved.tavilyApiKey || ''
+        drawerForm.webSearchTopK = saved.webSearchTopK ?? 5
+        drawerForm.enableFreeSearchFallback = saved.enableFreeSearchFallback ?? true
     } else if (plugin.pluginId === 'article_summary') {
         drawerForm.maxContentLength = saved.maxContentLength ?? 8000
         drawerForm.summaryLength = saved.summaryLength || '200-300'
@@ -654,7 +692,12 @@ const buildConfigJson = () => {
             systemPrompt: drawerForm.systemPrompt,
             dailyLimit: drawerForm.dailyLimit,
             temperature: drawerForm.temperature,
-            maxTokens: drawerForm.maxTokens
+            maxTokens: drawerForm.maxTokens,
+            allowAutoWebSearch: drawerForm.allowAutoWebSearch,
+            preferKnowledgeBase: drawerForm.preferKnowledgeBase,
+            tavilyApiKey: drawerForm.tavilyApiKey,
+            webSearchTopK: drawerForm.webSearchTopK,
+            enableFreeSearchFallback: drawerForm.enableFreeSearchFallback
         })
     }
     if (id === 'article_summary') {

@@ -1,5 +1,5 @@
 <template>
-    <footer class="mt-auto border-t border-[var(--border-base)] bg-[var(--bg-card)]">
+    <footer class="site-footer mt-auto border-t border-[var(--border-base)] bg-[var(--bg-card)]">
         <div class="max-w-content mx-auto px-6 py-5">
             <div class="flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-[var(--text-muted)]">
                 <span>© {{ currentYear }} {{ blogSettingsStore.blogSettings.name || 'Weblog' }}. All Rights Reserved.</span>

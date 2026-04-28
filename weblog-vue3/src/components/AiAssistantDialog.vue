@@ -1,7 +1,7 @@
 <template>
     <el-dialog 
         v-model="dialogVisible" 
-        width="620px"
+        width="820px"
         :close-on-click-modal="false" 
         class="ai-assistant-dialog"
         destroy-on-close
@@ -9,8 +9,27 @@
         <template #header>
             <div class="dialog-header">
                 <div class="header-left">
-                    <span class="dialog-title">AI 写作助手</span>
-                    <el-icon class="settings-btn" @click="showSettings = true"><Setting /></el-icon>
+                    <div class="title-group">
+                        <span class="dialog-title">AI 对话</span>
+                        <span class="dialog-subtitle">使用 AI 助手帮助您编写和优化内容</span>
+                    </div>
+                    <div class="assistant-tools">
+                        <el-tooltip content="模型设置" placement="bottom">
+                            <button class="tool-icon-btn" @click="showSettings = true">
+                                <el-icon><Setting /></el-icon>
+                            </button>
+                        </el-tooltip>
+                        <el-tooltip content="新会话" placement="bottom">
+                            <button class="tool-icon-btn" @click="handleNewConversation">
+                                <el-icon><Plus /></el-icon>
+                            </button>
+                        </el-tooltip>
+                        <el-tooltip content="清空" placement="bottom">
+                            <button class="tool-icon-btn" :disabled="conversations.length === 0" @click="handleClearConversation">
+                                <el-icon><Delete /></el-icon>
+                            </button>
+                        </el-tooltip>
+                    </div>
                 </div>
                 <div class="header-actions">
                     <!-- 会话列表 -->
@@ -35,16 +54,6 @@
                             </el-dropdown-menu>
                         </template>
                     </el-dropdown>
-                    
-                    <el-button size="small" @click="handleNewConversation">
-                        <el-icon><Plus /></el-icon>
-                        新建会话
-                    </el-button>
-                    
-                    <el-button size="small" @click="handleClearConversation" :disabled="conversations.length === 0">
-                        <el-icon><Delete /></el-icon>
-                        清空
-                    </el-button>
                 </div>
             </div>
         </template>
@@ -167,6 +176,12 @@
                     @keydown.enter.prevent="handleEnter"
                     ref="inputRef"
                 />
+                <div class="input-extra-actions">
+                    <el-button size="small" @click="handleQuoteFullText">
+                        <el-icon><DocumentCopy /></el-icon>
+                        引用全文
+                    </el-button>
+                </div>
                 <div class="input-actions">
                     <el-button 
                         v-if="!generating"
@@ -214,6 +229,10 @@ const props = defineProps({
         default: false
     },
     initialPrompt: {
+        type: String,
+        default: ''
+    },
+    sourceContent: {
         type: String,
         default: ''
     }
@@ -502,6 +521,18 @@ const useTemplate = (template) => {
     })
 }
 
+const handleQuoteFullText = () => {
+    const content = props.sourceContent || props.initialPrompt
+    if (!content) {
+        ElMessage.info('当前没有可引用的正文内容')
+        return
+    }
+    prompt.value = `请基于以下全文处理：\n\n${content}`
+    nextTick(() => {
+        inputRef.value?.focus()
+    })
+}
+
 const escapeHtml = (text) => {
     const div = document.createElement('div')
     div.textContent = text
@@ -665,13 +696,7 @@ const generateContent = async () => {
         if (!result) {
             conversations.value.pop()
         } else {
-            ElMessageBox.confirm('内容已生成，是否追加到编辑器？', '生成完成', {
-                confirmButtonText: '是',
-                cancelButtonText: '否',
-                type: 'success'
-            }).then(() => {
-                emit('insert-content', { action: 'append', content: result })
-            }).catch(() => {})
+            ElMessage.success('内容已生成，可在结果下方选择追加、替换或填入摘要')
         }
 
     } catch (error) {
@@ -1172,5 +1197,305 @@ const generateContent = async () => {
 
 .ai-assistant-dialog .el-dialog__footer {
     display: none;
+}
+</style>
+
+<style scoped>
+/* doocs/md inspired assistant surface */
+.dialog-header {
+    align-items: flex-start;
+    padding-right: 28px;
+}
+
+.header-left {
+    align-items: flex-start;
+    gap: 22px;
+}
+
+.title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.dialog-title {
+    font-size: 24px;
+    line-height: 1.15;
+    font-weight: 800;
+    color: #111827;
+    letter-spacing: 0;
+}
+
+.dialog-subtitle {
+    font-size: 14px;
+    color: #7a7f89;
+    font-weight: 400;
+}
+
+.assistant-tools {
+    display: inline-flex;
+    align-items: center;
+    gap: 18px;
+    padding-top: 2px;
+}
+
+.tool-icon-btn {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #111827;
+    cursor: pointer;
+    transition: background-color 0.16s ease, color 0.16s ease;
+}
+
+.tool-icon-btn:hover {
+    background: #f3f4f6;
+    color: #4f46e5;
+}
+
+.tool-icon-btn:disabled {
+    cursor: not-allowed;
+    color: #c7ccd4;
+    background: transparent;
+}
+
+.header-actions {
+    align-items: flex-start;
+}
+
+.header-actions :deep(.el-button) {
+    border-radius: 10px;
+    background: #f7f7f8;
+    border-color: transparent;
+    color: #4b5563;
+}
+
+.ai-container {
+    gap: 20px;
+}
+
+.conversation-area {
+    height: 430px;
+    min-height: 430px;
+    padding: 22px;
+    border: 0;
+    border-radius: 0;
+    background: #ffffff;
+}
+
+.empty-icon {
+    width: 76px;
+    height: 76px;
+    border-radius: 22px;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+}
+
+.empty-text {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.message-item {
+    max-width: 86%;
+}
+
+.message-avatar {
+    display: none;
+}
+
+.assistant.message-item {
+    max-width: 72%;
+}
+
+.message-bubble {
+    padding: 18px 20px;
+    border-radius: 12px;
+    font-size: 16px;
+    line-height: 1.8;
+}
+
+.assistant .message-bubble {
+    background: #f4f5f7;
+    border: 0;
+    color: #1f2937;
+    border-bottom-left-radius: 12px;
+}
+
+.user .message-bubble {
+    background: #2f3747;
+    color: #ffffff;
+    border-radius: 12px;
+}
+
+.message-actions {
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.message-actions :deep(.el-button) {
+    border-radius: 9px;
+    background: #ffffff;
+    border-color: #e5e7eb;
+}
+
+.template-section {
+    order: -1;
+}
+
+.template-scroll {
+    gap: 10px;
+    padding: 0;
+}
+
+.template-tag {
+    height: 42px;
+    padding: 0 18px;
+    border-radius: 9px;
+    background: #f4f4f5;
+    color: #1f2937;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.template-tag:hover {
+    background: #e9ecf3;
+    color: #111827;
+}
+
+.input-section {
+    position: relative;
+    padding: 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
+}
+
+.input-section :deep(.el-textarea__inner) {
+    min-height: 116px !important;
+    padding: 18px 78px 48px 18px;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: transparent;
+    color: #111827;
+    font-size: 16px;
+}
+
+.input-extra-actions {
+    position: absolute;
+    left: 16px;
+    bottom: 12px;
+}
+
+.input-extra-actions :deep(.el-button) {
+    border-radius: 9px;
+    border-color: #e5e7eb;
+    background: #ffffff;
+    color: #4b5563;
+}
+
+.input-actions {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+}
+
+.send-btn,
+.stop-btn {
+    width: 48px;
+    height: 48px;
+    padding: 0 !important;
+    border-radius: 50% !important;
+}
+
+.send-btn span,
+.stop-btn span {
+    display: inline-flex;
+}
+
+.send-btn :deep(.el-icon),
+.stop-btn :deep(.el-icon) {
+    margin: 0 !important;
+    font-size: 20px;
+}
+
+.send-btn {
+    background: #9ca3af !important;
+    box-shadow: none !important;
+}
+
+.send-btn :deep(span:not(.el-icon)) {
+    font-size: 0;
+}
+
+.stop-btn :deep(span:not(.el-icon)) {
+    font-size: 0;
+}
+
+.remaining-hint,
+.token-warning {
+    margin-top: -10px;
+}
+
+html.dark .dialog-title,
+html.dark .tool-icon-btn {
+    color: #f8fafc;
+}
+
+html.dark .dialog-subtitle {
+    color: #94a3b8;
+}
+
+html.dark .conversation-area,
+html.dark .input-section {
+    background: rgba(8, 13, 24, 0.96);
+}
+
+html.dark .assistant .message-bubble {
+    background: rgba(30, 41, 59, 0.88);
+    color: #e5edf7;
+}
+
+html.dark .template-tag {
+    background: rgba(30, 41, 59, 0.86);
+    color: #dbeafe;
+}
+
+html.dark .input-section :deep(.el-textarea__inner) {
+    color: #f8fafc;
+}
+</style>
+
+<style>
+.ai-assistant-dialog.el-dialog {
+    max-width: calc(100vw - 48px);
+    border-radius: 16px !important;
+}
+
+.ai-assistant-dialog .el-dialog__header {
+    padding: 34px 36px 14px !important;
+    background: #ffffff !important;
+    border-bottom: 0 !important;
+}
+
+.ai-assistant-dialog .el-dialog__body {
+    padding: 10px 36px 30px !important;
+    background: #ffffff !important;
+}
+
+.ai-assistant-dialog .el-dialog__headerbtn {
+    top: 26px !important;
+    right: 28px !important;
+}
+
+html.dark .ai-assistant-dialog .el-dialog__header,
+html.dark .ai-assistant-dialog .el-dialog__body {
+    background: rgba(8, 13, 24, 0.98) !important;
 }
 </style>

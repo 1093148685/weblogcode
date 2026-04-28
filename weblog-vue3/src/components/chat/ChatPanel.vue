@@ -58,6 +58,14 @@
                         <button
                             type="button"
                             class="chat-mode-option"
+                            :class="{ 'chat-mode-option-active': selectedChatMode === 'auto' }"
+                            @click="setChatMode('auto')"
+                        >
+                            智能选择
+                        </button>
+                        <button
+                            type="button"
+                            class="chat-mode-option"
                             :class="{ 'chat-mode-option-active': selectedChatMode === 'normal' }"
                             @click="setChatMode('normal')"
                         >
@@ -71,17 +79,26 @@
                         >
                             知识库问答
                         </button>
+                        <button
+                            type="button"
+                            class="chat-mode-option"
+                            :class="{ 'chat-mode-option-active': selectedChatMode === 'web' }"
+                            @click="setChatMode('web')"
+                        >
+                            联网搜索
+                        </button>
                     </div>
                 </div>
 
                 <!-- 知识库选择（RAG） -->
-                <div class="px-4 mb-4" :class="{ 'opacity-55': selectedChatMode !== 'rag' }">
+                <div class="px-4 mb-4" :class="{ 'opacity-55': selectedChatMode !== 'rag' && selectedChatMode !== 'auto' }">
                     <div class="flex items-center justify-between text-xs text-[var(--text-muted)] mb-1 px-1">
                         <span>知识库</span>
-                        <span v-if="selectedKb" class="text-[var(--color-primary)]">RAG 已启用</span>
+                        <span v-if="selectedChatMode === 'auto' && selectedKbOption" class="text-[var(--color-primary)]">智能可用</span>
+                        <span v-else-if="selectedKb" class="text-[var(--color-primary)]">RAG 已启用</span>
                     </div>
                     <select v-model="selectedKbId"
-                        :disabled="selectedChatMode !== 'rag'"
+                        :disabled="selectedChatMode !== 'rag' && selectedChatMode !== 'auto'"
                         @change="handleKbChange"
                         class="w-full text-sm rounded-lg px-3 py-2 bg-[var(--bg-card)] border border-[var(--border-light)] text-[var(--text-body)] focus:outline-none focus:ring-2 focus:ring-violet-400">
                         <option value="">不使用知识库</option>
@@ -248,11 +265,13 @@
                                 <div class="min-w-0 flex-1">
                                     <div class="chat-ai-bubble">
                                         <div v-if="chat.mode || chat.kbName" class="chat-answer-meta">
-                                            <span class="chat-answer-mode" :class="chat.mode === 'rag' ? 'chat-answer-mode-rag' : 'chat-answer-mode-normal'">
-                                                {{ chat.mode === 'rag' ? '知识库问答' : '普通聊天' }}
+                                            <span class="chat-answer-mode" :class="answerModeClass(chat.mode)">
+                                                {{ answerModeLabel(chat.mode) }}
                                             </span>
+                                            <span v-if="chat.smartRouteLabel" class="chat-answer-kb">{{ chat.smartRouteLabel }}</span>
                                             <span v-if="chat.kbName" class="chat-answer-kb">{{ chat.kbName }}</span>
                                         </div>
+                                        <p v-if="chat.routeReason" class="chat-route-reason">{{ chat.routeReason }}</p>
 
                                         <!-- 流式加载中 -->
                                         <div v-if="!chat.content && index === displayMessages.length - 1 && isStreaming" class="flex items-center gap-2 py-1">
@@ -289,7 +308,7 @@
                                         </button>
 
                                         <div v-if="isConservativeRagAnswer(chat)" class="rag-warning mt-3">
-                                            知识库已命中来源，但模型回答偏保守。可以点击重试重新生成。
+                                            {{ conservativeAnswerTip(chat) }}
                                         </div>
 
                                         <div v-if="chat.sources && chat.sources.length" class="rag-source-panel mt-4">
@@ -306,12 +325,32 @@
                                                 <div v-for="source in normalizeSources(chat.sources)" :key="source.chunkId || source.index" class="rag-source-item">
                                                     <div class="rag-source-head">
                                                         <span class="rag-source-index">[{{ source.index }}]</span>
-                                                        <span class="rag-source-name">{{ source.title || '未知文档' }}</span>
-                                                        <span v-if="source.score !== undefined" class="rag-source-score">{{ formatScore(source.score) }}</span>
+                                                        <a
+                                                            v-if="source.url"
+                                                            class="rag-source-name rag-source-link"
+                                                            :href="source.url"
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                        >
+                                                            {{ source.title || '联网来源' }}
+                                                        </a>
+                                                        <span v-else class="rag-source-name">{{ source.title || '未知文档' }}</span>
+                                                        <span v-if="source.score !== undefined" class="rag-source-score">{{ formatSourceBadge(source) }}</span>
                                                     </div>
                                                     <p>{{ source.content }}</p>
                                                 </div>
                                             </div>
+                                        </div>
+
+                                        <div v-if="chat.content && !isStreaming && suggestedFollowUps(chat).length" class="ai-follow-up-list">
+                                            <button
+                                                v-for="item in suggestedFollowUps(chat)"
+                                                :key="item"
+                                                type="button"
+                                                @click="useFollowUp(item, chat)"
+                                            >
+                                                {{ item }}
+                                            </button>
                                         </div>
 
                                         <!-- 操作按钮 -->
@@ -351,7 +390,7 @@
             <Transition name="scroll-btn">
                 <button
                     v-if="showScrollBtn"
-                    @click="scrollToBottom"
+                    @click="scrollToBottom(true)"
                     class="absolute bottom-28 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-white bg-[var(--color-primary)] rounded-full shadow-lg hover:opacity-90 active:scale-95 transition-all duration-200"
                     title="回到最新消息"
                 >
@@ -484,6 +523,7 @@
 
 <script setup>
 import { ref, computed, nextTick, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import {
     Setting, Promotion, Document, Close, Search, Plus,
     DArrowLeft, DArrowRight, VideoPause, Delete
@@ -497,6 +537,9 @@ import ModelSettings from './ModelSettings.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 defineOptions({ name: 'ChatPanel' })
+
+const route = useRoute()
+const router = useRouter()
 
 // ──────── 匿名用户 clientId（持久化到 localStorage）────────
 function getOrCreateClientId() {
@@ -515,6 +558,7 @@ const textareaRef = ref(null)
 const chatContainer = ref(null)
 const isStreaming = ref(false)
 const showScrollBtn = ref(false)
+const autoFollowScroll = ref(true)
 const showSettings = ref(false)
 const showSidebar = ref(true)
 const showArticleDialog = ref(false)
@@ -524,6 +568,7 @@ const allArticles = ref([])
 const usageInfo = ref(null)
 const chatSessions = ref([])
 const currentSessionId = ref(null)
+const routeIntentHandled = ref(false)
 let abortController = null
 
 // 流式传输时的临时状态
@@ -536,7 +581,7 @@ const selectedModelId = ref('deepseek-chat')
 // ──────── 知识库 RAG ────────
 const kbList = ref([])
 const selectedKbId = ref('')
-const selectedChatMode = ref('normal')
+const selectedChatMode = ref('auto')
 
 onMounted(async () => {
     try {
@@ -581,12 +626,19 @@ const activeKbId = computed(() => {
     return Number.isFinite(id) && id > 0 ? id : null
 })
 
-const chatMode = computed(() => activeKbId.value ? 'rag' : 'normal')
+const chatMode = computed(() => {
+    if (selectedChatMode.value === 'web') return 'web'
+    return activeKbId.value ? 'rag' : 'normal'
+})
 
 const setChatMode = (mode) => {
+    if (mode === 'auto') {
+        selectedChatMode.value = 'auto'
+        return
+    }
     if (mode === 'rag' && kbList.value.length === 0) {
         ElMessage.warning('暂无可用知识库')
-        selectedChatMode.value = 'normal'
+        selectedChatMode.value = 'auto'
         return
     }
     selectedChatMode.value = mode
@@ -596,16 +648,35 @@ const setChatMode = (mode) => {
 }
 
 const handleKbChange = () => {
+    if (selectedChatMode.value === 'auto') return
     selectedChatMode.value = selectedKbId.value ? 'rag' : 'normal'
 }
 
-const quickPrompts = computed(() => selectedChatMode.value === 'rag'
-    ? ['总结知识库重点', '这篇文章讲了什么？', '根据知识库解释这个概念', '列出引用来源']
-    : ['讲一个笑话', '帮我写一段代码', '解释一个技术概念', '帮我润色一段文字'])
+const quickPrompts = computed(() => {
+    if (selectedChatMode.value === 'auto') {
+        return ['今天有什么 AI 热点？', 'Django 最新版是多少？', '怎么学习英语？', '根据博客文章总结重点']
+    }
+    if (selectedChatMode.value === 'rag') {
+        return ['总结知识库重点', '这篇文章讲了什么？', '根据知识库解释这个概念', '列出引用来源']
+    }
+    if (selectedChatMode.value === 'web') {
+        return ['搜索最新 AI 新闻', '查一下这个技术的最新版本', '对比两个工具的优缺点', '找资料并总结']
+    }
+    return ['讲一个笑话', '帮我写一段代码', '解释一个技术概念', '帮我润色一段文字']
+})
 
-const welcomeDescription = computed(() => selectedChatMode.value === 'rag'
-    ? '知识库问答模式会先检索选中的知识库，再基于命中的来源回答。'
-    : '普通聊天模式不会检索知识库，适合闲聊、写作、代码解释和通用问题。')
+const welcomeDescription = computed(() => {
+    if (selectedChatMode.value === 'auto') {
+        return '智能选择会自动判断是否需要联网、知识库或普通回答，减少手动切换。'
+    }
+    if (selectedChatMode.value === 'rag') {
+        return '知识库问答模式会先检索选中的知识库，再基于命中的来源回答。'
+    }
+    if (selectedChatMode.value === 'web') {
+        return '联网搜索模式会先检索公开网页，再结合来源生成回答，适合需要最新资料的问题。'
+    }
+    return '普通聊天模式不会检索知识库，适合闲聊、写作、代码解释和通用问题。'
+})
 
 // ──────── 计算属性 ────────
 const currentSessionTitle = computed(() => {
@@ -626,7 +697,10 @@ const restoreModeFromSession = (sessionId = currentSessionId.value) => {
     const messages = session?.messages || []
     const lastModeMessage = [...messages].reverse().find(m => m.mode || m.kbId)
 
-    if (!lastModeMessage) return
+    if (!lastModeMessage) {
+        selectedChatMode.value = 'auto'
+        return
+    }
 
     if (lastModeMessage.mode === 'rag' || lastModeMessage.kbId) {
         if (lastModeMessage.kbId) {
@@ -647,7 +721,12 @@ const restoreModeFromSession = (sessionId = currentSessionId.value) => {
     }
 
     if (lastModeMessage.mode === 'normal') {
-        selectedChatMode.value = 'normal'
+        selectedChatMode.value = 'auto'
+        return
+    }
+
+    if (lastModeMessage.mode === 'web') {
+        selectedChatMode.value = 'auto'
     }
 }
 
@@ -666,6 +745,7 @@ onMounted(async () => {
     await loadSessionsFromDb()
     await loadUsageInfo()
     await loadArticles()
+    await handleRouteArticleIntent()
     scrollToBottom(true)
 })
 
@@ -690,6 +770,48 @@ const loadArticles = async () => {
     } catch (e) {
         console.error('加载文章列表失败:', e)
     }
+}
+
+const handleRouteArticleIntent = async () => {
+    if (routeIntentHandled.value || !route.query.articleId) return
+    routeIntentHandled.value = true
+
+    const articleId = Number(route.query.articleId)
+    if (!Number.isFinite(articleId) || articleId <= 0) return
+
+    try {
+        const res = await getArticleDetail(articleId)
+        if (res.success && res.data) {
+            quotedArticle.value = res.data
+        }
+    } catch (e) {
+        console.warn('加载引用文章失败:', e)
+    }
+
+    if (!quotedArticle.value) return
+
+    const currentSession = chatSessions.value.find(s => s.id === currentSessionId.value)
+    if (!currentSessionId.value || currentSession?.messages?.length) {
+        createNewChat()
+    }
+
+    selectedChatMode.value = 'normal'
+    inputText.value = String(route.query.prompt || `请围绕《${quotedArticle.value.title || '这篇文章'}》进行总结，并列出关键知识点。`)
+    await nextTick()
+    autoResize()
+    textareaRef.value?.focus()
+
+    if (route.query.autoSend === '1') {
+        const content = inputText.value
+        inputText.value = ''
+        await sendMessage({ content, forceMode: 'normal', freshContext: true })
+    }
+
+    const nextQuery = { ...route.query }
+    delete nextQuery.articleId
+    delete nextQuery.prompt
+    delete nextQuery.autoSend
+    router.replace({ path: route.path, query: nextQuery })
 }
 
 const loadUsageInfo = async () => {
@@ -763,7 +885,8 @@ const saveSessionToDb = async (sessionId, messages, model) => {
                 ragSteps: m.ragSteps || [],
                 kbId: m.kbId || null,
                 kbName: m.kbName || null,
-                mode: m.mode || null
+                mode: m.mode || null,
+                smartRouteLabel: m.smartRouteLabel || null
             }))),
             model: model || selectedModelId.value,
             provider: ''
@@ -926,10 +1049,30 @@ const normalizeSource = (source = {}, index = 0) => ({
     chunkId: source.chunkId ?? source.ChunkId ?? `${source.DocumentId || 'source'}-${index}`,
     title: source.title ?? source.Title ?? '未知文档',
     content: source.content ?? source.Content ?? '',
-    score: source.score ?? source.Score
+    score: source.score ?? source.Score,
+    relevance: source.relevance ?? source.Relevance ?? null,
+    contentQuality: source.contentQuality ?? source.ContentQuality ?? null,
+    hasUsableContent: source.hasUsableContent ?? source.HasUsableContent ?? false,
+    url: source.url ?? source.Url ?? '',
+    sourceType: source.sourceType ?? source.SourceType ?? 'rag'
 })
 
 const normalizeSources = (sources = []) => sources.map(normalizeSource)
+
+const answerModeLabel = (mode) => {
+    if (mode === 'auto') return '智能选择'
+    if (mode === 'rag') return '知识库问答'
+    if (mode === 'web') return '联网搜索'
+    if (mode === 'article') return '文章辅助'
+    return '普通聊天'
+}
+
+const answerModeClass = (mode) => {
+    if (mode === 'rag') return 'chat-answer-mode-rag'
+    if (mode === 'web') return 'chat-answer-mode-web'
+    if (mode === 'article' || mode === 'auto') return 'chat-answer-mode-rag'
+    return 'chat-answer-mode-normal'
+}
 
 const toggleSourcePanel = (chat) => {
     chat.sourcesExpanded = !chat.sourcesExpanded
@@ -968,6 +1111,13 @@ const isConservativeRagAnswer = (chat) => {
     return /没有.*(相关|找到|资料|内容|信息)|未找到|无法.*(回答|确定)/.test(chat.content)
 }
 
+const conservativeAnswerTip = (chat) => {
+    if (chat?.mode === 'web') {
+        return '联网来源可能跑偏或相关性不足，可以点击重试，或切回普通聊天直接回答。'
+    }
+    return '知识库已命中来源，但模型回答偏保守。可以点击重试重新生成。'
+}
+
 const canUseNormalFallback = (chat) => {
     if (isStreaming.value || !chat?.kbId) return false
     const noSources = !chat.sources || chat.sources.length === 0
@@ -1004,9 +1154,16 @@ const buildOutgoingMessages = (messages, mode, freshContext = false) => {
 
     if (freshContext && lastUserMessage) {
         scopedMessages = [lastUserMessage]
-    } else if (mode === 'rag') {
+    } else if (mode === 'rag' || mode === 'web') {
         const systemMessages = cleanMessages.filter(m => m.role === 'system')
-        const recentMessages = cleanMessages.filter(m => m.role !== 'system').slice(-6)
+        const recentMessages = cleanMessages
+            .filter(m => m.role !== 'system')
+            .filter(m => {
+                if (mode !== 'web') return true
+                const text = `${m.content || ''} ${m.ragStatus || ''}`
+                return !(m.role === 'assistant' && /知识库|RAG|检索知识库|没有.*相关内容|未找到/.test(text))
+            })
+            .slice(-6)
         scopedMessages = [...systemMessages, ...recentMessages]
     } else {
         scopedMessages = cleanMessages
@@ -1019,6 +1176,11 @@ const buildOutgoingMessages = (messages, mode, freshContext = false) => {
         outgoingMessages.unshift({
             role: 'system',
             content: '当前是普通聊天模式，未启用知识库。请像正常 AI 助手一样回答用户，不要因为知识库没有命中或没有启用而拒绝回答。'
+        })
+    } else if (mode === 'web') {
+        outgoingMessages.unshift({
+            role: 'system',
+            content: '当前是联网搜索模式。请结合联网来源回答；如果没有联网来源，也不要提及知识库，请直接说明联网搜索未返回可用来源。'
         })
     }
 
@@ -1035,33 +1197,52 @@ const handleStreamPayload = async (raw, appendContent) => {
     const lastMsg = currentAssistantMessage()
     if (!lastMsg) return
 
+    const applyRoutePayload = (payload = {}) => {
+        if (!payload.routeMode && !payload.routeReason && !payload.routeKbId) return
+        const routeMode = payload.routeMode || lastMsg.mode
+        lastMsg.mode = routeMode
+        lastMsg.routeReason = payload.routeReason || lastMsg.routeReason || ''
+        lastMsg.smartRouteLabel = smartModeLabel(routeMode)
+        if (payload.routeKbId) {
+            lastMsg.kbId = payload.routeKbId
+            const kb = knowledgeBases.value.find(item => item.id === payload.routeKbId)
+            if (kb) lastMsg.kbName = kb.name
+        }
+        if (routeMode === 'web') {
+            lastMsg.sourcesExpanded = true
+        }
+    }
+
     if (parsed.type === 'rag_status') {
         const payload = parsed.payload || {}
-        lastMsg.ragStatus = payload.message || '正在检索知识库...'
+        applyRoutePayload(payload)
+        lastMsg.ragStatus = payload.message || (lastMsg.mode === 'web' ? '正在联网搜索...' : '正在检索知识库...')
         updateRagStep(lastMsg, payload.step || 'status', lastMsg.ragStatus, payload.status || 'running')
         return
     }
 
     if (parsed.type === 'rag_sources') {
+        applyRoutePayload(parsed.payload || {})
         const sources = parsed.payload?.sources || []
         lastMsg.sources = normalizeSources(sources)
         lastMsg.ragStatus = sources.length
-            ? parsed.payload?.message || `命中 ${sources.length} 条知识库来源`
-            : parsed.payload?.message || '没有命中足够相关的知识库内容'
+            ? parsed.payload?.message || `找到 ${sources.length} 条引用来源`
+            : parsed.payload?.message || (lastMsg.mode === 'web' ? '没有找到可用联网来源' : '没有命中足够相关的知识库内容')
         updateRagStep(lastMsg, 'sources', lastMsg.ragStatus, sources.length ? 'completed' : 'warning')
         return
     }
 
     if (parsed.type === 'rag_error') {
         const payload = parsed.payload || {}
+        applyRoutePayload(payload)
         lastMsg.ragStatus = payload.message || '知识库检索失败，已切换为普通对话'
         updateRagStep(lastMsg, payload.step || 'error', lastMsg.ragStatus, payload.status || 'error')
         return
     }
 
     if (parsed.content) {
-        if (lastMsg.kbId) {
-            updateRagStep(lastMsg, 'generate', '正在生成回答...', 'running')
+        if (lastMsg.kbId || lastMsg.mode === 'web') {
+            updateRagStep(lastMsg, 'generate', lastMsg.mode === 'web' ? '正在基于联网资料生成回答...' : '正在生成回答...', 'running')
         }
         appendContent(parsed.content)
         finishRagStatusIfNeeded()
@@ -1075,6 +1256,36 @@ const handleStreamPayload = async (raw, appendContent) => {
     }
 }
 
+const resolveSmartMode = (content, article = null) => {
+    if (selectedChatMode.value !== 'auto') {
+        return chatMode.value
+    }
+
+    const text = `${content || ''}`.trim().toLowerCase()
+    if (!text) return 'normal'
+
+    const webPattern = /(联网|上网|搜索|搜一下|查一下|官网|官方|今天|今日|现在|当前|最近|最新|最新版|版本号|刚刚|实时|热点|新闻|快讯|价格|股价|汇率|天气|气温|温度|下雨|政策|法规|比赛|赛程|榜单|排名|发布|更新|latest|current|news|weather|price|version|release|trending)/i
+    if (webPattern.test(text)) {
+        return 'web'
+    }
+
+    const ragPattern = /(这篇|本文|文章|博客|知识库|站内|根据.*资料|基于.*资料|引用来源|总结.*重点|讲了什么|归纳.*内容|推荐.*文章|相关文章|项目文档|教程里|博客里)/i
+    if (!article && selectedKbOption.value && ragPattern.test(text)) {
+        return 'rag'
+    }
+
+    return 'normal'
+}
+
+const smartModeLabel = (mode) => {
+    if (selectedChatMode.value !== 'auto') return ''
+    if (mode === 'web') return '智能选择：联网搜索'
+    if (mode === 'rag') return '智能选择：知识库问答'
+    if (mode === 'article') return '智能选择：文章辅助'
+    if (mode === 'auto') return '智能选择：判断中'
+    return '智能选择：普通聊天'
+}
+
 // ──────── 发送消息 ────────
 const sendMessage = async (options = {}) => {
     const forcedContent = typeof options.content === 'string' ? options.content.trim() : ''
@@ -1086,14 +1297,16 @@ const sendMessage = async (options = {}) => {
     }
 
     const originalChatMode = selectedChatMode.value
+    const requestedMode = options.forceMode || selectedChatMode.value
     if (options.forceMode) {
         selectedChatMode.value = options.forceMode
     }
-    const effectiveMode = chatMode.value
-    const effectiveKb = selectedKb.value
 
     let userContent = forcedContent || inputText.value.trim()
     const currentQuotedArticle = quotedArticle.value
+    const effectiveMode = requestedMode === 'auto' ? 'auto' : chatMode.value
+    const candidateKb = (requestedMode === 'rag' || requestedMode === 'auto') ? selectedKbOption.value : null
+    const effectiveKb = requestedMode === 'rag' ? candidateKb : null
     quotedArticle.value = null
     if (!forcedContent) {
         inputText.value = ''
@@ -1116,19 +1329,26 @@ const sendMessage = async (options = {}) => {
         content: userContent,
         quotedArticleTitle: currentQuotedArticle?.title || null,
         mode: effectiveMode,
+        smartRouteLabel: smartModeLabel(effectiveMode),
         timestamp: Date.now()
     })
     sessionMessages.push({
         role: 'assistant',
         content: '',
         sources: [],
-        ragStatus: effectiveKb ? '准备检索知识库...' : '',
-        ragSteps: effectiveKb
+        ragStatus: effectiveMode === 'auto' ? '正在智能判断...' : effectiveMode === 'web' ? '准备联网搜索...' : effectiveKb ? '准备检索知识库...' : '',
+        ragSteps: effectiveMode === 'auto'
+            ? [{ key: 'route', message: '正在智能判断...', status: 'running' }]
+            : effectiveMode === 'web'
+            ? [{ key: 'queued', message: '准备联网搜索...', status: 'running' }]
+            : effectiveKb
             ? [{ key: 'queued', message: '准备检索知识库...', status: 'running' }]
             : [],
         kbId: effectiveKb?.id || null,
         kbName: effectiveKb?.name || null,
         mode: effectiveMode,
+        smartRouteLabel: smartModeLabel(effectiveMode),
+        sourcesExpanded: effectiveMode === 'web',
         timestamp: Date.now()
     })
 
@@ -1145,14 +1365,14 @@ const sendMessage = async (options = {}) => {
 
     streamingSessionId.value = sessionId
     streamingMessages.value = sessionMessages
-    scrollToBottom()
+    scrollToBottom(true)
 
     isStreaming.value = true
     abortController = new AbortController()
 
     try {
         const token = getToken() || ''
-        const outgoingMessages = buildOutgoingMessages(sessionMessages.slice(0, -1), effectiveMode, options.freshContext)
+        const outgoingMessages = buildOutgoingMessages(sessionMessages.slice(0, -1), requestedMode, options.freshContext)
         const response = await fetch('/api/ai/chat', {
             method: 'POST',
             headers: {
@@ -1163,14 +1383,16 @@ const sendMessage = async (options = {}) => {
             body: JSON.stringify({
                 messages: outgoingMessages,
                 model: selectedModelId.value,
-                mode: effectiveMode,
+                mode: requestedMode,
+                enableWebSearch: requestedMode === 'web',
                 sessionId: sessionId,
                 clientId: clientId,
                 articleContent: currentQuotedArticle
                     ? (currentQuotedArticle.content || currentQuotedArticle.Content || currentQuotedArticle.summary || '')
                     : null,
                 articleTitle: currentQuotedArticle?.title || currentQuotedArticle?.Title || null,
-                kbId: effectiveKb?.id || null
+                articleId: currentQuotedArticle?.id || currentQuotedArticle?.Id || null,
+                kbId: candidateKb?.id || null
             })
         })
 
@@ -1276,8 +1498,8 @@ const regenerateResponse = async (index) => {
     if (userMsg.mode === 'rag' || userMsg.kbId) {
         selectedChatMode.value = 'rag'
         if (userMsg.kbId) selectedKbId.value = String(userMsg.kbId)
-    } else if (userMsg.mode === 'normal') {
-        selectedChatMode.value = 'normal'
+    } else if (userMsg.mode === 'web' || userMsg.mode === 'normal') {
+        selectedChatMode.value = 'auto'
     }
 
     // 如果之前有引用文章，恢复引用状态
@@ -1312,24 +1534,38 @@ const regenerateResponse = async (index) => {
 const handleScroll = () => {
     if (!chatContainer.value) return
     const { scrollTop, scrollHeight, clientHeight } = chatContainer.value
-    showScrollBtn.value = scrollHeight - scrollTop - clientHeight > 200
+    const distanceToBottom = scrollHeight - scrollTop - clientHeight
+    const isNearBottom = distanceToBottom < 96
+    showScrollBtn.value = distanceToBottom > 200
+
+    if (isNearBottom) {
+        autoFollowScroll.value = true
+    } else if (isStreaming.value) {
+        autoFollowScroll.value = false
+    }
 }
 
 const scrollToBottom = async (force = false) => {
     await nextTick()
     if (chatContainer.value) {
+        if (!force && !autoFollowScroll.value) {
+            return
+        }
         chatContainer.value.scrollTop = chatContainer.value.scrollHeight
         showScrollBtn.value = false
+        autoFollowScroll.value = true
         if (force) {
             requestAnimationFrame(() => {
                 if (!chatContainer.value) return
                 chatContainer.value.scrollTop = chatContainer.value.scrollHeight
                 showScrollBtn.value = false
+                autoFollowScroll.value = true
             })
             setTimeout(() => {
                 if (!chatContainer.value) return
                 chatContainer.value.scrollTop = chatContainer.value.scrollHeight
                 showScrollBtn.value = false
+                autoFollowScroll.value = true
             }, 120)
         }
     }
@@ -1358,6 +1594,15 @@ const formatScore = (score) => {
     return value >= 1 ? `${value.toFixed(1)} 命中` : `${Math.round(value * 100)}%`
 }
 
+const formatSourceBadge = (source = {}) => {
+    if (source.sourceType && source.sourceType !== 'rag') {
+        if (source.isAuthoritative) return '权威'
+        if (source.hasUsableContent) return `正文 ${Math.round(Number(source.contentQuality || 0) * 100)}%`
+        return `标题 ${Math.round(Number(source.relevance || source.score || 0) * 100)}%`
+    }
+    return formatScore(source.score)
+}
+
 const copyMessage = async (content) => {
     try {
         await navigator.clipboard.writeText(content || '')
@@ -1365,6 +1610,42 @@ const copyMessage = async (content) => {
     } catch {
         ElMessage.error('复制失败')
     }
+}
+
+const suggestedFollowUps = (chat) => {
+    if (!chat?.content) return []
+    if (chat.mode === 'web') {
+        return ['只保留权威来源', '按时间线整理', '继续联网查证']
+    }
+    if (chat.mode === 'article') {
+        return ['总结本文重点', '生成学习路线', '生成面试题']
+    }
+    if (chat.mode === 'rag' || chat.kbId || chat.sources?.length) {
+        return ['只根据来源总结', '列出引用证据', '生成学习路线']
+    }
+    return ['用更简单的话解释', '整理成表格', '生成面试题']
+}
+
+const buildFollowUpPrompt = (text, chat) => {
+    if (!chat) return text
+    if (text.includes('联网') || text.includes('权威') || text.includes('时间线')) {
+        return `${text}：请基于你上一条回答继续处理；如果需要最新信息，请再次联网交叉验证，并标出可靠来源。`
+    }
+    if (text.includes('来源') || text.includes('引用')) {
+        return `${text}：请只基于上一条回答中的来源和证据继续回答，不要扩展没有来源支撑的结论。`
+    }
+    if (text.includes('本文') || chat.mode === 'article') {
+        return `${text}：请围绕刚才引用的文章继续回答，保持结构清晰。`
+    }
+    return `${text}：请基于你上一条回答继续处理。`
+}
+
+const useFollowUp = (text, chat = null) => {
+    inputText.value = buildFollowUpPrompt(text, chat)
+    nextTick(() => {
+        textareaRef.value?.focus()
+        autoResize()
+    })
 }
 
 const usePrompt = (prompt) => {
@@ -1553,6 +1834,12 @@ const selectArticle = async (article) => {
     border: 1px solid var(--border-base);
 }
 
+@media (min-width: 1280px) {
+    .chat-mode-switch {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
 .chat-mode-option {
     min-height: 2.15rem;
     border: 0;
@@ -1611,15 +1898,34 @@ const selectArticle = async (article) => {
     border: 1px solid rgba(59, 130, 246, 0.20);
 }
 
+.chat-answer-mode-web {
+    color: #0f766e;
+    background: rgba(20, 184, 166, 0.12);
+    border: 1px solid rgba(20, 184, 166, 0.24);
+}
+
 .chat-answer-kb {
     color: #64748b;
     background: var(--bg-hover);
     border: 1px solid var(--border-base);
 }
 
+.chat-route-reason {
+    margin: -0.25rem 0 0.75rem;
+    color: var(--text-muted);
+    font-size: 0.76rem;
+    line-height: 1.45;
+}
+
 .dark .chat-answer-mode-normal,
 .dark .chat-answer-kb {
     color: #94a3b8;
+}
+
+.dark .chat-answer-mode-web {
+    color: #5eead4;
+    background: rgba(20, 184, 166, 0.14);
+    border-color: rgba(45, 212, 191, 0.26);
 }
 
 .rag-fallback-btn {
@@ -1810,6 +2116,14 @@ const selectArticle = async (article) => {
     white-space: nowrap;
 }
 
+.rag-source-link {
+    text-decoration: none;
+}
+
+.rag-source-link:hover {
+    color: var(--color-primary);
+}
+
 .rag-source-score {
     margin-left: auto;
     padding: 0.1rem 0.45rem;
@@ -1825,6 +2139,33 @@ const selectArticle = async (article) => {
     color: var(--text-muted);
     font-size: 0.75rem;
     line-height: 1.55;
+}
+
+.ai-follow-up-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-base);
+}
+
+.ai-follow-up-list button {
+    padding: 7px 10px;
+    border-radius: 999px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 650;
+    background: var(--bg-hover);
+    border: 1px solid var(--border-base);
+    transition: all 0.18s ease;
+}
+
+.ai-follow-up-list button:hover {
+    color: var(--color-primary);
+    border-color: rgba(59, 130, 246, 0.35);
+    background: var(--bg-card);
+    transform: translateY(-1px);
 }
 
 .rag-chip {

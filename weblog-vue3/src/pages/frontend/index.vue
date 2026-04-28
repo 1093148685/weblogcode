@@ -69,61 +69,61 @@
                     </div>
 
                     <template v-else>
-                    <div v-for="(article, index) in articles" :key="index"
+                    <article v-for="(article, index) in articles" :key="index"
                         ref="articleCardRefs"
-                        class="article-card relative bg-[var(--bg-card)] border border-[var(--border-base)] rounded-xl shadow-card hover:shadow-card-hover transition-all duration-200 overflow-hidden group scroll-animate"
+                        class="article-card article-stream-card scroll-animate"
                         :style="{ animationDelay: `${index * 0.05}s` }">
                         <!-- 置顶标记 -->
                         <div v-if="article.isTop === true"
-                            class="absolute top-0 right-0 z-10 flex items-center gap-1 px-3 py-2.5 text-xs font-medium text-amber-600 bg-amber-50 border-l border-b border-amber-100 rounded-bl-lg"
+                            class="article-pin-badge"
                             title="置顶">
                             <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 0 0 .95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 0 0-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 0 0-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 0 0-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 0 0 .951-.69l1.07-3.292Z"/></svg>
                             置顶
                         </div>
-                        <div class="flex flex-col sm:flex-row gap-0 sm:gap-6 items-stretch">
+                        <div class="article-stream-card__inner">
                             <!-- 封面图 -->
                             <a v-if="article.cover" @click="goArticleDetailPage(article.id)"
-                                class="cursor-pointer flex-shrink-0 w-full sm:w-[260px] h-[180px] sm:h-auto overflow-hidden relative rounded-t-lg sm:rounded-l-lg sm:rounded-tr-none">
-                                <div class="w-full h-full min-h-[180px] sm:min-h-[140px] relative overflow-hidden">
+                                class="article-stream-card__cover">
+                                <div class="article-stream-card__cover-inner">
                                     <img
-                                        class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                        class="article-stream-card__image"
                                         :src="article.cover" alt="" />
-                                    <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                    <div class="article-stream-card__image-mask"></div>
                                 </div>
                             </a>
                             <!-- 无封面占位图 -->
                             <div v-if="!article.cover" @click="goArticleDetailPage(article.id)"
-                                class="cursor-pointer flex-shrink-0 w-full sm:w-[260px] h-[180px] sm:min-h-[140px] bg-gradient-to-br from-[#253341] to-[#1c2732] flex items-center justify-center rounded-t-lg sm:rounded-l-lg sm:rounded-tr-none">
+                                class="article-stream-card__cover article-stream-card__cover--empty">
                                 <svg class="w-12 h-12 text-[#38444d]" fill="none" viewBox="0 0 24 24">
                                     <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m3 16 5-7 6 6.5m6.5 2.5L16 13l-4.286 6M14 10h.01M4 19h16a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1Z"/>
                                 </svg>
                             </div>
                             <!-- 内容区 -->
-                            <div class="flex-1 min-w-0 p-5 sm:py-5 sm:pr-6 sm:pl-0 flex flex-col justify-center">
+                            <div class="article-stream-card__body">
                                 <div>
                                     <!-- 标签 -->
-                                    <div v-if="article.tags && article.tags.length > 0" class="flex flex-wrap gap-2 mb-3">
+                                    <div v-if="article.tags && article.tags.length > 0" class="article-stream-card__tags">
                                         <span v-for="(tag, tagIndex) in article.tags.slice(0, 3)" :key="tagIndex"
                                             @click.stop="goTagArticleListPage(tag.id, tag.name)"
-                                            class="cursor-pointer px-2.5 py-1 text-xs bg-[var(--bg-hover)] text-[var(--text-secondary)] rounded-md hover:bg-[var(--color-primary)] hover:text-white transition-colors">
+                                            class="article-stream-card__tag">
                                             {{ tag.name }}
                                         </span>
                                     </div>
                                     <!-- 标题 -->
                                     <a @click="goArticleDetailPage(article.id)" class="cursor-pointer">
-                                        <h2 class="text-lg font-semibold text-[var(--text-heading)] hover:text-[var(--color-primary)] transition-colors duration-200 line-clamp-2 leading-snug mb-2">
+                                        <h2 class="article-stream-card__title">
                                             {{ article.title }}
                                         </h2>
                                     </a>
                                     <!-- 摘要 -->
                                     <p v-if="article.summary"
-                                        class="text-sm text-[var(--text-secondary)] line-clamp-2 leading-relaxed">
+                                        class="article-stream-card__summary">
                                         {{ article.summary }}
                                     </p>
                                 </div>
                                 <!-- 底部信息 -->
-                                <div class="flex items-center gap-4 mt-4 pt-4 border-t border-[var(--border-light)] text-xs text-[var(--text-muted)]">
-                                    <span class="flex items-center gap-1.5">
+                                <div class="article-stream-card__meta">
+                                    <span>
                                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 20 20">
                                             <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 1v3m5-3v3m5-3v3M1 7h18M5 11h10M2 3h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
                                         </svg>
@@ -131,7 +131,7 @@
                                     </span>
                                     <a v-if="article.category"
                                         @click.stop="goCategoryArticleListPage(article.category.id, article.category.name)"
-                                        class="flex items-center gap-1 cursor-pointer hover:text-[var(--color-primary)] transition-colors">
+                                        class="article-stream-card__category">
                                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 18 18">
                                             <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H1Zm0 0V2a1 1 0 0 1 1-1h5.443a1 1 0 0 1 .8.4l2.7 3.6H1Z" />
                                         </svg>
@@ -139,7 +139,7 @@
                                     </a>
 
                                     <!-- 阅读量 -->
-                                    <span class="flex items-center gap-1" title="阅读量">
+                                    <span title="阅读量">
                                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
                                             <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
                                                 d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7Z"/>
@@ -152,7 +152,7 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </article>
                     </template>
                 </div>
 
@@ -522,6 +522,200 @@ const goTagArticleListPage = (id, name) => {
     opacity: 0;
 }
 
+.article-stream-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 18px;
+    background:
+        linear-gradient(135deg, rgba(59, 130, 246, 0.05), transparent 42%),
+        var(--bg-card);
+    border: 1px solid var(--border-base);
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+    transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
+}
+
+.article-stream-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(59, 130, 246, 0.36);
+    box-shadow: 0 22px 56px rgba(15, 23, 42, 0.14);
+}
+
+.article-stream-card__inner {
+    display: grid;
+    grid-template-columns: minmax(220px, 31%) minmax(0, 1fr);
+    min-height: 214px;
+}
+
+.article-stream-card__cover {
+    position: relative;
+    display: block;
+    min-height: 214px;
+    cursor: pointer;
+    overflow: hidden;
+    background: linear-gradient(135deg, #1f2937, #111827);
+}
+
+.article-stream-card__cover-inner,
+.article-stream-card__image {
+    width: 100%;
+    height: 100%;
+}
+
+.article-stream-card__image {
+    display: block;
+    object-fit: cover;
+    transition: transform 0.55s ease;
+}
+
+.article-stream-card:hover .article-stream-card__image {
+    transform: scale(1.055);
+}
+
+.article-stream-card__image-mask {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 42%, rgba(15, 23, 42, 0.26));
+    opacity: 0;
+    transition: opacity 0.22s ease;
+}
+
+.article-stream-card:hover .article-stream-card__image-mask {
+    opacity: 1;
+}
+
+.article-stream-card__cover--empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.article-stream-card__body {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 26px 30px;
+}
+
+.article-stream-card__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.article-stream-card__tag {
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 999px;
+    color: var(--text-secondary);
+    background: var(--bg-hover);
+    border: 1px solid var(--border-light);
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1;
+    transition: all 0.18s ease;
+}
+
+.article-stream-card__tag:hover {
+    color: #fff;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.article-stream-card__title {
+    display: -webkit-box;
+    margin: 0 0 10px;
+    overflow: hidden;
+    color: var(--text-heading);
+    font-size: 21px;
+    font-weight: 800;
+    line-height: 1.38;
+    letter-spacing: 0;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    transition: color 0.18s ease;
+}
+
+.article-stream-card__title:hover {
+    color: var(--color-primary);
+}
+
+.article-stream-card__summary {
+    display: -webkit-box;
+    margin: 0;
+    overflow: hidden;
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.85;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.article-stream-card__meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-light);
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.article-stream-card__meta span,
+.article-stream-card__meta a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.article-stream-card__category {
+    cursor: pointer;
+    transition: color 0.18s ease;
+}
+
+.article-stream-card__category:hover {
+    color: var(--color-primary);
+}
+
+.article-pin-badge {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 10;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 10px;
+    border-radius: 999px;
+    color: #b45309;
+    background: rgba(255, 251, 235, 0.94);
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.dark .article-stream-card {
+    background:
+        radial-gradient(circle at 0 0, rgba(59, 130, 246, 0.09), transparent 32%),
+        rgba(30, 41, 53, 0.92);
+    box-shadow: 0 18px 46px rgba(0, 0, 0, 0.22);
+}
+
+.dark .article-stream-card:hover {
+    box-shadow: 0 24px 58px rgba(0, 0, 0, 0.34);
+}
+
+.dark .article-pin-badge {
+    color: #fbbf24;
+    background: rgba(120, 53, 15, 0.78);
+    border-color: rgba(251, 191, 36, 0.28);
+}
+
 /* 滚动淡入动画 */
 .scroll-animate {
     opacity: 0;
@@ -532,5 +726,29 @@ const goTagArticleListPage = (id, name) => {
 .scroll-animate.animate-in {
     opacity: 1;
     transform: translateY(0);
+}
+
+@media (max-width: 640px) {
+    .article-stream-card__inner {
+        grid-template-columns: 1fr;
+    }
+
+    .article-stream-card__cover {
+        min-height: 190px;
+        aspect-ratio: 16 / 9;
+    }
+
+    .article-stream-card__body {
+        padding: 20px;
+    }
+
+    .article-stream-card__title {
+        font-size: 19px;
+    }
+
+    .article-pin-badge {
+        top: 10px;
+        right: 10px;
+    }
 }
 </style>

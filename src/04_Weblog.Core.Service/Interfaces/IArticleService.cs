@@ -11,6 +11,7 @@ public interface IArticleService
     Task<PageDto<ArticleAdminDto>> GetAdminPageAsync(PageRequest request);
     Task<List<TagSelectDto>> GetAllTagsAsync();
     Task<bool> UpdateIsTopAsync(long id, bool isTop);
+    Task<bool> UpdateStatusAsync(long id, int status);
 }
 
 public interface IArticlePortalService

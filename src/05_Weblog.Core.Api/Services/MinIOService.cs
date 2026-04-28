@@ -53,7 +53,10 @@ public class MinIOService
         // 使用文件内容的 MD5 hash 作为文件名，实现去重
         var extension = Path.GetExtension(fileName).ToLower();
         var contentHash = GetContentHash(fileData);
-        var objectName = $"{contentHash}{extension}";
+        var safeFolder = string.IsNullOrWhiteSpace(folder)
+            ? "uploads"
+            : folder.Trim().Trim('/').Replace("\\", "/");
+        var objectName = $"{safeFolder}/{contentHash}{extension}";
 
         // Ensure bucket exists (thread-safe)
         await EnsureBucketExistsAsync();
@@ -69,7 +72,9 @@ public class MinIOService
         // 上传新文件
         await UploadAsync(objectName, fileData, extension);
 
-        var url = $"{_publicUrl}/{_bucketName}/{objectName}";
+        await UploadAsync(objectName, fileData, extension);
+
+        var url = $"{_publicUrl.TrimEnd('/')}/{_bucketName}/{objectName}";
         Console.WriteLine($"File uploaded successfully: {url}");
         return url;
     }
@@ -88,7 +93,7 @@ public class MinIOService
             await _minioClient.StatObjectAsync(statArgs);
 
             // 文件存在，返回 URL
-            return $"{_publicUrl}/{_bucketName}/{objectName}";
+            return $"{_publicUrl.TrimEnd('/')}/{_bucketName}/{objectName}";
         }
         catch (ObjectNotFoundException)
         {

@@ -4,9 +4,11 @@
    <el-config-provider :locale="locale">
       <div class="flex flex-col min-h-screen bg-[var(--bg-base)] transition-colors duration-300">
          <router-view v-slot="{ Component }">
-            <keep-alive :include="cachedViews">
-               <component :is="Component" />
-            </keep-alive>
+            <transition name="page-fade" appear>
+               <keep-alive :include="cachedViews">
+                  <component :is="Component" />
+               </keep-alive>
+            </transition>
          </router-view>
       </div>
    </el-config-provider>
@@ -37,15 +39,29 @@ const cachedViews = computed(() => {
 /* 页面切换过渡动画 */
 .page-fade-enter-active,
 .page-fade-leave-active {
-   transition: opacity 0.25s ease, transform 0.25s ease;
+   transition: opacity 0.32s ease, transform 0.32s ease, filter 0.32s ease;
 }
 .page-fade-enter-from {
    opacity: 0;
-   transform: translateY(10px);
+   transform: translateY(8px);
+   filter: blur(4px);
 }
 .page-fade-leave-to {
    opacity: 0;
-   transform: translateY(-10px);
+   transform: translateY(-4px);
+   filter: blur(2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+   .page-fade-enter-active,
+   .page-fade-leave-active {
+      transition: none;
+   }
+   .page-fade-enter-from,
+   .page-fade-leave-to {
+      transform: none;
+      filter: none;
+   }
 }
 
 /* NProgress 加载条 - Cool Gray 主色 */

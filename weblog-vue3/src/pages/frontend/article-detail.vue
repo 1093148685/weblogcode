@@ -9,8 +9,13 @@
 
 
     <!-- 文章标题、标签、Meta 信息 -->
-    <div class="article-hero">
-        <div class="article-hero__inner max-w-content flex flex-col mx-auto px-6 pb-10 pt-8">
+    <div class="article-hero" :class="{ 'is-loading': articleLoading }">
+        <div v-if="articleLoading" class="article-hero__inner max-w-content flex flex-col mx-auto px-6 pb-10 pt-8">
+            <div class="article-hero-skeleton article-hero-skeleton__tag"></div>
+            <div class="article-hero-skeleton article-hero-skeleton__title"></div>
+            <div class="article-hero-skeleton article-hero-skeleton__meta"></div>
+        </div>
+        <div v-else class="article-hero__inner max-w-content flex flex-col mx-auto px-6 pb-10 pt-8 article-reveal">
             <!-- 标签集合 -->
             <div v-if="article.tags && article.tags.length > 0" class="flex flex-wrap gap-1.5 mb-4">
                 <span @click="goTagArticleListPage(tag.id, tag.name)" v-for="(tag, index) in article.tags" :key="index"
@@ -69,10 +74,38 @@
             <!-- 左边：文章内容 -->
             <div class="min-w-0">
                 <!-- 文章卡片 -->
-                <div class="article-card">
+                <div v-if="articleLoading" class="article-card article-card--loading">
+                    <div class="article-loading-block article-loading-block--summary"></div>
+                    <div class="article-loading-line w-4/5"></div>
+                    <div class="article-loading-line"></div>
+                    <div class="article-loading-line w-11/12"></div>
+                    <div class="article-loading-line w-3/4"></div>
+                    <div class="article-loading-paragraph"></div>
+                    <div class="article-loading-line"></div>
+                    <div class="article-loading-line w-5/6"></div>
+                </div>
+                <div v-else class="article-card article-reveal">
                     <article>
                         <!-- AI 摘要 -->
                         <AiSummaryCard ref="aiSummaryRef" :content="article.content" :ready="articleRenderReady" />
+
+                        <section v-if="article.id" class="article-ai-hub">
+                            <div class="article-ai-hub__head">
+                                <div>
+                                    <p class="article-ai-hub__eyebrow">AI 阅读助手</p>
+                                    <h2>围绕这篇文章继续探索</h2>
+                                </div>
+                                <button class="article-ai-hub__primary" type="button" @click="askArticleAi('请用通俗语言总结这篇文章，并列出 5 个关键知识点。')">
+                                    问这篇文章
+                                </button>
+                            </div>
+                            <div class="article-ai-hub__actions">
+                                <button type="button" @click="askArticleAi('请把这篇文章整理成适合复习的学习路线，按先后顺序列出。')">生成学习路线</button>
+                                <button type="button" @click="askArticleAi('请根据这篇文章生成 8 道面试题，并附上参考答案。')">生成面试题</button>
+                                <button type="button" @click="askArticleAi('请提取这篇文章中的代码、架构或技术要点，并解释容易踩坑的地方。')">解释技术要点</button>
+                                <button type="button" @click="askArticleAi('请基于这篇文章推荐下一步应该阅读或学习的方向。')">推荐下一步</button>
+                            </div>
+                        </section>
 
                         <!-- 正文 -->
                         <div :class="{ 'dark': isDark }">
@@ -165,6 +198,9 @@ const router = useRouter()
 // 文章数据
 const article = ref({})
 
+// 文章主体加载状态，AI 摘要等正文稳定后再加载
+const articleLoading = ref(true)
+
 // 文章是否渲染完毕
 const articleRenderReady = ref(false)
 
@@ -174,7 +210,10 @@ const aiSummaryRef = ref(null)
 // Markdown 转 HTML
 const renderedContent = computed(() => {
     if (!article.value.content) return ''
-    return marked.parse(article.value.content, { breaks: true, gfm: true })
+    const content = article.value.content
+    return /<\/?[a-z][\s\S]*>/i.test(content)
+        ? content
+        : marked.parse(content, { breaks: true, gfm: true })
 })
 
 // 获取文章详情
@@ -183,6 +222,10 @@ function refreshArticleDetail(articleId) {
         console.error('articleId is required')
         return
     }
+
+    articleLoading.value = true
+    articleRenderReady.value = false
+    article.value = {}
     
     // 清除缓存，确保获取最新数据
     clearArticleDetailCache(articleId)
@@ -233,11 +276,28 @@ function refreshArticleDetail(articleId) {
             })
 
             // 文章渲染完毕后，加载 AI 摘要
+            articleLoading.value = false
             articleRenderReady.value = true
         })
+    }).catch((error) => {
+        console.error('load article detail failed:', error)
+        articleLoading.value = false
+        articleRenderReady.value = false
     })
 }
 refreshArticleDetail(route.params.articleId)
+
+const askArticleAi = (prompt) => {
+    router.push({
+        path: '/',
+        query: {
+            view: 'ai-chat',
+            articleId: article.value.id || route.params.articleId,
+            prompt,
+            autoSend: '1'
+        }
+    })
+}
 
 // 启动暗色模式监听
 onMounted(() => {
@@ -270,8 +330,6 @@ const goTagArticleListPage = (id, name) => {
 
 // 监听路由
 watch(route, (newRoute, oldRoute) => {
-    // 重置文章渲染状态
-    articleRenderReady.value = false
     // 重新渲染文章详情
     refreshArticleDetail(newRoute.params.articleId)
 })
@@ -348,6 +406,166 @@ const handleMouseLeave = (event) => {
     box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
 }
 
+.article-reveal {
+    animation: articleReveal 0.42s ease both;
+}
+
+.article-hero.is-loading {
+    min-height: 178px;
+}
+
+.article-hero-skeleton,
+.article-loading-line,
+.article-loading-block,
+.article-loading-paragraph {
+    position: relative;
+    overflow: hidden;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--bg-hover) 25%, var(--bg-active) 50%, var(--bg-hover) 75%);
+    background-size: 240% 100%;
+    animation: articleSkeleton 1.35s ease-in-out infinite;
+}
+
+.article-hero-skeleton__tag {
+    width: 128px;
+    height: 26px;
+    margin-bottom: 22px;
+}
+
+.article-hero-skeleton__title {
+    width: min(760px, 82%);
+    height: 44px;
+    margin-bottom: 22px;
+    border-radius: 14px;
+}
+
+.article-hero-skeleton__meta {
+    width: 360px;
+    max-width: 70%;
+    height: 18px;
+}
+
+.article-card--loading {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 520px;
+}
+
+.article-loading-block--summary {
+    height: 112px;
+    margin-bottom: 18px;
+    border-radius: 18px;
+}
+
+.article-loading-line {
+    height: 18px;
+}
+
+.article-loading-paragraph {
+    height: 160px;
+    margin: 12px 0;
+    border-radius: 18px;
+}
+
+@keyframes articleSkeleton {
+    0% { background-position: 120% 0; }
+    100% { background-position: -120% 0; }
+}
+
+@keyframes articleReveal {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+        filter: blur(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+        filter: blur(0);
+    }
+}
+
+.article-ai-hub {
+    margin-top: 18px;
+    margin-bottom: 24px;
+    padding: 18px;
+    border-radius: 18px;
+    border: 1px solid rgba(59, 130, 246, 0.18);
+    background:
+        linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(34, 211, 238, 0.08)),
+        var(--bg-card);
+}
+
+.article-ai-hub__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.article-ai-hub__eyebrow {
+    margin: 0 0 4px;
+    color: var(--color-primary);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.article-ai-hub h2 {
+    margin: 0;
+    color: var(--text-heading);
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.article-ai-hub__primary,
+.article-ai-hub__actions button {
+    border-radius: 12px;
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.article-ai-hub__primary {
+    flex-shrink: 0;
+    padding: 10px 16px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #2563eb, #06b6d4);
+    box-shadow: 0 12px 26px rgba(37, 99, 235, 0.22);
+}
+
+.article-ai-hub__actions {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.article-ai-hub__actions button {
+    min-height: 44px;
+    padding: 10px 12px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 650;
+    background: rgba(255, 255, 255, 0.58);
+    border: 1px solid var(--border-base);
+}
+
+.article-ai-hub__primary:hover,
+.article-ai-hub__actions button:hover {
+    transform: translateY(-1px);
+}
+
+.article-ai-hub__actions button:hover {
+    color: var(--color-primary);
+    border-color: rgba(59, 130, 246, 0.35);
+    background: var(--bg-card);
+}
+
+.dark .article-ai-hub__actions button {
+    background: rgba(15, 23, 42, 0.54);
+}
+
 .article-pager {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -393,6 +611,22 @@ const handleMouseLeave = (event) => {
     color: #292525;
     line-height: 150%;
     font-family: PingFang SC, Helvetica Neue, Helvetica, Hiragino Sans GB, Microsoft YaHei, "\5FAE\8F6F\96C5\9ED1", Arial, sans-serif;
+}
+
+::v-deep(.article-content h1) {
+    margin-top: 18px;
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    color: var(--text-heading);
+    font-size: 32px;
+    font-weight: 850;
+    line-height: 1.28;
+    border-bottom: 1px solid var(--border-base);
+}
+
+::v-deep(.dark .article-content h1) {
+    color: rgb(241 245 249);
+    border-bottom-color: rgb(55 65 81 / 1);
 }
 
 ::v-deep(.article-content h2) {
@@ -613,22 +847,32 @@ img:focus) {
 }
 
 /* pre 样式 */
-::v-deep(pre) {
+::v-deep(.article-content pre) {
     margin-bottom: 20px;
     padding-top: 30px;
     background: #21252b;
     border-radius: 12px;
     position: relative;
     box-shadow: 0 18px 38px rgba(15, 23, 42, 0.18);
+    overflow: hidden;
 }
 
-::v-deep(pre code.hljs) {
+::v-deep(.article-content pre code),
+::v-deep(.article-content pre code.hljs) {
+    display: block;
     padding: 0.7rem 1rem;
     border-bottom-left-radius: 6px;
     border-bottom-right-radius: 6px;
+    color: #c9d1d9;
+    background: transparent;
+    font-family: Operator Mono, Consolas, Monaco, Menlo, monospace;
+    font-size: 15px;
+    line-height: 1.8;
+    white-space: pre;
+    overflow-x: auto;
 }
 
-::v-deep(pre:before) {
+::v-deep(.article-content pre:before) {
     background: #fc625d;
     border-radius: 50%;
     box-shadow: 20px 0 #fdbc40, 40px 0 #35cd4b;
@@ -638,6 +882,19 @@ img:focus) {
     margin-left: 10px;
     position: absolute;
     width: 10px;
+}
+
+::v-deep(.article-content pre code *) {
+    font-family: inherit;
+}
+
+::v-deep(.article-content pre code ul),
+::v-deep(.article-content pre code ol),
+::v-deep(.article-content pre code li),
+::v-deep(.article-content pre code p) {
+    margin: 0;
+    padding: 0;
+    list-style: none;
 }
 
 /* 表格样式 */
@@ -786,6 +1043,15 @@ img:focus) {
     .article-card {
         padding: 20px;
         border-radius: 14px;
+    }
+
+    .article-ai-hub__head {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .article-ai-hub__actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .article-pager {

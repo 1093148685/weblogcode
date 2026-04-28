@@ -99,6 +99,8 @@ function typeContent(text, animated = true) {
 }
 
 async function loadSummary() {
+    if (!props.ready) return
+
     const id = props.articleId || route.params.articleId
     if (!id) return
 
@@ -150,11 +152,13 @@ watch(() => props.ready, (isReady) => {
 watch(() => route.params.articleId, (newId) => {
     if (newId) {
         resetState()
-        loadSummary()
+        if (props.ready) loadSummary()
     }
 })
 
-onMounted(loadSummary)
+onMounted(() => {
+    if (props.ready) loadSummary()
+})
 onBeforeUnmount(() => clearInterval(typingTimer))
 
 defineExpose({

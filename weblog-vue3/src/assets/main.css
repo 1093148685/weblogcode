@@ -1905,11 +1905,30 @@ html.dark .el-dialog__footer {
 }
 
 .tag-nav,
-.el-footer {
+.admin-layout .el-footer {
   background: rgba(8, 13, 24, 0.88) !important;
   border-color: var(--admin-border) !important;
   color: var(--admin-text-muted) !important;
   box-shadow: 0 1px 0 rgba(148, 163, 184, 0.12) inset !important;
+}
+
+.site-footer {
+  background: var(--bg-card) !important;
+  border-top-color: var(--border-base) !important;
+  color: var(--text-muted) !important;
+  transition: background-color var(--transition-base), border-color var(--transition-base), color var(--transition-base);
+}
+
+html:not(.dark) .site-footer {
+  background: #ffffff !important;
+  border-top-color: #e5e7eb !important;
+  color: #94a3b8 !important;
+}
+
+html.dark .site-footer {
+  background: #1c2732 !important;
+  border-top-color: #253341 !important;
+  color: #657786 !important;
 }
 
 .nav-tabs .el-tabs__item {
@@ -2026,8 +2045,147 @@ html:not(.dark) .menu-footer {
 html:not(.dark) .tag-nav,
 html:not(.dark) .el-footer {
   background: rgba(255, 255, 255, 0.88) !important;
+  border-color: transparent !important;
+  color: #64748b !important;
+}
+
+html:not(.dark) .tag-nav {
+  border-bottom: 0 !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06) !important;
+}
+
+html:not(.dark) .nav-tabs .el-tabs__header,
+html:not(.dark) .nav-tabs .el-tabs__nav,
+html:not(.dark) .nav-tabs .el-tabs__item {
+  border-color: transparent !important;
+}
+
+html:not(.dark) .nav-tabs .el-tabs__item {
+  background: rgba(248, 250, 252, 0.9) !important;
+  box-shadow: none !important;
+}
+
+html:not(.dark) .nav-tabs .el-tabs__item.is-active {
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.16) !important;
+}
+
+html:not(.dark) .admin-header {
+  border-bottom-color: transparent !important;
+  box-shadow: 0 8px 26px rgba(15, 23, 42, 0.05) !important;
+}
+
+html:not(.dark) .menu-container {
+  border-right-color: transparent !important;
+}
+
+html:not(.dark) .admin-main > .el-card,
+html:not(.dark) .admin-main .glass-panel,
+html:not(.dark) .admin-main .admin-table-panel,
+html:not(.dark) .admin-main .ai-card,
+html:not(.dark) .admin-main .panel-card {
+  border-color: transparent !important;
+}
+
+/* Admin surface polish: keep top-level cards from exposing awkward corners under the tab bar. */
+.admin-main .el-card,
+.admin-main .glass-panel,
+.admin-main .admin-table-panel,
+.admin-main .ai-card,
+.admin-main .panel-card,
+.admin-main .page-hero {
+  border-radius: 12px !important;
+}
+
+.admin-main > .el-card:first-child,
+.admin-main > div:first-child > .el-card:first-child,
+.admin-main > .page-shell:first-child > .page-hero:first-child {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+}
+
+.admin-main > .el-card:first-child .el-card__body,
+.admin-main > div:first-child > .el-card:first-child .el-card__body {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+}
+
+.admin-main .el-table,
+.admin-main .el-table--border .el-table__inner-wrapper {
+  border-radius: 10px !important;
+}
+
+html:not(.dark) .admin-layout .el-footer,
+html:not(.dark) .admin-footer {
+  background: rgba(255, 255, 255, 0.92) !important;
   border-color: #e2e8f0 !important;
   color: #64748b !important;
+  box-shadow: 0 -1px 0 rgba(226, 232, 240, 0.9) inset !important;
+}
+
+html.dark .admin-layout .el-footer,
+html.dark .admin-footer {
+  background: rgba(8, 13, 24, 0.88) !important;
+  border-color: rgba(71, 85, 105, 0.34) !important;
+  color: #94a3b8 !important;
+}
+
+/* Admin announcement dialog: keep the simple form dialog above the page shell. */
+.admin-announcement-dialog,
+.admin-announcement-dialog.el-dialog {
+  max-width: calc(100vw - 32px);
+  overflow: hidden !important;
+  background: var(--admin-bg-card) !important;
+  border: 1px solid var(--admin-border) !important;
+  box-shadow: var(--admin-shadow) !important;
+}
+
+.admin-announcement-dialog .el-dialog__header {
+  background: var(--admin-bg-card) !important;
+  border-bottom: 1px solid var(--admin-border) !important;
+  padding: 18px 24px 14px !important;
+  margin-right: 0 !important;
+}
+
+.admin-announcement-dialog .el-dialog__body {
+  background: var(--admin-bg-card) !important;
+  color: var(--admin-text) !important;
+  padding: 22px 24px !important;
+}
+
+.admin-announcement-dialog .el-dialog__footer {
+  background: var(--admin-bg-soft) !important;
+  border-top: 1px solid var(--admin-border) !important;
+  padding: 14px 24px 18px !important;
+}
+
+.admin-announcement-dialog .el-form-item {
+  margin-bottom: 20px;
+}
+
+.admin-announcement-dialog .el-textarea__inner {
+  min-height: 116px !important;
+}
+
+html:not(.dark) .admin-announcement-dialog,
+html:not(.dark) .admin-announcement-dialog.el-dialog {
+  background: #ffffff !important;
+  border-color: #dbe4ef !important;
+}
+
+html:not(.dark) .admin-announcement-dialog .el-dialog__header,
+html:not(.dark) .admin-announcement-dialog .el-dialog__body {
+  background: #ffffff !important;
+}
+
+html:not(.dark) .admin-announcement-dialog .el-dialog__footer {
+  background: #f8fafc !important;
+  border-top-color: #e2e8f0 !important;
+}
+
+html.dark .admin-announcement-dialog,
+html.dark .admin-announcement-dialog.el-dialog {
+  background: rgba(8, 13, 24, 0.96) !important;
+  border-color: rgba(71, 85, 105, 0.42) !important;
 }
 
 html:not(.dark) .nav-tabs .el-tabs__item {
@@ -2083,6 +2241,133 @@ html.dark .article-editor-dialog .el-dialog__header {
   border-color: var(--admin-border-strong) !important;
 }
 
+/* Admin table theme: keep Element Plus tables aligned with the active admin skin. */
+.admin-main .admin-table-panel,
+.admin-main .el-card.admin-table-panel {
+  background: var(--admin-bg-card) !important;
+  border-color: var(--admin-border) !important;
+}
+
+.admin-main .el-card.admin-table-panel .el-card__body {
+  background: transparent !important;
+}
+
+.admin-main .el-table {
+  --el-table-bg-color: var(--admin-bg-card);
+  --el-table-tr-bg-color: var(--admin-bg-card);
+  --el-table-header-bg-color: var(--admin-bg-soft);
+  --el-table-row-hover-bg-color: var(--admin-bg-hover);
+  --el-table-current-row-bg-color: var(--admin-bg-hover);
+  --el-table-border-color: var(--admin-grid-line);
+  --el-table-border: 1px solid var(--el-table-border-color);
+  --el-table-text-color: var(--admin-text);
+  --el-table-header-text-color: var(--admin-text-muted);
+  --el-table-fixed-box-shadow: -12px 0 26px rgba(15, 23, 42, 0.08);
+  background: var(--admin-bg-card) !important;
+  border-color: var(--admin-grid-line) !important;
+  color: var(--admin-text) !important;
+}
+
+html.dark .admin-main .el-table {
+  --el-table-fixed-box-shadow: -12px 0 28px rgba(0, 0, 0, 0.34);
+}
+
+.admin-main .el-table__inner-wrapper,
+.admin-main .el-table__header-wrapper,
+.admin-main .el-table__body-wrapper,
+.admin-main .el-table__footer-wrapper,
+.admin-main .el-table__fixed,
+.admin-main .el-table__fixed-right,
+.admin-main .el-table__fixed-header-wrapper,
+.admin-main .el-table__fixed-body-wrapper {
+  background: var(--admin-bg-card) !important;
+}
+
+.admin-main .el-table__header,
+.admin-main .el-table__header tr,
+.admin-main .el-table th.el-table__cell {
+  background: var(--admin-bg-soft) !important;
+  border-color: var(--admin-grid-line) !important;
+  color: var(--admin-text-muted) !important;
+}
+
+.admin-main .el-table__body,
+.admin-main .el-table__body tr,
+.admin-main .el-table td.el-table__cell {
+  background: var(--admin-bg-card) !important;
+  border-color: var(--admin-grid-line) !important;
+  color: var(--admin-text) !important;
+}
+
+html:not(.dark) .admin-main .el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+  background: rgba(79, 70, 229, 0.035) !important;
+}
+
+html.dark .admin-main .el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+  background: rgba(30, 41, 59, 0.78) !important;
+}
+
+.admin-main .el-table__body tr:hover > td.el-table__cell,
+.admin-main .el-table__body tr.hover-row > td.el-table__cell,
+.admin-main .el-table__body tr.current-row > td.el-table__cell {
+  background: var(--admin-bg-hover) !important;
+  color: var(--admin-text) !important;
+}
+
+.admin-main .el-table__empty-block {
+  background: var(--admin-bg-card) !important;
+}
+
+.admin-main .el-table__empty-text {
+  color: var(--admin-text-muted) !important;
+}
+
+.admin-main .el-table--border,
+.admin-main .el-table--group,
+.admin-main .el-table--border .el-table__inner-wrapper,
+.admin-main .el-table--border .el-table__cell,
+.admin-main .el-table__border-left-patch {
+  border-color: var(--admin-grid-line) !important;
+}
+
+.admin-main .el-table--border::before,
+.admin-main .el-table--border::after,
+.admin-main .el-table--border .el-table__inner-wrapper::before,
+.admin-main .el-table--border .el-table__inner-wrapper::after,
+.admin-main .el-table__inner-wrapper::before,
+.admin-main .el-table__border-left-patch {
+  background-color: var(--admin-grid-line) !important;
+}
+
+.admin-main .el-table .el-table__cell.is-hidden > * {
+  visibility: hidden;
+}
+
+.admin-main .el-pagination {
+  color: var(--admin-text-muted) !important;
+}
+
+.admin-main .el-pagination.is-background .btn-prev,
+.admin-main .el-pagination.is-background .btn-next,
+.admin-main .el-pagination.is-background .el-pager li {
+  background: var(--admin-bg-soft) !important;
+  border: 1px solid var(--admin-border) !important;
+  color: var(--admin-text-muted) !important;
+}
+
+.admin-main .el-pagination.is-background .btn-prev:not(:disabled):hover,
+.admin-main .el-pagination.is-background .btn-next:not(:disabled):hover,
+.admin-main .el-pagination.is-background .el-pager li:not(.is-disabled):hover {
+  border-color: color-mix(in srgb, var(--admin-accent) 34%, var(--admin-border)) !important;
+  color: var(--admin-text) !important;
+}
+
+.admin-main .el-pagination.is-background .el-pager li.is-active {
+  background: linear-gradient(135deg, var(--admin-accent), var(--admin-accent-2)) !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
+}
+
 /* ── Focus ring: frontend/admin inputs use the active theme accent ── */
 .el-input__wrapper.is-focus,
 .el-select__wrapper.is-focused,
@@ -2091,6 +2376,13 @@ input:focus,
 textarea:focus {
   border-color: var(--admin-accent, var(--color-primary)) !important;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--admin-accent, var(--color-primary)) 18%, transparent) !important;
+}
+
+.el-select input:focus,
+.el-select__input:focus {
+  border-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 /* ── Frontend search modal polish ── */

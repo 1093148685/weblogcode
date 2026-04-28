@@ -9,6 +9,8 @@ using Weblog.Core.Service.AI.Core;
 using Weblog.Core.Service.AI.Plugins;
 using Weblog.Core.Service.AI.Providers;
 using Weblog.Core.Service.AI.Rag;
+using Weblog.Core.Service.AI.Routing;
+using Weblog.Core.Service.AI.WebSearch;
 using SqlSugar;
 
 namespace Weblog.Core.Api.Controllers.Portal;
@@ -22,14 +24,18 @@ public class AiChatController : ControllerBase
     private readonly ILogger<AiChatController> _logger;
     private readonly ISqlSugarClient _db;
     private readonly IRagService _ragService;
+    private readonly IWebSearchService _webSearchService;
+    private readonly IAiChatRoutingService _routingService;
 
-    public AiChatController(IAiKernel aiKernel, PluginManager pluginManager, ILogger<AiChatController> logger, ISqlSugarClient db, IRagService ragService)
+    public AiChatController(IAiKernel aiKernel, PluginManager pluginManager, ILogger<AiChatController> logger, ISqlSugarClient db, IRagService ragService, IWebSearchService webSearchService, IAiChatRoutingService routingService)
     {
         _aiKernel = aiKernel;
         _pluginManager = pluginManager;
         _logger = logger;
         _db = db;
         _ragService = ragService;
+        _webSearchService = webSearchService;
+        _routingService = routingService;
     }
 
     [HttpGet("models")]
@@ -181,17 +187,20 @@ public class AiChatController : ControllerBase
 
         var fullResponse = new StringBuilder();
         var model = request.Model ?? "deepseek-chat";
-        var chatMode = string.IsNullOrWhiteSpace(request.Mode)
+        var requestedMode = string.IsNullOrWhiteSpace(request.Mode)
             ? (request.KbId.HasValue && request.KbId.Value > 0 ? "rag" : "normal")
             : request.Mode.Trim().ToLowerInvariant();
-        var ragKbId = request.KbId.GetValueOrDefault();
-        var useRag = chatMode == "rag" && ragKbId > 0;
 
         var pluginConfig = await LoadPluginConfigAsync("chat_assistant");
         var systemPrompt = pluginConfig.GetValueOrDefault("systemPrompt")?.ToString();
         var defaultSystemPrompt = systemPrompt;
         var temperature = GetFloatValue(pluginConfig, "temperature", 0.7f);
         var maxTokens = GetIntValue(pluginConfig, "maxTokens", 4096);
+        var allowAutoWebSearch = GetBoolValue(pluginConfig, "allowAutoWebSearch", true);
+        var preferKnowledgeBase = GetBoolValue(pluginConfig, "preferKnowledgeBase", true);
+        var webSearchTopK = Math.Clamp(GetIntValue(pluginConfig, "webSearchTopK", 5), 1, 8);
+        var enableFreeSearchFallback = GetBoolValue(pluginConfig, "enableFreeSearchFallback", true);
+        var tavilyApiKey = pluginConfig.GetValueOrDefault("tavilyApiKey")?.ToString();
 
         try
         {
@@ -201,6 +210,33 @@ public class AiChatController : ControllerBase
                 Content = m.Content
             }).ToList();
             var ragSources = new List<PortalRagSource>();
+            var originalUserQuery = messages.LastOrDefault(m => m.Role == "user")?.Content ?? "";
+            var route = _routingService.Decide(new AiChatRouteRequest
+            {
+                RequestedMode = request.EnableWebSearch ? "web" : requestedMode,
+                Query = originalUserQuery,
+                KbId = request.KbId,
+                HasArticleContext = !string.IsNullOrWhiteSpace(request.ArticleContent),
+                AllowAutoWebSearch = allowAutoWebSearch,
+                PreferKnowledgeBase = preferKnowledgeBase
+            });
+            var chatMode = route.Mode;
+            var ragKbId = route.KbId.GetValueOrDefault();
+            var useRag = route.UseRag;
+            var useWebSearch = route.UseWebSearch;
+            var useArticle = route.UseArticle || !string.IsNullOrWhiteSpace(request.ArticleContent);
+
+            await SendEvent("rag_status", new
+            {
+                step = "route",
+                status = "completed",
+                message = route.Reason,
+                routeMode = chatMode,
+                routeReason = route.Reason,
+                routeIntent = route.Intent,
+                routeConfidence = route.Confidence,
+                routeKbId = route.KbId
+            });
 
             if (useRag)
             {
@@ -209,12 +245,20 @@ public class AiChatController : ControllerBase
                 messages = systemMessages.Concat(recentMessages).ToList();
             }
 
-            if (!useRag)
+            if (!useRag && !useWebSearch)
             {
                 messages.Insert(0, new AiChatMessage
                 {
                     Role = "system",
                     Content = "当前是普通聊天模式，未启用知识库检索。请直接回答用户问题，不要以“知识库中没有相关内容”作为拒答理由，也不要提及知识库命中情况。"
+                });
+            }
+            else if (useWebSearch)
+            {
+                messages.Insert(0, new AiChatMessage
+                {
+                    Role = "system",
+                    Content = "当前是联网搜索模式。请不要使用“知识库中没有相关内容”这类说法；联网资料只作为辅助。如果搜索结果与用户问题明显不相关，请明确说“本次联网搜索结果相关性不足”，然后按普通 AI 助手直接回答，不要拒答。"
                 });
             }
 
@@ -262,6 +306,14 @@ public class AiChatController : ControllerBase
                 {
                     messages.Insert(0, new AiChatMessage { Role = "system", Content = articlePrompt });
                 }
+            }
+            if (useArticle)
+            {
+                messages.Insert(0, new AiChatMessage
+                {
+                    Role = "system",
+                    Content = "当前是文章阅读辅助模式。请优先围绕用户提供的文章内容回答，可以总结、解释术语、生成学习路线、面试题或推荐下一步阅读；如果文章内容不足，再补充通用建议。"
+                });
             }
 
             // ── RAG 知识库检索增强 ──
@@ -368,6 +420,122 @@ public class AiChatController : ControllerBase
                 }
             }
 
+            // ── 联网搜索增强 ──
+            if (useWebSearch)
+            {
+                try
+                {
+                    var userQuery = messages.LastOrDefault(m => m.Role == "user")?.Content ?? "";
+                    if (!string.IsNullOrWhiteSpace(userQuery))
+                    {
+                        await SendEvent("rag_status", new { step = "web-search", status = "running", message = "正在联网搜索公开资料..." });
+                        var webResults = await _webSearchService.SearchAsync(userQuery, new WebSearchOptions
+                        {
+                            TopK = webSearchTopK,
+                            TavilyApiKey = tavilyApiKey,
+                            EnableFreeFallback = enableFreeSearchFallback
+                        }, ct);
+                        var relevantWebResults = webResults
+                            .Where(item => item.IsAuthoritative || item.HasUsableContent || item.Relevance >= 0.35f)
+                            .ToList();
+
+                        if (webResults.Count > 0)
+                        {
+                            var contextWebResults = relevantWebResults.Count > 0 ? relevantWebResults : webResults;
+                            await SendEvent("rag_sources", new
+                            {
+                                message = relevantWebResults.Count > 0
+                                    ? $"找到 {relevantWebResults.Count} 条可用联网来源"
+                                    : "联网搜索结果相关性不足",
+                                sources = contextWebResults.Select(item => new
+                                {
+                                    index = item.Index,
+                                    documentId = 0,
+                                    chunkId = item.Index,
+                                    title = item.Title,
+                                    content = item.Snippet,
+                                    score = item.Relevance,
+                                    url = item.Url,
+                                    sourceType = item.SourceType,
+                                    isAuthoritative = item.IsAuthoritative,
+                                    relevance = item.Relevance,
+                                    contentQuality = item.ContentQuality,
+                                    hasUsableContent = item.HasUsableContent,
+                                    routeMode = chatMode,
+                                    routeReason = route.Reason
+                                })
+                            });
+                            await SendEvent("rag_status", new
+                            {
+                                step = "web-sources",
+                                status = relevantWebResults.Count > 0 ? "completed" : "warning",
+                                message = relevantWebResults.Count > 0 ? $"已准备 {relevantWebResults.Count} 条联网来源" : "联网结果相关性不足，将按普通助手回答",
+                                routeMode = chatMode,
+                                routeReason = route.Reason
+                            });
+
+                            var webContext = new StringBuilder();
+                            webContext.AppendLine("【联网搜索参考资料】");
+                            webContext.AppendLine($"用户问题：{userQuery}");
+                            webContext.AppendLine("请先判断以下公开网页搜索结果是否真的与用户问题相关。");
+                            webContext.AppendLine("如果资料相关，请优先结合资料回答，并在关键结论后用 [1]、[2] 标注来源。");
+                            webContext.AppendLine("如果资料明显不相关、主题跑偏或只包含广告/无关网站，请忽略这些资料，按普通 AI 助手直接回答用户问题，并简短说明“本次联网搜索结果相关性不足”。");
+                            webContext.AppendLine("如果来源是 package 或 weather 类型，它是本次问题的优先权威来源，请直接回答对应版本号或天气结果，不要被旧对话或其他无关搜索结果影响。");
+                            webContext.AppendLine("注意：搜索结果可能不完整或过期，涉及版本、价格、政策、时间等内容时请说明需要以原网页为准。");
+                            webContext.AppendLine();
+
+                            foreach (var item in contextWebResults)
+                            {
+                                webContext.AppendLine($"[{item.Index}] {item.Title}");
+                                webContext.AppendLine($"类型：{item.SourceType}");
+                                webContext.AppendLine($"相关性：{Math.Round(item.Relevance, 2)}");
+                                webContext.AppendLine($"正文质量：{Math.Round(item.ContentQuality, 2)}");
+                                webContext.AppendLine($"正文可用：{(item.HasUsableContent ? "是" : "否")}");
+                                webContext.AppendLine($"链接：{item.Url}");
+                                webContext.AppendLine($"摘要：{item.Snippet}");
+                                webContext.AppendLine();
+                            }
+
+                            var lastUserMessage = messages.LastOrDefault(m => m.Role == "user");
+                            if (lastUserMessage != null)
+                            {
+                                lastUserMessage.Content = webContext + "\n\n请基于以上规则回答用户问题：资料相关就引用资料，资料不相关就忽略资料并直接回答。回答末尾只列出实际使用过的参考来源。\n\n用户问题：" + userQuery;
+                            }
+
+                            if (messages.First().Role == "system")
+                            {
+                                messages[0].Content = webContext + "\n\n" + messages[0].Content;
+                            }
+                            else
+                            {
+                                messages.Insert(0, new AiChatMessage { Role = "system", Content = webContext.ToString() });
+                            }
+                        }
+                        else
+                        {
+                            await SendEvent("rag_sources", new
+                            {
+                                message = "没有找到可用联网来源",
+                                routeMode = chatMode,
+                                routeReason = route.Reason,
+                                sources = Array.Empty<object>()
+                            });
+                            await SendEvent("rag_status", new { step = "web-search", status = "warning", message = "联网搜索没有找到可用结果，已按普通对话回答", routeMode = chatMode, routeReason = route.Reason });
+                            messages.Insert(0, new AiChatMessage
+                            {
+                                Role = "system",
+                                Content = "用户开启了联网搜索，但搜索服务没有返回可用结果。请直接按普通 AI 助手回答，并提醒用户本次没有可引用的联网来源。"
+                            });
+                        }
+                    }
+                }
+                catch (Exception searchEx)
+                {
+                    _logger.LogWarning(searchEx, "Web search failed, continuing without search context");
+                    await SendEvent("rag_error", new { step = "web-search", status = "error", message = "联网搜索失败，已切换为普通对话", detail = searchEx.Message });
+                }
+            }
+
             if (!string.IsNullOrEmpty(defaultSystemPrompt))
             {
                 if (messages.First().Role == "system")
@@ -402,9 +570,9 @@ public class AiChatController : ControllerBase
                 return;
             }
 
-            if (useRag)
+            if (useRag || useWebSearch)
             {
-                await SendEvent("rag_status", new { step = "generate", status = "running", message = ragSources.Count > 0 ? "正在基于引用来源生成回答..." : "正在生成回答..." });
+                await SendEvent("rag_status", new { step = "generate", status = "running", message = useWebSearch ? "正在基于联网资料生成回答..." : ragSources.Count > 0 ? "正在基于引用来源生成回答..." : "正在生成回答..." });
             }
 
             await foreach (var chunk in provider.ChatStreamAsync(aiRequest, apiKey, ct))
@@ -416,7 +584,7 @@ public class AiChatController : ControllerBase
                 await SendChunk(chunk);
             }
 
-            if (useRag)
+            if (useRag || useWebSearch)
             {
                 await SendEvent("rag_status", new { step = "generate", status = "completed", message = "回答生成完成" });
             }
@@ -803,6 +971,41 @@ public class AiChatController : ControllerBase
         }
         return defaultValue;
     }
+
+    private static bool GetBoolValue(Dictionary<string, object> config, string key, bool defaultValue)
+    {
+        if (config.TryGetValue(key, out var value))
+        {
+            try
+            {
+                if (value is JsonElement jsonElement)
+                {
+                    return jsonElement.ValueKind switch
+                    {
+                        JsonValueKind.True => true,
+                        JsonValueKind.False => false,
+                        JsonValueKind.String when bool.TryParse(jsonElement.GetString(), out var parsed) => parsed,
+                        JsonValueKind.Number when jsonElement.TryGetInt32(out var number) => number != 0,
+                        _ => defaultValue
+                    };
+                }
+                if (value is bool boolValue)
+                {
+                    return boolValue;
+                }
+                if (bool.TryParse(value.ToString(), out var result))
+                {
+                    return result;
+                }
+                if (int.TryParse(value.ToString(), out var numberValue))
+                {
+                    return numberValue != 0;
+                }
+            }
+            catch { }
+        }
+        return defaultValue;
+    }
 }
 
 public class PortalChatRequest
@@ -811,10 +1014,13 @@ public class PortalChatRequest
     public string? SessionId { get; set; }
     public string? ClientId { get; set; }
     public string? Model { get; set; }
-    /// <summary>对话模式：normal 普通聊天；rag 知识库问答。为空时兼容旧逻辑：有 KbId 则 rag，否则 normal。</summary>
+    /// <summary>对话模式：normal 普通聊天；rag 知识库问答；web 联网搜索。为空时兼容旧逻辑：有 KbId 则 rag，否则 normal。</summary>
     public string? Mode { get; set; }
+    /// <summary>是否启用联网搜索。推荐前端传 mode=web；该字段用于兼容后续开关式入口。</summary>
+    public bool EnableWebSearch { get; set; } = false;
     public string? ArticleContent { get; set; }
     public string? ArticleTitle { get; set; }
+    public long? ArticleId { get; set; }
     /// <summary>可选：指定知识库 ID，传入后自动检索并注入上下文（RAG）</summary>
     public long? KbId { get; set; }
     /// <summary>当消息超过20条时，自动压缩早期消息以节省 Token</summary>
@@ -835,6 +1041,9 @@ public class PortalRagSource
     public string Title { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
     public float Score { get; set; }
+    public float Relevance { get; set; }
+    public string? Url { get; set; }
+    public string SourceType { get; set; } = "rag";
 }
 
 public class AiModelInfo

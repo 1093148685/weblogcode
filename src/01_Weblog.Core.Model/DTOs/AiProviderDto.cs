@@ -38,6 +38,28 @@ public class UpdateAiProviderRequest
     public string? Config { get; set; }
 }
 
+public class FetchModelsRequest
+{
+    public string ApiUrl { get; set; } = string.Empty;
+    public string ApiKey { get; set; } = string.Empty;
+}
+
+public class AiModelOptionDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public long Created { get; set; }
+}
+
+public class ProviderHealthDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public long LatencyMs { get; set; }
+    public string LastChecked { get; set; } = string.Empty;
+    public string? Error { get; set; }
+}
+
 public class AiPluginDto
 {
     public long Id { get; set; }

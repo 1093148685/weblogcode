@@ -54,7 +54,15 @@
             </div>
 
             <!-- 新增/编辑对话框 -->
-            <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px">
+            <el-dialog
+                v-model="dialogVisible"
+                :title="dialogTitle"
+                width="600px"
+                class="admin-announcement-dialog"
+                align-center
+                append-to-body
+                destroy-on-close
+            >
                 <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
                     <el-form-item label="公告内容" prop="content">
                         <el-input v-model="form.content" type="textarea" :rows="4" placeholder="请输入公告内容" />
@@ -116,10 +124,6 @@ onMounted(() => {
 const dataLoaded = ref(false)
 
 function getTableData() {
-    // 如果数据已加载且有数据，不重复加载
-    if (dataLoaded.value && tableData.value.length > 0) {
-        return
-    }
     getAnnouncementList({
         content: searchContent.value || null,
         isEnabled: searchIsEnabled.value || null,
@@ -153,6 +157,7 @@ function resetSearch() {
     startDate.value = ''
     endDate.value = ''
     current.value = 1
+    dataLoaded.value = false
     getTableData()
 }
 

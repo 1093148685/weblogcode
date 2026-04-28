@@ -14,6 +14,7 @@ using Weblog.Core.Service.AI.Core;
 using Weblog.Core.Service.AI.Providers;
 using Weblog.Core.Service.AI.Plugins;
 using Weblog.Core.Service.AI.Rag;
+using Weblog.Core.Service.AI.Routing;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -96,7 +97,11 @@ builder.Services.AddSingleton<Weblog.Core.Service.AI.Core.AiProviderSelector>();
 builder.Services.AddScoped<Weblog.Core.Service.AI.IAiProviderService, Weblog.Core.Service.AI.AiProviderService>();
 builder.Services.AddSingleton<Weblog.Core.Service.AI.Plugins.PluginManager>();
 builder.Services.AddScoped<Weblog.Core.Service.AI.IAiKernel, Weblog.Core.Service.AI.AiKernel>();
+builder.Services.AddScoped<IAiAssistantService, AiAssistantService>();
 builder.Services.AddScoped<IRagService, RagService>();
+builder.Services.AddScoped<IRagAdminService, RagAdminService>();
+builder.Services.AddSingleton<IAiChatRoutingService, AiChatRoutingService>();
+builder.Services.AddHttpClient<Weblog.Core.Service.AI.WebSearch.IWebSearchService, Weblog.Core.Service.AI.WebSearch.WebSearchService>();
 builder.Services.AddHttpClient<IGiphyService, GiphyService>();
 builder.Services.AddHttpClient<ILinkPreviewService, LinkPreviewService>();
 

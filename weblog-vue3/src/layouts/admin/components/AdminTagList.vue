@@ -56,7 +56,7 @@ const { menuStore, activeTab, tabList, tabChange, removeTab, handleCloseTab } = 
 /* ===== 标签栏容器（参考 FeiTwnd 简约灰白） ===== */
 .tag-nav {
     background: rgba(8, 13, 24, 0.82);
-    border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+    border-bottom: 0;
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
     animation: slideDown 0.3s ease-out;
     backdrop-filter: blur(14px);
@@ -99,7 +99,7 @@ const { menuStore, activeTab, tabList, tabChange, removeTab, handleCloseTab } = 
     padding: 0 12px !important;
     margin: 0 2px !important;
     border-radius: 6px !important;
-    border: 1px solid rgba(148, 163, 184, 0.18) !important;
+    border: 1px solid transparent !important;
     background: rgba(15, 23, 42, 0.82) !important;
     color: var(--admin-text-muted) !important;
     transition: all 0.18s ease !important;

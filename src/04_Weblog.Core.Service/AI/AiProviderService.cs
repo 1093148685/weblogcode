@@ -47,20 +47,7 @@ public class AiProviderService : IAiProviderService
     public async Task<List<AiProviderDto>> GetAllProvidersAsync()
     {
         var providers = await _dbContext.AiProviderDb.OrderBy(p => p.Priority).ToListAsync();
-        return providers.Select(p => new AiProviderDto
-        {
-            Id = p.Id,
-            Name = p.Name,
-            DisplayName = p.DisplayName,
-            Type = p.Type,
-            ApiUrl = p.ApiUrl,
-            ApiKey = "",
-            IsEnabled = p.IsEnabled,
-            Priority = p.Priority,
-            Config = p.Config,
-            CreatedAt = p.CreatedAt,
-            UpdatedAt = p.UpdatedAt
-        }).ToList();
+        return providers.Select(ToDto).ToList();
     }
 
     public async Task<AiProviderDto?> GetProviderByIdAsync(long id)
@@ -68,30 +55,19 @@ public class AiProviderService : IAiProviderService
         var provider = await _dbContext.AiProviderDb.Where(p => p.Id == id).FirstAsync();
         if (provider == null) return null;
 
-        return new AiProviderDto
-        {
-            Id = provider.Id,
-            Name = provider.Name,
-            DisplayName = provider.DisplayName,
-            Type = provider.Type,
-            ApiUrl = provider.ApiUrl,
-            ApiKey = "",
-            IsEnabled = provider.IsEnabled,
-            Priority = provider.Priority,
-            Config = provider.Config,
-            CreatedAt = provider.CreatedAt,
-            UpdatedAt = provider.UpdatedAt
-        };
+        return ToDto(provider);
     }
 
     public async Task<AiProviderDto> CreateProviderAsync(CreateAiProviderRequest request)
     {
+        ValidateCreateRequest(request);
+
         var provider = new AiProvider
         {
-            Name = request.Name.ToLower(),
-            DisplayName = request.DisplayName,
-            Type = request.Type,
-            ApiUrl = request.ApiUrl ?? "",
+            Name = NormalizeProviderName(request.Name),
+            DisplayName = request.DisplayName.Trim(),
+            Type = NormalizeProviderType(request.Type),
+            ApiUrl = NormalizeApiUrl(request.ApiUrl),
             EncryptedApiKey = _encryption.Encrypt(request.ApiKey),
             IsEnabled = request.IsEnabled,
             Priority = request.Priority,
@@ -102,31 +78,20 @@ public class AiProviderService : IAiProviderService
         
         await InitializeKeyPoolsAsync();
 
-        return new AiProviderDto
-        {
-            Id = provider.Id,
-            Name = provider.Name,
-            DisplayName = provider.DisplayName,
-            Type = provider.Type,
-            ApiUrl = provider.ApiUrl,
-            ApiKey = "",
-            IsEnabled = provider.IsEnabled,
-            Priority = provider.Priority,
-            Config = provider.Config,
-            CreatedAt = provider.CreatedAt,
-            UpdatedAt = provider.UpdatedAt
-        };
+        return ToDto(provider);
     }
 
     public async Task<AiProviderDto> UpdateProviderAsync(long id, UpdateAiProviderRequest request)
     {
+        ValidateUpdateRequest(request);
+
         var provider = await _dbContext.AiProviderDb.Where(p => p.Id == id).FirstAsync();
         if (provider == null)
             throw new Exception("Provider not found");
 
-        provider.DisplayName = request.DisplayName;
-        provider.Type = request.Type;
-        provider.ApiUrl = request.ApiUrl ?? "";
+        provider.DisplayName = request.DisplayName.Trim();
+        provider.Type = NormalizeProviderType(request.Type);
+        provider.ApiUrl = NormalizeApiUrl(request.ApiUrl);
         if (!string.IsNullOrEmpty(request.ApiKey))
             provider.EncryptedApiKey = _encryption.Encrypt(request.ApiKey);
         provider.IsEnabled = request.IsEnabled;
@@ -138,20 +103,7 @@ public class AiProviderService : IAiProviderService
         
         await InitializeKeyPoolsAsync();
 
-        return new AiProviderDto
-        {
-            Id = provider.Id,
-            Name = provider.Name,
-            DisplayName = provider.DisplayName,
-            Type = provider.Type,
-            ApiUrl = provider.ApiUrl,
-            ApiKey = "",
-            IsEnabled = provider.IsEnabled,
-            Priority = provider.Priority,
-            Config = provider.Config,
-            CreatedAt = provider.CreatedAt,
-            UpdatedAt = provider.UpdatedAt
-        };
+        return ToDto(provider);
     }
 
     public async Task<bool> DeleteProviderAsync(long id)
@@ -206,5 +158,54 @@ public class AiProviderService : IAiProviderService
         }).ToList();
 
         _selector.InitializeKeyPools(configs);
+    }
+
+    private static AiProviderDto ToDto(AiProvider provider)
+    {
+        return new AiProviderDto
+        {
+            Id = provider.Id,
+            Name = provider.Name,
+            DisplayName = provider.DisplayName,
+            Type = provider.Type,
+            ApiUrl = provider.ApiUrl,
+            ApiKey = "",
+            IsEnabled = provider.IsEnabled,
+            Priority = provider.Priority,
+            Config = provider.Config,
+            CreatedAt = provider.CreatedAt,
+            UpdatedAt = provider.UpdatedAt
+        };
+    }
+
+    private static void ValidateCreateRequest(CreateAiProviderRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name))
+            throw new Exception("Provider 名称不能为空");
+        if (string.IsNullOrWhiteSpace(request.DisplayName))
+            throw new Exception("Provider 显示名称不能为空");
+        if (string.IsNullOrWhiteSpace(request.ApiKey))
+            throw new Exception("API Key 不能为空");
+    }
+
+    private static void ValidateUpdateRequest(UpdateAiProviderRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.DisplayName))
+            throw new Exception("Provider 显示名称不能为空");
+    }
+
+    private static string NormalizeProviderName(string name)
+    {
+        return name.Trim().ToLowerInvariant();
+    }
+
+    private static string NormalizeProviderType(string? type)
+    {
+        return string.IsNullOrWhiteSpace(type) ? AiProviderType.Chat.ToString().ToLowerInvariant() : type.Trim().ToLowerInvariant();
+    }
+
+    private static string NormalizeApiUrl(string? apiUrl)
+    {
+        return apiUrl?.Trim().TrimEnd('/') ?? "";
     }
 }

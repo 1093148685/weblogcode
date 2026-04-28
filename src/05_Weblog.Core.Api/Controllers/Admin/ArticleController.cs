@@ -65,10 +65,12 @@ public class ArticleController : ControllerBase
         var result = await _articleService.UpdateIsTopAsync(request.Id, request.IsTop);
         return result ? Result.Ok() : Result.Fail("更新失败");
     }
-}
 
-public class UpdateIsTopRequest
-{
-    public long Id { get; set; }
-    public bool IsTop { get; set; }
+    [HttpPost("status/update")]
+    [RequireRole("admin")]
+    public async Task<Result> UpdateStatus([FromBody] UpdateArticleStatusRequest request)
+    {
+        var result = await _articleService.UpdateStatusAsync(request.Id, request.Status);
+        return result ? Result.Ok() : Result.Fail("更新失败");
+    }
 }

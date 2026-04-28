@@ -143,11 +143,11 @@ public class AiProviderController : ControllerBase
     }
 
     [HttpPost("fetch-models")]
-    public async Task<Result<List<object>>> FetchModels([FromBody] FetchModelsRequest request)
+    public async Task<Result<List<AiModelOptionDto>>> FetchModels([FromBody] FetchModelsRequest request)
     {
         if (string.IsNullOrEmpty(request.ApiUrl) || string.IsNullOrEmpty(request.ApiKey))
         {
-            return Result<List<object>>.Fail("API URL 和 API Key 不能为空");
+            return Result<List<AiModelOptionDto>>.Fail("API URL 和 API Key 不能为空");
         }
 
         try
@@ -168,30 +168,31 @@ public class AiProviderController : ControllerBase
                 
                 if (jsonDoc.RootElement.TryGetProperty("data", out var data))
                 {
-                    var models = new List<object>();
+                    var models = new List<AiModelOptionDto>();
                     foreach (var item in data.EnumerateArray())
                     {
-                        models.Add(new
+                        var id = item.GetProperty("id").GetString() ?? string.Empty;
+                        models.Add(new AiModelOptionDto
                         {
-                            id = item.GetProperty("id").GetString(),
-                            name = item.TryGetProperty("name", out var name) ? name.GetString() : item.GetProperty("id").GetString(),
-                            created = item.TryGetProperty("created", out var created) ? created.GetInt64() : 0
+                            Id = id,
+                            Name = item.TryGetProperty("name", out var name) ? name.GetString() ?? id : id,
+                            Created = item.TryGetProperty("created", out var created) ? created.GetInt64() : 0
                         });
                     }
-                    return Result<List<object>>.Ok(models);
+                    return Result<List<AiModelOptionDto>>.Ok(models);
                 }
                 
-                return Result<List<object>>.Ok(new List<object>());
+                return Result<List<AiModelOptionDto>>.Ok(new List<AiModelOptionDto>());
             }
             else
             {
-                return Result<List<object>>.Fail($"请求失败: {response.StatusCode}\n{content}");
+                return Result<List<AiModelOptionDto>>.Fail($"请求失败: {response.StatusCode}\n{content}");
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to fetch models");
-            return Result<List<object>>.Fail($"获取模型列表失败: {ex.Message}");
+            return Result<List<AiModelOptionDto>>.Fail($"获取模型列表失败: {ex.Message}");
         }
     }
 
@@ -243,19 +244,4 @@ public class AiProviderController : ControllerBase
         _selector.ResetKeyHealth(name);
         return Result<bool>.Ok(true);
     }
-}
-
-public class FetchModelsRequest
-{
-    public string ApiUrl { get; set; } = string.Empty;
-    public string ApiKey { get; set; } = string.Empty;
-}
-
-public class ProviderHealthDto
-{
-    public string Name { get; set; } = string.Empty;
-    public string Status { get; set; } = string.Empty;
-    public long LatencyMs { get; set; }
-    public string LastChecked { get; set; } = string.Empty;
-    public string? Error { get; set; }
 }

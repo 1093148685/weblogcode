@@ -1,44 +1,16 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using SqlSugar;
+using Weblog.Core.Model.DTOs;
 using Weblog.Core.Model.Entities;
 using Weblog.Core.Service.AI.Core;
 using Weblog.Core.Service.AI.Providers;
 
 namespace Weblog.Core.Service.AI.Rag;
 
-// ── DTOs ──────────────────────────────────────────────────────────────────
+// 鈹€鈹€ DTOs 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
-public class CreateKbRequest
-{
-    public string Name { get; set; } = string.Empty;
-    public string? Description { get; set; }
-    public string EmbeddingProvider { get; set; } = "openai";
-    public string EmbeddingModel { get; set; } = "text-embedding-3-small";
-    public int ChunkSize { get; set; } = 500;
-    public int ChunkOverlap { get; set; } = 50;
-}
-
-public class RetrievedChunk
-{
-    public long ChunkId { get; set; }
-    public long DocumentId { get; set; }
-    public string DocumentTitle { get; set; } = string.Empty;
-    public string Content { get; set; } = string.Empty;
-    public float Score { get; set; }
-}
-
-public class KbStats
-{
-    public long KbId { get; set; }
-    public int DocumentCount { get; set; }
-    public int ChunkCount { get; set; }
-    public int IndexedDocumentCount { get; set; }
-    public int PendingDocumentCount { get; set; }
-    public int FailedDocumentCount { get; set; }
-}
-
-// ── Interface ─────────────────────────────────────────────────────────────
+// 鈹€鈹€ Interface 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 public interface IRagService
 {
@@ -52,23 +24,23 @@ public interface IRagService
     Task<KbDocument> AddDocumentAsync(long kbId, string title, string content, string sourceType = "upload", long sourceId = 0);
     Task DeleteDocumentAsync(long kbId, long docId);
 
-    /// <summary>对单个文档执行切片 + Embedding（异步后台可安全调用）</summary>
+    /// <summary>瀵瑰崟涓枃妗ｆ墽琛屽垏鐗?+ Embedding锛堝紓姝ュ悗鍙板彲瀹夊叏璋冪敤锛?/summary>
     Task IndexDocumentAsync(long docId);
 
-    /// <summary>重建知识库内所有文档的索引</summary>
+    /// <summary>閲嶅缓鐭ヨ瘑搴撳唴鎵€鏈夋枃妗ｇ殑绱㈠紩</summary>
     Task ReindexAllAsync(long kbId);
 
-    /// <summary>相似度检索，返回 top-K 切片</summary>
+    /// <summary>鐩镐技搴︽绱紝杩斿洖 top-K 鍒囩墖</summary>
     Task<List<RetrievedChunk>> RetrieveAsync(long kbId, string query, int topK = 5, float vectorWeight = 0.7f, float keywordWeight = 0.3f);
 
-    /// <summary>获取知识库统计</summary>
+    /// <summary>鑾峰彇鐭ヨ瘑搴撶粺璁?/summary>
     Task<KbStats> GetStatsAsync(long kbId);
 
-    /// <summary>通过纯文本内容创建文档并触发索引（用于文件上传）</summary>
+    /// <summary>閫氳繃绾枃鏈唴瀹瑰垱寤烘枃妗ｅ苟瑙﹀彂绱㈠紩锛堢敤浜庢枃浠朵笂浼狅級</summary>
     Task<KbDocument> ImportTextDocumentAsync(long kbId, string title, string content, string sourceType = "file");
 }
 
-// ── Implementation ────────────────────────────────────────────────────────
+// 鈹€鈹€ Implementation 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 public class RagService : IRagService
 {
@@ -89,7 +61,7 @@ public class RagService : IRagService
         _logger = logger;
     }
 
-    // ── 知识库 CRUD ──────────────────────────────────────────────────────
+    // 鈹€鈹€ 鐭ヨ瘑搴?CRUD 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
     public async Task<KnowledgeBase> CreateKbAsync(CreateKbRequest req)
     {
@@ -117,7 +89,7 @@ public class RagService : IRagService
     public async Task<KnowledgeBase> UpdateKbAsync(long id, CreateKbRequest req)
     {
         var kb = await _db.Queryable<KnowledgeBase>().FirstAsync(k => k.Id == id)
-                  ?? throw new Exception("知识库不存在");
+                  ?? throw new Exception("鐭ヨ瘑搴撲笉瀛樺湪");
         kb.Name = req.Name;
         kb.Description = req.Description;
         kb.EmbeddingProvider = req.EmbeddingProvider;
@@ -136,7 +108,7 @@ public class RagService : IRagService
         await _db.Deleteable<KnowledgeBase>().Where(k => k.Id == id).ExecuteCommandAsync();
     }
 
-    // ── 文档管理 ─────────────────────────────────────────────────────────
+    // 鈹€鈹€ 鏂囨。绠＄悊 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
     public async Task<List<KbDocument>> GetDocumentsAsync(long kbId, int page = 1, int pageSize = 20)
         => await _db.Queryable<KbDocument>()
@@ -169,7 +141,7 @@ public class RagService : IRagService
         await _db.Deleteable<KbDocument>().Where(d => d.Id == docId && d.KbId == kbId).ExecuteCommandAsync();
     }
 
-    // ── 索引（切片 + Embedding）──────────────────────────────────────────
+    // 鈹€鈹€ 绱㈠紩锛堝垏鐗?+ Embedding锛夆攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
     public async Task IndexDocumentAsync(long docId)
     {
@@ -185,11 +157,10 @@ public class RagService : IRagService
 
         try
         {
-            // 1. 删除旧切片
-            await _db.Deleteable<KbChunk>().Where(c => c.DocumentId == docId).ExecuteCommandAsync();
+            // 1. 鍒犻櫎鏃у垏鐗?            await _db.Deleteable<KbChunk>().Where(c => c.DocumentId == docId).ExecuteCommandAsync();
 
-            // 2. 切片
-            var chunks = SplitText(doc.Content ?? "", kb.ChunkSize, kb.ChunkOverlap);
+            // 2. 鍒囩墖
+            var chunks = RagTextProcessor.SplitText(doc.Content ?? "", kb.ChunkSize, kb.ChunkOverlap);
             if (chunks.Count == 0)
             {
                 doc.Status = "indexed";
@@ -199,7 +170,7 @@ public class RagService : IRagService
                 return;
             }
 
-            // 3. 尝试 Embedding（失败则降级为纯文本切片，不存向量）
+            // 3. 灏濊瘯 Embedding锛堝け璐ュ垯闄嶇骇涓虹函鏂囨湰鍒囩墖锛屼笉瀛樺悜閲忥級
             List<float[]?> vectors;
             try
             {
@@ -211,7 +182,7 @@ public class RagService : IRagService
                 vectors = chunks.Select(_ => (float[]?)null).ToList();
             }
 
-            // 4. 入库
+            // 4. 鍏ュ簱
             var kbChunks = chunks.Select((text, idx) => new KbChunk
             {
                 KbId = doc.KbId,
@@ -219,7 +190,7 @@ public class RagService : IRagService
                 Content = text,
                 ChunkIndex = idx,
                 Vector = vectors[idx] != null ? JsonSerializer.Serialize(vectors[idx]) : null,
-                TokenCount = EstimateTokens(text),
+                TokenCount = RagTextProcessor.EstimateTokens(text),
                 CreatedAt = DateTime.Now
             }).ToList();
 
@@ -240,7 +211,7 @@ public class RagService : IRagService
         await _db.Updateable(doc).ExecuteCommandAsync();
     }
 
-    /// <summary>尝试批量 Embedding，不支持时抛异常由调用方决定如何处理</summary>
+    /// <summary>灏濊瘯鎵归噺 Embedding锛屼笉鏀寔鏃舵姏寮傚父鐢辫皟鐢ㄦ柟鍐冲畾濡備綍澶勭悊</summary>
     private async Task<List<float[]?>> TryEmbedBatchAsync(KnowledgeBase kb, List<string> chunks)
     {
         var (embeddingProvider, apiKey, error) = await _selector.SelectAsync(
@@ -248,7 +219,7 @@ public class RagService : IRagService
             type: AiProviderType.Embedding);
 
         if (embeddingProvider == null || apiKey == null)
-            throw new Exception($"没有可用的 Provider：{error}");
+            throw new Exception($"没有可用的 Embedding Provider：{error}");
 
         var embeddingApiUrl = _selector.GetApiUrl(kb.EmbeddingProvider);
 
@@ -262,11 +233,11 @@ public class RagService : IRagService
             else if (embeddingProvider is IEmbeddingProvider ep)
                 rawVectors = await ep.EmbedBatchAsync(chunks, apiKey, kb.EmbeddingModel);
             else
-                throw new Exception($"Provider {embeddingProvider.Name} 不支持 Embedding");
+                throw new Exception($"Provider {embeddingProvider.Name} 涓嶆敮鎸?Embedding");
         }
         catch (Exception ex)
         {
-            // 调用失败（401 / 429 / 网络等）→ 标记 Key 不健康，避免后续文档继续使用坏 Key
+            // 璋冪敤澶辫触锛?01 / 429 / 缃戠粶绛夛級鈫?鏍囪 Key 涓嶅仴搴凤紝閬垮厤鍚庣画鏂囨。缁х画浣跨敤鍧?Key
             _selector.RecordFailure(embeddingProvider.Name, apiKey);
             _logger.LogWarning("Embedding provider {Provider} key marked unhealthy: {Error}",
                 embeddingProvider.Name, ex.Message);
@@ -286,92 +257,31 @@ public class RagService : IRagService
         }
     }
 
-    // ── 检索 ─────────────────────────────────────────────────────────────
+    // 鈹€鈹€ 妫€绱?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
     public async Task<List<RetrievedChunk>> RetrieveAsync(long kbId, string query, int topK = 5, float vectorWeight = 0.7f, float keywordWeight = 0.3f)
     {
-        var kb = await _db.Queryable<KnowledgeBase>().FirstAsync(k => k.Id == kbId)
+        var kb = await _db.Queryable<KnowledgeBase>().FirstAsync(item => item.Id == kbId)
                   ?? throw new Exception("知识库不存在");
 
         var chunks = await _db.Queryable<KbChunk>()
-            .Where(c => c.KbId == kbId)
+            .Where(chunk => chunk.KbId == kbId)
             .ToListAsync();
 
-        if (chunks.Count == 0) return new List<RetrievedChunk>();
+        if (chunks.Count == 0)
+            return new List<RetrievedChunk>();
 
-        // 加载文档标题
-        var docIds = chunks.Select(c => c.DocumentId).Distinct().ToList();
-        var docs = await _db.Queryable<KbDocument>()
-            .Where(d => docIds.Contains(d.Id))
-            .ToListAsync();
-        var docMap = docs.ToDictionary(d => d.Id, d => d.Title);
+        var documentTitles = await GetDocumentTitleMapAsync(chunks);
+        var chunksWithVector = chunks.Where(chunk => !string.IsNullOrWhiteSpace(chunk.Vector)).ToList();
 
-        // 判断是否有向量：有则走向量相似度，没有则走关键词
-        var chunksWithVector = chunks.Where(c => !string.IsNullOrEmpty(c.Vector)).ToList();
         if (chunksWithVector.Count > 0)
         {
-            // ── 向量检索 ──
             try
             {
-                var (embProvider, apiKey, error) = await _selector.SelectAsync(
-                    preferredProvider: kb.EmbeddingProvider,
-                    type: AiProviderType.Embedding);
-
-                if (embProvider != null && apiKey != null)
-                {
-                    var embeddingApiUrl = _selector.GetApiUrl(kb.EmbeddingProvider);
-                    float[] queryVec;
-                    if (embProvider is OpenAiProvider oap2)
-                        queryVec = await oap2.EmbedAsync(query, apiKey, kb.EmbeddingModel, apiUrl: embeddingApiUrl);
-                    else if (embProvider is DeepSeekProvider dsp2)
-                        queryVec = await dsp2.EmbedAsync(query, apiKey, kb.EmbeddingModel);
-                    else if (embProvider is IEmbeddingProvider ep2)
-                        queryVec = await ep2.EmbedAsync(query, apiKey, kb.EmbeddingModel);
-                    else
-                        goto keywordSearch;
-
-                    _selector.RecordSuccess(embProvider.Name, apiKey);
-
-                    // 向量分
-                    var vectorScores = chunksWithVector
-                        .Select(c =>
-                        {
-                            float[] vec;
-                            try { vec = JsonSerializer.Deserialize<float[]>(c.Vector!)!; }
-                            catch { return (chunk: c, vScore: 0f); }
-                            return (chunk: c, vScore: CosineSimilarity(queryVec, vec));
-                        })
-                        .ToDictionary(x => x.chunk.Id, x => x.vScore);
-
-                    // 关键词分（归一化到 0~1）
-                    var kws = query.Split(' ', '，', ',', '。', '？', '?')
-                        .Select(k => k.Trim()).Where(k => k.Length >= 2).ToList();
-                    if (kws.Count == 0) kws.Add(query.Trim());
-                    var maxKw = (float)Math.Max(kws.Count, 1);
-                    var kwScores = chunksWithVector
-                        .ToDictionary(c => c.Id,
-                            c => kws.Sum(kw => c.Content.Contains(kw, StringComparison.OrdinalIgnoreCase) ? 1f : 0f) / maxKw);
-
-                    // 合并分数
-                    return chunksWithVector
-                        .Select(c =>
-                        {
-                            var finalScore = vectorWeight * vectorScores.GetValueOrDefault(c.Id)
-                                           + keywordWeight * kwScores.GetValueOrDefault(c.Id);
-                            return (chunk: c, score: finalScore);
-                        })
-                        .OrderByDescending(x => x.score)
-                        .Take(topK)
-                        .Select(x => new RetrievedChunk
-                        {
-                            ChunkId       = x.chunk.Id,
-                            DocumentId    = x.chunk.DocumentId,
-                            DocumentTitle = docMap.GetValueOrDefault(x.chunk.DocumentId, "未知文档"),
-                            Content       = x.chunk.Content,
-                            Score         = x.score
-                        })
-                        .ToList();
-                }
+                var vectorResults = await TryRetrieveByVectorAsync(
+                    kb, chunksWithVector, documentTitles, query, topK, vectorWeight, keywordWeight);
+                if (vectorResults.Count > 0)
+                    return vectorResults;
             }
             catch (Exception ex)
             {
@@ -379,37 +289,120 @@ public class RagService : IRagService
             }
         }
 
-        keywordSearch:
-        // ── 关键词检索（降级方案）──
-        var keywords = query.Split(' ', '，', ',', '。', '？', '?')
-            .Select(k => k.Trim())
-            .Where(k => k.Length >= 2)
-            .ToList();
-        if (keywords.Count == 0) keywords.Add(query.Trim());
+        return RetrieveByKeyword(chunks, documentTitles, query, topK);
+    }
 
-        return chunks
-            .Select(c =>
+    private async Task<Dictionary<long, string>> GetDocumentTitleMapAsync(List<KbChunk> chunks)
+    {
+        var documentIds = chunks.Select(chunk => chunk.DocumentId).Distinct().ToList();
+        var documents = await _db.Queryable<KbDocument>()
+            .Where(document => documentIds.Contains(document.Id))
+            .ToListAsync();
+
+        return documents.ToDictionary(document => document.Id, document => document.Title);
+    }
+
+    private async Task<List<RetrievedChunk>> TryRetrieveByVectorAsync(
+        KnowledgeBase kb,
+        List<KbChunk> chunksWithVector,
+        Dictionary<long, string> documentTitles,
+        string query,
+        int topK,
+        float vectorWeight,
+        float keywordWeight)
+    {
+        var queryVector = await EmbedQueryAsync(kb, query);
+        var keywords = RagTextProcessor.ExtractKeywords(query);
+
+        var vectorScores = chunksWithVector
+            .Select(chunk =>
             {
-                var score = keywords.Sum(kw =>
-                    c.Content.Contains(kw, StringComparison.OrdinalIgnoreCase) ? 1f : 0f);
-                return (chunk: c, score);
+                try
+                {
+                    var chunkVector = JsonSerializer.Deserialize<float[]>(chunk.Vector!);
+                    var score = chunkVector == null ? 0f : RagTextProcessor.CosineSimilarity(queryVector, chunkVector);
+                    return (chunk, score);
+                }
+                catch
+                {
+                    return (chunk, score: 0f);
+                }
             })
-            .Where(x => x.score > 0)
-            .OrderByDescending(x => x.score)
-            .Take(topK)
-            .Select(x => new RetrievedChunk
+            .ToDictionary(item => item.chunk.Id, item => item.score);
+
+        var scoredChunks = chunksWithVector.Select(chunk =>
+        {
+            var vectorScore = vectorScores.GetValueOrDefault(chunk.Id);
+            var keywordScore = RagTextProcessor.KeywordScore(chunk.Content, keywords);
+            var score = vectorWeight * vectorScore + keywordWeight * keywordScore;
+            return (chunk, score);
+        });
+
+        return ToRetrievedChunks(scoredChunks, documentTitles, topK);
+    }
+
+    private async Task<float[]> EmbedQueryAsync(KnowledgeBase kb, string query)
+    {
+        var (provider, apiKey, _) = await _selector.SelectAsync(
+            preferredProvider: kb.EmbeddingProvider,
+            type: AiProviderType.Embedding);
+
+        if (provider == null || apiKey == null)
+            throw new Exception("没有可用的 Embedding Provider");
+
+        var apiUrl = _selector.GetApiUrl(kb.EmbeddingProvider);
+        try
+        {
+            float[] queryVector = provider switch
             {
-                ChunkId = x.chunk.Id,
-                DocumentId = x.chunk.DocumentId,
-                DocumentTitle = docMap.GetValueOrDefault(x.chunk.DocumentId, "未知文档"),
-                Content = x.chunk.Content,
-                Score = x.score
+                OpenAiProvider openAi => await openAi.EmbedAsync(query, apiKey, kb.EmbeddingModel, apiUrl: apiUrl),
+                DeepSeekProvider deepSeek => await deepSeek.EmbedAsync(query, apiKey, kb.EmbeddingModel),
+                IEmbeddingProvider embeddingProvider => await embeddingProvider.EmbedAsync(query, apiKey, kb.EmbeddingModel),
+                _ => throw new Exception($"Provider {provider.Name} 不支持 Embedding")
+            };
+
+            _selector.RecordSuccess(provider.Name, apiKey);
+            return queryVector;
+        }
+        catch
+        {
+            _selector.RecordFailure(provider.Name, apiKey);
+            throw;
+        }
+    }
+
+    private static List<RetrievedChunk> RetrieveByKeyword(
+        List<KbChunk> chunks,
+        Dictionary<long, string> documentTitles,
+        string query,
+        int topK)
+    {
+        var keywords = RagTextProcessor.ExtractKeywords(query);
+        var scoredChunks = chunks
+            .Select(chunk => (chunk, score: RagTextProcessor.KeywordScore(chunk.Content, keywords)))
+            .Where(item => item.score > 0);
+
+        return ToRetrievedChunks(scoredChunks, documentTitles, topK);
+    }
+
+    private static List<RetrievedChunk> ToRetrievedChunks(
+        IEnumerable<(KbChunk chunk, float score)> scoredChunks,
+        Dictionary<long, string> documentTitles,
+        int topK)
+    {
+        return scoredChunks
+            .OrderByDescending(item => item.score)
+            .Take(topK)
+            .Select(item => new RetrievedChunk
+            {
+                ChunkId = item.chunk.Id,
+                DocumentId = item.chunk.DocumentId,
+                DocumentTitle = documentTitles.GetValueOrDefault(item.chunk.DocumentId, "未知文档"),
+                Content = item.chunk.Content,
+                Score = item.score
             })
             .ToList();
     }
-
-    // ── 统计 ─────────────────────────────────────────────────────────────
-
     public async Task<KbStats> GetStatsAsync(long kbId)
     {
         var docs = await _db.Queryable<KbDocument>().Where(d => d.KbId == kbId).ToListAsync();
@@ -428,7 +421,6 @@ public class RagService : IRagService
     public async Task<KbDocument> ImportTextDocumentAsync(long kbId, string title, string content, string sourceType = "file")
     {
         var doc = await AddDocumentAsync(kbId, title, content, sourceType);
-        // 触发后台索引（不等待完成）
         _ = Task.Run(async () =>
         {
             try { await IndexDocumentAsync(doc.Id); }
@@ -437,78 +429,5 @@ public class RagService : IRagService
         return doc;
     }
 
-    // ── 工具方法 ─────────────────────────────────────────────────────────
-
-    /// <summary>按段落切片，保持语义完整性</summary>
-    private static List<string> SplitText(string text, int chunkSize, int overlap)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return new List<string>();
-
-        // 先按双换行分段
-        var paragraphs = text.Split(new[] { "\n\n", "\r\n\r\n" }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(p => p.Trim())
-            .Where(p => p.Length > 0)
-            .ToList();
-
-        var chunks = new List<string>();
-        var current = new System.Text.StringBuilder();
-
-        foreach (var para in paragraphs)
-        {
-            // 如果单段本身超过 chunkSize，强制按字符切
-            if (para.Length > chunkSize * 2)
-            {
-                if (current.Length > 0)
-                {
-                    chunks.Add(current.ToString().Trim());
-                    current.Clear();
-                }
-                for (var i = 0; i < para.Length; i += chunkSize - overlap)
-                {
-                    var end = Math.Min(i + chunkSize, para.Length);
-                    chunks.Add(para[i..end].Trim());
-                    if (end == para.Length) break;
-                }
-                continue;
-            }
-
-            if (current.Length + para.Length > chunkSize && current.Length > 0)
-            {
-                chunks.Add(current.ToString().Trim());
-                // 保留最后 overlap 个字符作为重叠
-                var overlapText = current.Length > overlap
-                    ? current.ToString()[^overlap..]
-                    : current.ToString();
-                current.Clear();
-                current.Append(overlapText);
-                current.Append('\n');
-            }
-
-            current.Append(para);
-            current.Append("\n\n");
-        }
-
-        if (current.Length > 0)
-            chunks.Add(current.ToString().Trim());
-
-        return chunks.Where(c => c.Length >= 10).ToList();
-    }
-
-    private static int EstimateTokens(string text) => (int)(text.Length * 0.6);
-
-    private static float CosineSimilarity(float[] a, float[] b)
-    {
-        if (a.Length != b.Length) return 0f;
-        var dot = 0f;
-        var normA = 0f;
-        var normB = 0f;
-        for (var i = 0; i < a.Length; i++)
-        {
-            dot += a[i] * b[i];
-            normA += a[i] * a[i];
-            normB += b[i] * b[i];
-        }
-        var denom = MathF.Sqrt(normA) * MathF.Sqrt(normB);
-        return denom < 1e-10f ? 0f : dot / denom;
-    }
 }
+

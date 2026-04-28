@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Weblog.Core.Api.Filters;
 using Weblog.Core.Common.Result;
 using Weblog.Core.Model.DTOs;
 using Weblog.Core.Service.Interfaces;
@@ -18,6 +19,7 @@ public class AdminStickerController : ControllerBase
     }
 
     [HttpPost("packs")]
+    [RequireRole("admin")]
     public async Task<Result<StickerPackDto>> CreatePack([FromBody] CreateStickerPackRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Name))
@@ -35,6 +37,7 @@ public class AdminStickerController : ControllerBase
     }
 
     [HttpPut("packs/{id}")]
+    [RequireRole("admin")]
     public async Task<Result<StickerPackDto>> UpdatePack(long id, [FromBody] UpdateStickerPackRequest request)
     {
         var pack = await _stickerService.UpdatePackAsync(id, request);
@@ -44,6 +47,7 @@ public class AdminStickerController : ControllerBase
     }
 
     [HttpDelete("packs/{id}")]
+    [RequireRole("admin")]
     public async Task<Result<bool>> DeletePack(long id)
     {
         var success = await _stickerService.DeletePackAsync(id);
@@ -53,6 +57,7 @@ public class AdminStickerController : ControllerBase
     }
 
     [HttpPost("packs/{id}/upload")]
+    [RequireRole("admin")]
     public async Task<Result<List<StickerDto>>> UploadZip(long id, IFormFile file)
     {
         if (file == null || file.Length == 0)
@@ -88,6 +93,7 @@ public class AdminStickerController : ControllerBase
     }
 
     [HttpDelete("stickers/{id}")]
+    [RequireRole("admin")]
     public async Task<Result<bool>> DeleteSticker(long id)
     {
         var success = await _stickerService.DeleteStickerAsync(id);
@@ -97,6 +103,7 @@ public class AdminStickerController : ControllerBase
     }
 
     [HttpPost("packs/{packId}/cover/{stickerId}")]
+    [RequireRole("admin")]
     public async Task<Result<bool>> SetCover(long packId, long stickerId)
     {
         var success = await _stickerService.SetCoverAsync(packId, stickerId);

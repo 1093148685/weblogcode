@@ -23,9 +23,9 @@ public class FileController : ControllerBase
 
     [HttpPost("upload")]
     [RequireRole("admin")]
-    public async Task<Result<string>> Upload([FromForm] FileUploadRequest request)
+    public async Task<Result<string>> Upload([FromForm] IFormFile? file, [FromForm] string? folder)
     {
-        if (request.File == null || request.File.Length == 0)
+        if (file == null || file.Length == 0)
         {
             return Result<string>.Fail("请选择文件");
         }
@@ -33,13 +33,10 @@ public class FileController : ControllerBase
         try
         {
             using var ms = new MemoryStream();
-            await request.File.CopyToAsync(ms);
-            var fileData = ms.ToArray();
+            await file.CopyToAsync(ms);
 
-            var folder = request.Folder ?? "uploads";
-            
-            // Use MinIO to upload
-            var url = await _minIOService.UploadFileAsync(folder, request.File.FileName, fileData);
+            var uploadFolder = string.IsNullOrWhiteSpace(folder) ? "uploads" : folder;
+            var url = await _minIOService.UploadFileAsync(uploadFolder, file.FileName, ms.ToArray());
             return Result<string>.Ok(url);
         }
         catch (Exception ex)
@@ -47,10 +44,4 @@ public class FileController : ControllerBase
             return Result<string>.Fail($"上传失败: {ex.Message}");
         }
     }
-}
-
-public class FileUploadRequest
-{
-    public IFormFile? File { get; set; }
-    public string? Folder { get; set; }
 }

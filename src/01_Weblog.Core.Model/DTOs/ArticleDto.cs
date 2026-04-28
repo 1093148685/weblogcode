@@ -105,3 +105,15 @@ public class SearchArticleRequest
     public int Current { get; set; } // 兼容前端
     public int Size { get; set; } // 兼容前端
 }
+
+public class UpdateIsTopRequest
+{
+    public long Id { get; set; }
+    public bool IsTop { get; set; }
+}
+
+public class UpdateArticleStatusRequest
+{
+    public long Id { get; set; }
+    public int Status { get; set; }
+}
