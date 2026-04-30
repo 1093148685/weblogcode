@@ -32,6 +32,7 @@ public class DbContext
     public ISugarQueryable<StickerPack> StickerPackDb => _db.Queryable<StickerPack>();
     public ISugarQueryable<Sticker> StickerDb => _db.Queryable<Sticker>();
     public ISugarQueryable<CommentAdmin> CommentAdminDb => _db.Queryable<CommentAdmin>();
+    public ISugarQueryable<EmailSubscriber> EmailSubscriberDb => _db.Queryable<EmailSubscriber>();
     public ISugarQueryable<LinkPreviewCache> LinkPreviewCacheDb => _db.Queryable<LinkPreviewCache>();
     public ISugarQueryable<AiProvider> AiProviderDb => _db.Queryable<AiProvider>();
     public ISugarQueryable<AiPlugin> AiPluginDb => _db.Queryable<AiPlugin>();

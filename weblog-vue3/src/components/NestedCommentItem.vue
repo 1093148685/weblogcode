@@ -1,8 +1,9 @@
-<template>
+﻿<template>
     <div class="nested-comment-item flex items-start gap-2 py-3"
         :class="[borderTop ? 'border-t border-gray-100 dark:border-gray-700/50' : '']">
         <img v-if="comment.avatar && comment.avatar.length > 0"
             :src="comment.avatar"
+            @error="handleImageError"
             class="w-7 h-7 rounded-full border border-gray-200 dark:border-gray-600 flex-shrink-0">
         <div v-else class="w-7 h-7 rounded-full border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0 text-gray-400">
             <i class="fas fa-user"></i>
@@ -10,7 +11,9 @@
         
         <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 mb-1 flex-wrap">
-                <span class="text-sm font-medium text-blue-600 dark:text-blue-400">{{ comment.nickname }}</span>
+                <a v-if="normalizedWebsite" :href="normalizedWebsite" target="_blank" rel="noopener noreferrer"
+                    class="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline underline-offset-2">{{ comment.nickname }}</a>
+                <span v-else class="text-sm font-medium text-blue-600 dark:text-blue-400">{{ comment.nickname }}</span>
                 <el-tag v-if="comment.isAdmin" size="small" type="warning" class="ml-1">
                     <i class="fas fa-crown mr-1"></i>管理员
                 </el-tag>
@@ -18,8 +21,8 @@
                 <span class="text-sm text-gray-400 font-mono">{{ formatTime(comment.createTime) }}</span>
                 <span v-if="comment.ipLocation || comment.deviceType || comment.browser" class="text-xs text-gray-400">
                     <span v-if="comment.ipLocation">{{ comment.ipLocation }}</span>
-                    <span v-if="comment.deviceType"> · {{ comment.deviceType }}</span>
-                    <span v-if="comment.browser"> · {{ comment.browser }}</span>
+                    <span v-if="comment.deviceType" class="inline-flex items-center gap-1"><span class="meta-icon" v-html="deviceIconSvg"></span>{{ comment.deviceType }}</span>
+                    <span v-if="comment.browser" class="inline-flex items-center gap-1"><span class="meta-icon" v-html="browserIconSvg"></span>{{ comment.browser }}</span>
                 </span>
             </div>
             <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -30,6 +33,7 @@
             <div v-if="commentImages && commentImages.length > 0" class="mt-2 flex flex-wrap gap-2">
                 <img v-for="(img, index) in commentImages" :key="index"
                     :src="img"
+                    @error="handleImageError"
                     class="max-w-[100px] max-h-[100px] object-cover rounded-md cursor-pointer hover:opacity-80 transition-opacity border border-gray-200 dark:border-gray-600"
                     @click="previewImage(img)">
             </div>
@@ -53,13 +57,13 @@
             
             <div class="flex items-center gap-4 mt-3">
                 <button @click="toggleReply(comment)"
-                    class="text-sm text-gray-500 dark:text-gray-400 hover:text-blue-500 transition-colors">回复</button>
+                    class="text-sm text-gray-500 dark:text-gray-400 hover:text-blue-500 transition-colors inline-flex items-center gap-1"><i class="far fa-comment"></i>回复</button>
                 <button @click="toggleFlower(comment)"
                     :class="['text-sm flex items-center gap-1 transition-colors',
                         comment.hasCurrentUserFlower 
                             ? 'text-pink-500' 
                             : 'text-gray-500 dark:text-gray-400 hover:text-pink-500']">
-                    <i :class="comment.hasCurrentUserFlower ? 'fas fa-heart' : 'far fa-heart'"></i>
+                    <i class="fas fa-heart text-pink-500"></i>
                     <span>{{ comment.flowerCount || 0 }}</span>
                 </button>
             </div>
@@ -202,6 +206,45 @@ const websitePreviews = ref([])
 const hasImages = computed(() => replySelectedMedia.value.some(m => m.type === 'image'))
 const hasSticker = computed(() => replySelectedMedia.value.some(m => m.type === 'sticker'))
 const hasGiphy = computed(() => replySelectedMedia.value.some(m => m.type === 'giphy'))
+const fallbackImage = 'data:image/svg+xml;utf8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="160" height="120" viewBox="0 0 160 120"%3E%3Cdefs%3E%3ClinearGradient id="g" x1="0" x2="1" y1="0" y2="1"%3E%3Cstop stop-color="%23dbeafe"/%3E%3Cstop offset="1" stop-color="%23ccfbf1"/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width="160" height="120" rx="12" fill="url(%23g)"/%3E%3Cpath d="M50 76l20-24 19 20 12-14 18 22H42z" fill="none" stroke="%236b7280" stroke-width="5" stroke-linejoin="round"/%3E%3Ccircle cx="104" cy="42" r="7" fill="%236b7280"/%3E%3C/svg%3E'
+const normalizedWebsite = computed(() => normalizeUrl(props.comment.website))
+
+const normalizeUrl = (url) => {
+    const value = String(url || '').trim()
+    if (!value) return ''
+    return /^https?:\/\//i.test(value) ? value : `https://${value}`
+}
+
+const handleImageError = (event) => {
+    event.target.src = fallbackImage
+    event.target.classList.add('image-fallback')
+}
+
+const svgIcon = (body) => `<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">${body}</svg>`
+
+const deviceIconSvg = computed(() => {
+    const device = String(props.comment.deviceType || '').toLowerCase()
+    if (device.includes('windows')) {
+        return svgIcon('<path fill="#2563eb" d="M1.5 2.7 7.2 1.9v5.6H1.5V2.7Zm6.5-.9 6.5-1v6.7H8V1.8ZM1.5 8.4h5.7v5.7l-5.7-.8V8.4Zm6.5 0h6.5v6.7L8 14.2V8.4Z"/>')
+    }
+    if (device.includes('mac') || device.includes('ios')) {
+        return svgIcon('<path fill="#94a3b8" d="M11.6 8.3c0-1.5 1.2-2.3 1.3-2.4-.7-1-1.8-1.2-2.2-1.2-.9-.1-1.8.5-2.3.5-.5 0-1.2-.5-2-.5-1 0-2 .6-2.5 1.5-1.1 1.9-.3 4.7.8 6.2.5.8 1.1 1.6 1.9 1.6.8 0 1.1-.5 2-.5s1.2.5 2 .5c.8 0 1.4-.8 1.9-1.5.6-.9.8-1.7.8-1.8-.1 0-1.7-.7-1.7-2.4ZM10.1 3.8c.4-.5.7-1.2.6-1.8-.6 0-1.3.4-1.8.9-.4.4-.7 1.1-.6 1.7.7.1 1.4-.3 1.8-.8Z"/>')
+    }
+    if (device.includes('android')) return svgIcon('<path fill="#22c55e" d="M4.4 6.1h7.2v5.4c0 .7-.6 1.3-1.3 1.3H5.7c-.7 0-1.3-.6-1.3-1.3V6.1Zm-.9 1.1v3.7H2.4V7.2h1.1Zm10.1 0v3.7h-1.1V7.2h1.1ZM5.2 3.4 4.4 2.1l.6-.3.9 1.5c.7-.3 1.5-.4 2.1-.4.7 0 1.4.1 2.1.4l.9-1.5.6.3-.8 1.3c.8.5 1.3 1.2 1.4 2H3.8c.1-.8.6-1.5 1.4-2Zm.8 1.1a.5.5 0 1 0 0 1 .5.5 0 0 0 0-1Zm4 0a.5.5 0 1 0 0 1 .5.5 0 0 0 0-1Z"/>')
+    if (device.includes('mobile') || device.includes('phone')) return svgIcon('<rect x="4.2" y="1.5" width="7.6" height="13" rx="1.4" fill="none" stroke="#60a5fa" stroke-width="1.4"/><circle cx="8" cy="12.6" r=".6" fill="#60a5fa"/>')
+    return svgIcon('<path fill="none" stroke="#60a5fa" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" d="M2.5 3.2h11v7.2h-11zM6.4 13.4h3.2M8 10.4v3"/>')
+})
+
+const browserIconSvg = computed(() => {
+    const browser = String(props.comment.browser || '').toLowerCase()
+    if (browser.includes('chrome')) {
+        return svgIcon('<circle cx="8" cy="8" r="6.8" fill="#fbbc05"/><path fill="#ea4335" d="M8 1.2h5.9A6.8 6.8 0 0 1 14.6 8H8z"/><path fill="#34a853" d="M2.1 4.6 5.1 9.8 2.7 14A6.8 6.8 0 0 1 2.1 4.6Z"/><path fill="#4285f4" d="M8 14.8A6.8 6.8 0 0 0 13.9 4.6H8L5.1 9.8z"/><circle cx="8" cy="8" r="3.1" fill="#fff"/><circle cx="8" cy="8" r="2.1" fill="#4285f4"/>')
+    }
+    if (browser.includes('edge')) return svgIcon('<path fill="#0ea5e9" d="M14.5 9.1A6.5 6.5 0 1 1 8 1.5c3.1 0 5.2 2.1 5.4 4.7-1.1-1.5-3.3-1.8-5.1-.8-1.6.9-2.2 2.4-2.1 3.7.6-1.1 1.8-1.8 3.2-1.8 2.1 0 3.6.8 5.1 1.8Z"/><path fill="#22c55e" d="M14.5 9.1c-.5 3-3 5.4-6.3 5.4-2.7 0-4.6-1.5-4.6-3.7 0-1.8 1.5-3.5 3.7-3.5-1.1.8-1.2 2.4-.2 3.2 1.5 1.1 4.6.8 7.4-1.4Z"/>')
+    if (browser.includes('firefox')) return svgIcon('<path fill="#f97316" d="M13.8 8.5A5.8 5.8 0 1 1 4.1 4.3c.8-.7 1.5-.8 2.1-.8-.5.4-.8.9-.9 1.4 1-.8 2.4-1.3 3.8-.9 2.7.7 4.6 2.1 4.7 4.5Z"/><path fill="#fb7185" d="M4.1 4.3c-.4-1.3.1-2.2.8-2.8.1 1.1.6 1.5 1.3 2-.8.2-1.5.3-2.1.8Z"/><circle cx="8" cy="9" r="3.1" fill="#fff3"/>')
+    if (browser.includes('safari')) return svgIcon('<circle cx="8" cy="8" r="6.5" fill="#38bdf8"/><path fill="#fff" d="m9.2 9.2-4.5 2.1 2.1-4.5 4.5-2.1-2.1 4.5Z"/><path fill="#ef4444" d="m8.8 8.8-2 2 1-2.8 2.8-1-1.8 1.8Z"/>')
+    return svgIcon('<path fill="none" stroke="#94a3b8" stroke-width="1.4" d="M1.8 8a6.2 6.2 0 1 0 12.4 0A6.2 6.2 0 0 0 1.8 8Zm0 0h12.4M8 1.8c1.6 1.7 2.4 3.8 2.4 6.2S9.6 12.5 8 14.2C6.4 12.5 5.6 10.4 5.6 8S6.4 3.5 8 1.8Z"/>')
+})
 
 const isAnimatedUrl = (url) => {
     if (!url) return false
@@ -264,9 +307,13 @@ const fetchLinkPreviews = async (urls) => {
 }
 
 const initLinkPreviews = () => {
-    const urls = extractUrls(props.comment.content)
+    const urls = [...extractUrls(props.comment.content)]
+    const website = normalizeUrl(props.comment.website)
+    if (website && !isLocalUrl(website) && !urls.includes(website)) {
+        urls.unshift(website)
+    }
     if (urls.length > 0) {
-        fetchLinkPreviews(urls)
+        fetchLinkPreviews(urls.slice(0, MAX_LINK_PREVIEWS))
     }
 }
 
@@ -588,6 +635,28 @@ const removeReplyMedia = (index) => {
 .sticker-block {
     display: block;
     margin-top: 12px;
+}
+
+.image-fallback {
+    border-radius: 8px;
+    background: var(--bg-hover);
+    object-fit: cover;
+}
+
+.meta-icon {
+    width: 14px;
+    height: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 14px;
+}
+
+.meta-icon :deep(svg),
+.meta-icon svg {
+    width: 14px;
+    height: 14px;
+    display: block;
 }
 </style>
 

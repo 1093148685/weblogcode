@@ -1,13 +1,25 @@
 <template>
     <div class="message-form-container">
-        <div class="message-form">
+        <div class="message-form" :class="{ 'message-form--collapsed': collapsible && collapsed }">
+            <button v-if="collapsible && collapsed" type="button" class="compact-comment-entry" @click="expandForm">
+                <img v-if="commentStore.userInfo.avatar && commentStore.userInfo.avatar.length > 0"
+                    :src="commentStore.userInfo.avatar"
+                    class="w-10 h-10 rounded-full border border-[var(--border-base)]">
+                <div v-else class="w-10 h-10 rounded-full border border-[var(--border-base)] bg-[var(--bg-hover)] flex items-center justify-center text-[var(--text-muted)]">
+                    <i class="fas fa-user text-sm"></i>
+                </div>
+                <span>写下你的评论...</span>
+            </button>
             <!-- 头部 -->
-            <div class="form-header mb-4 flex items-center justify-between">
-                <span class="text-sm font-medium text-[var(--text-body)]">发表留言</span>
+            <div v-show="!collapsible || !collapsed" class="form-header mb-4 flex items-center justify-between">
+                <span class="message-form-title">
+                    <i class="fas fa-pen"></i>
+                    发表留言
+                </span>
                 <CommentAdminLogin />
             </div>
             
-            <form>
+            <form v-show="!collapsible || !collapsed">
                 <div class="flex gap-3 mb-3">
                     <!-- 头像 -->
                     <div class="w-10 h-10 flex-shrink-0">
@@ -22,7 +34,7 @@
                     <!-- 输入区域 -->
                     <div class="flex-1 min-w-0">
                         <!-- 三列输入框 -->
-                        <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-3">
+                        <div v-if="!(collapsible && identityCollapsed)" class="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-3">
                             <input @blur="onNicknameInputBlur" v-model="commentStore.userInfo.nickname"
                                 type="text"
                                 placeholder="QQ号/昵称"
@@ -35,6 +47,15 @@
                                 type="text"
                                 placeholder="网站 (选填)"
                                 class="flex-1 min-w-0 bg-[var(--bg-base)] border border-[var(--border-base)] rounded-md px-3 py-2 text-sm text-[var(--text-heading)] placeholder-[var(--text-placeholder)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]">
+                            <button v-if="collapsible && hasIdentityInfo" type="button"
+                                class="shrink-0 rounded-md border border-[var(--border-base)] px-3 py-2 text-xs font-bold text-[var(--text-secondary)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                                @click="identityCollapsed = true">
+                                收起信息
+                            </button>
+                        </div>
+                        <div v-else class="compact-identity-row mb-3">
+                            <span class="truncate">{{ commentStore.userInfo.nickname }}</span>
+                            <button type="button" @click="identityCollapsed = false">修改信息</button>
                         </div>
                         
                         <!-- 文本框 -->
@@ -181,8 +202,10 @@
                                 </span>
                             </div>
                             <button type="button" @click="onPublishClick"
-                                class="px-4 py-1.5 bg-green-600 hover:bg-green-500 text-white text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
-                                <i class="fas fa-paper-plane mr-1.5"></i>发布
+                                class="publish-icon-btn bg-green-600 hover:bg-green-500 text-white transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                                title="发布留言"
+                                aria-label="发布留言">
+                                <i class="fas fa-paper-plane"></i>
                             </button>
                         </div>
                         
@@ -242,7 +265,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, useAttrs, watch } from 'vue'
 import { useCommentStore } from '@/stores/comment'
 import { useCommentAdminStore } from '@/stores/commentAdmin'
 import { publishMessageWallComment } from '@/api/frontend/message-wall'
@@ -255,8 +278,20 @@ import CommentAdminLogin from './CommentAdminLogin.vue'
 import StickerPicker from './StickerPicker.vue'
 import GiphyPicker from './GiphyPicker.vue'
 
+const props = defineProps({
+    routerUrl: {
+        type: String,
+        default: '/message-wall'
+    },
+    title: {
+        type: String,
+        default: '发表留言'
+    }
+})
+
 const emit = defineEmits(['comment-published'])
 
+const attrs = useAttrs()
 const commentStore = useCommentStore()
 const commentAdminStore = useCommentAdminStore()
 
@@ -275,6 +310,8 @@ const secretForm = reactive({
 })
 
 const showEmojiPicker = ref(false)
+const collapsed = ref(false)
+const identityCollapsed = ref(false)
 const activeEmojiCategory = ref('bilibili')
 const showSuccessAnimation = ref(false)
 const imageInputRef = ref(null)
@@ -286,6 +323,12 @@ const warningThreshold = 450
 const MAX_IMAGES = 3
 
 const selectedMedia = ref([])
+const collapsible = computed(() => attrs.collapsible === true || attrs.collapsible === '' || attrs.collapsible === 'true')
+const hasIdentityInfo = computed(() =>
+    Boolean(String(commentStore.userInfo.nickname || '').trim()) &&
+    Boolean(String(commentStore.userInfo.mail || '').trim()) &&
+    Boolean(String(commentStore.userInfo.website || '').trim())
+)
 
 const isAnimatedUrl = (url) => {
     if (!url) return false
@@ -322,6 +365,14 @@ const contentLength = computed(() => commentForm.content.length)
 const { simpleEmojiCategories, loadBilibiliEmoji } = useEmoji()
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const guestNames = ['路过的风', '山海访客', '星河旅人', '云边来客', '代码旅人', '清晨来信', '晚风同学', '蓝色便签']
+const isQQNumber = (value) => /^\d+$/.test(String(value || '').trim())
+const generateGuestName = () => `${guestNames[Math.floor(Math.random() * guestNames.length)]}${Math.floor(Math.random() * 900 + 100)}`
+const normalizeWebsite = (value) => {
+    const website = String(value || '').trim()
+    if (!website) return ''
+    return /^https?:\/\//i.test(website) ? website : `https://${website}`
+}
 
 const toggleEmojiPicker = () => {
     showEmojiPicker.value = !showEmojiPicker.value
@@ -336,11 +387,22 @@ const closeEmojiPicker = (e) => {
 onMounted(() => {
     document.addEventListener('click', closeEmojiPicker)
     loadBilibiliEmoji()
+    identityCollapsed.value = collapsible.value && hasIdentityInfo.value
 })
 
 onUnmounted(() => {
     document.removeEventListener('click', closeEmojiPicker)
 })
+
+watch(hasIdentityInfo, (ready) => {
+    if (collapsible.value && ready) {
+        identityCollapsed.value = true
+    }
+})
+
+const expandForm = () => {
+    collapsed.value = false
+}
 
 const onPublishClick = () => {
     if (commentStore.userInfo.nickname.length === 0) {
@@ -382,9 +444,9 @@ const onPublishClick = () => {
     const data = {
         content: content,
         avatar: commentStore.userInfo.avatar,
-        nickname: commentStore.userInfo.nickname,
+        nickname: isQQNumber(commentStore.userInfo.nickname) ? generateGuestName() : commentStore.userInfo.nickname,
         mail: commentStore.userInfo.mail,
-        website: commentStore.userInfo.website,
+        website: normalizeWebsite(commentStore.userInfo.website),
         replyCommentId: commentForm.replyCommentId,
         parentCommentId: commentForm.parentCommentId,
         images: images
@@ -405,7 +467,7 @@ const onPublishClick = () => {
         data.expiresAt = getExpirationDate()
     }
 
-    publishMessageWallComment(data).then(res => {
+    publishMessageWallComment(data, props.routerUrl).then(res => {
         if (!res.success) {
             if (res.message && res.message.includes('敏感词')) {
                 showMessage('留言包含敏感词，请修改后重试', 'warning')
@@ -435,9 +497,13 @@ const onNicknameInputBlur = () => {
         if (!res.success) return
         commentStore.userInfo.avatar = res.data.avatar
         commentStore.userInfo.mail = res.data.mail
-        if (res.data.nickname) {
+        if (res.data.nickname && !checkIfPureNumber(res.data.nickname)) {
             commentStore.userInfo.nickname = res.data.nickname
+        } else {
+            commentStore.userInfo.nickname = generateGuestName()
         }
+    }).catch(() => {
+        commentStore.userInfo.nickname = generateGuestName()
     })
 }
 
@@ -594,19 +660,59 @@ const addGiphy = (giphyCode) => {
 
 .message-form {
     border: 1px solid var(--border-base);
-    border-radius: 12px;
-    padding: 20px;
+    border-radius: 8px;
+    padding: 20px 22px;
     background-color: var(--bg-card);
-    transition: box-shadow 0.3s ease;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.3s ease, border-color 0.3s ease;
 }
 
 .message-form:focus-within {
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    border-color: var(--border-heavy);
+    box-shadow: var(--shadow-md), 0 0 0 3px var(--focus-ring);
 }
 
 .form-header {
-    padding-bottom: 16px;
+    padding-bottom: 14px;
     border-bottom: 1px solid var(--border-light);
+}
+
+.message-form-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-heading);
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.message-form-title i {
+    color: var(--color-primary);
+}
+
+.message-form :deep(input),
+.message-form textarea,
+.message-form select {
+    border-radius: 8px !important;
+}
+
+.message-form button[type="button"]:last-child {
+    border-radius: 8px;
+}
+
+.publish-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 38px;
+    padding: 0;
+    flex: 0 0 44px;
+}
+
+.publish-icon-btn i {
+    margin: 0;
+    font-size: 15px;
 }
 
 .emoticon-16 {

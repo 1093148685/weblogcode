@@ -1,5 +1,5 @@
 <template>
-    <span class="parsed-content dark:text-gray-300">
+    <span ref="contentRef" class="parsed-content dark:text-gray-300">
         <template v-for="(part, index) in parsedParts" :key="index">
             <SpoilerText 
                 v-if="part.isSpoiler"
@@ -18,7 +18,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, nextTick, onMounted, onUpdated, ref } from 'vue'
 import SpoilerText from './SpoilerText.vue'
 import { useEmoji } from '@/composables/useEmoji'
 
@@ -27,6 +27,21 @@ const props = defineProps({
 })
 
 const { renderEmoticonAndMarkdown } = useEmoji()
+const contentRef = ref(null)
+const fallbackImage = 'data:image/svg+xml;utf8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="160" height="120" viewBox="0 0 160 120"%3E%3Cdefs%3E%3ClinearGradient id="g" x1="0" x2="1" y1="0" y2="1"%3E%3Cstop stop-color="%23dbeafe"/%3E%3Cstop offset="1" stop-color="%23ccfbf1"/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width="160" height="120" rx="12" fill="url(%23g)"/%3E%3Cpath d="M50 76l20-24 19 20 12-14 18 22H42z" fill="none" stroke="%236b7280" stroke-width="5" stroke-linejoin="round"/%3E%3Ccircle cx="104" cy="42" r="7" fill="%236b7280"/%3E%3C/svg%3E'
+
+const bindImageFallback = async () => {
+    await nextTick()
+    contentRef.value?.querySelectorAll('img').forEach(img => {
+        img.onerror = () => {
+            img.src = fallbackImage
+            img.classList.add('image-fallback')
+        }
+    })
+}
+
+onMounted(bindImageFallback)
+onUpdated(bindImageFallback)
 
 const parsedParts = computed(() => {
     if (!props.content) return []
@@ -112,5 +127,11 @@ const extractAttr = (str, name, defaultVal) => {
 
 .parsed-content :deep(p) {
     @apply text-gray-700 dark:text-gray-300;
+}
+
+.parsed-content :deep(.image-fallback) {
+    border-radius: 8px;
+    background: var(--bg-hover);
+    object-fit: cover;
 }
 </style>

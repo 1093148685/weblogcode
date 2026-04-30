@@ -750,6 +750,45 @@ const shrinkAndExpand = () => {
 }
 
 /* hr 横线 */
+@media (max-width: 768px) {
+    ::v-deep(.article-content) {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    ::v-deep(.article-content table) {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        border-collapse: collapse;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    ::v-deep(.article-content table th),
+    ::v-deep(.article-content table td) {
+        min-width: 88px;
+        white-space: nowrap;
+        word-break: keep-all;
+        vertical-align: middle;
+    }
+
+    ::v-deep(.article-content table th:first-child),
+    ::v-deep(.article-content table td:first-child) {
+        min-width: 260px;
+    }
+
+    ::v-deep(.article-content table th:last-child),
+    ::v-deep(.article-content table td:last-child) {
+        min-width: 96px;
+    }
+
+    ::v-deep(.article-content table code) {
+        white-space: nowrap;
+        word-break: keep-all;
+    }
+}
+
 ::v-deep(hr) {
     margin-bottom: 20px;
 }

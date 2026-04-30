@@ -32,7 +32,12 @@ public class BlogSettingsService : IBlogSettingsService
                 GiteeHomepage = "",
                 ZhihuHomepage = "",
                 IsCommentSensiWordOpen = true,
-                IsCommentExamineOpen = false
+                IsCommentExamineOpen = false,
+                IsSubscribeCardOpen = true,
+                SubscribeTitle = "订阅更新",
+                SubscribeDescription = "订阅后，最新文章将通过邮件发送给你",
+                SubscribePlaceholder = "输入你的邮箱地址",
+                SubscribeButtonText = "订阅"
             };
             var id = await _dbContext.Db.Insertable(settings).ExecuteReturnIdentityAsync();
             settings.Id = id;
@@ -69,7 +74,12 @@ public class BlogSettingsService : IBlogSettingsService
                 SmtpPassword = request.SmtpPassword,
                 SmtpEnableSsl = request.SmtpEnableSsl,
                 SmtpFromEmail = request.SmtpFromEmail,
-                SmtpFromName = request.SmtpFromName
+                SmtpFromName = request.SmtpFromName,
+                IsSubscribeCardOpen = request.IsSubscribeCardOpen,
+                SubscribeTitle = request.SubscribeTitle,
+                SubscribeDescription = request.SubscribeDescription,
+                SubscribePlaceholder = request.SubscribePlaceholder,
+                SubscribeButtonText = request.SubscribeButtonText
             };
             var id = await _dbContext.Db.Insertable(settings).ExecuteReturnIdentityAsync();
             settings.Id = id;
@@ -99,6 +109,11 @@ public class BlogSettingsService : IBlogSettingsService
             settings.SmtpEnableSsl = request.SmtpEnableSsl;
             settings.SmtpFromEmail = request.SmtpFromEmail;
             settings.SmtpFromName = request.SmtpFromName;
+            settings.IsSubscribeCardOpen = request.IsSubscribeCardOpen;
+            settings.SubscribeTitle = request.SubscribeTitle;
+            settings.SubscribeDescription = request.SubscribeDescription;
+            settings.SubscribePlaceholder = request.SubscribePlaceholder;
+            settings.SubscribeButtonText = request.SubscribeButtonText;
             await _dbContext.Db.Updateable(settings).ExecuteCommandAsync();
         }
         return settings.Adapt<BlogSettingsDto>();

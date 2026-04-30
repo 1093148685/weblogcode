@@ -45,8 +45,10 @@ builder.Services.AddScoped<ISqlSugarClient>(s =>
         typeof(ArticleContent),
         typeof(ArticleCategoryRel),
         typeof(Comment),
+        typeof(EmailSubscriber),
         typeof(Wiki),
         typeof(WikiCatalog),
+        typeof(LinkPreviewCache),
         typeof(BlogSettings),
         typeof(Statistics),
         typeof(StatisticsArticlePv),
@@ -83,6 +85,7 @@ builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<ICommentService, CommentService>();
 builder.Services.AddScoped<ICommentAdminService, CommentAdminService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<ISubscribeService, SubscribeService>();
 builder.Services.AddScoped<IWikiService, WikiService>();
 builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
 builder.Services.AddScoped<IAiSummaryService, AiSummaryService>();

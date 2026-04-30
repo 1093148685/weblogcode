@@ -32,9 +32,17 @@
                             <div v-for="(wiki, index) in wikis" :key="index" class="col-span-12 md:col-span-6 lg:col-span-4 animate__animated animate__fadeInUp">
                                 <div class="relative bg-[var(--bg-card)] h-full border border-[var(--border-base)] rounded-card shadow-card hover:shadow-card-hover hover:scale-[1.02] transition-all duration-300 overflow-hidden group">
                                     <!-- 知识库封面 -->
-                                    <a @click="goWikiArticleDetailPage(wiki.id, wiki.firstArticleId)" class="cursor-pointer block overflow-hidden">
-                                        <img class="h-40 w-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
-                                            :src="wiki.cover" />
+                                    <a @click="goWikiArticleDetailPage(wiki.id, wiki.firstArticleId)" class="wiki-cover">
+                                        <img v-if="wiki.cover"
+                                            class="wiki-cover__image"
+                                            :src="wiki.cover"
+                                            alt=""
+                                            @error="wiki.cover = ''" />
+                                        <div v-else class="wiki-cover__placeholder">
+                                            <svg class="wiki-cover__icon" fill="none" viewBox="0 0 24 24">
+                                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m3 16 5-7 6 6.5m6.5 2.5L16 13l-4.286 6M14 10h.01M4 19h16a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1Z"/>
+                                            </svg>
+                                        </div>
                                     </a>
                                     <div class="p-4">
                                         <!-- 知识库标题 -->
@@ -115,3 +123,44 @@ const goWikiArticleDetailPage = (wikiId, articleId) => {
     router.push({path: '/wiki/' + wikiId, query: {articleId}})
 }
 </script>
+
+<style scoped>
+.wiki-cover {
+    position: relative;
+    display: block;
+    height: 160px;
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--bg-hover);
+}
+
+.wiki-cover__image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.group:hover .wiki-cover__image {
+    transform: scale(1.03);
+}
+
+.wiki-cover__placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    color: var(--text-muted);
+    background:
+        linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(16, 185, 129, 0.16)),
+        var(--bg-hover);
+}
+
+.wiki-cover__icon {
+    width: 44px;
+    height: 44px;
+    opacity: 0.9;
+}
+</style>

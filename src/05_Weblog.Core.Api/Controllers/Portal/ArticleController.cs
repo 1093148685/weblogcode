@@ -12,12 +12,14 @@ namespace Weblog.Core.Api.Controllers.Portal;
 public class ArticlePortalController : ControllerBase
 {
     private readonly IArticlePortalService _articlePortalService;
-    private readonly IDashboardService _dashboardService;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
 
-    public ArticlePortalController(IArticlePortalService articlePortalService, IDashboardService dashboardService)
+    public ArticlePortalController(
+        IArticlePortalService articlePortalService,
+        IServiceScopeFactory serviceScopeFactory)
     {
         _articlePortalService = articlePortalService;
-        _dashboardService = dashboardService;
+        _serviceScopeFactory = serviceScopeFactory;
     }
 
     [HttpPost("list")]
@@ -34,8 +36,12 @@ public class ArticlePortalController : ControllerBase
 
         _ = Task.Run(async () =>
         {
-            await _articlePortalService.IncrementViewCountAsync(request.ArticleId);
-            await _dashboardService.IncrementPvAsync();
+            using var scope = _serviceScopeFactory.CreateScope();
+            var articlePortalService = scope.ServiceProvider.GetRequiredService<IArticlePortalService>();
+            var dashboardService = scope.ServiceProvider.GetRequiredService<IDashboardService>();
+
+            await articlePortalService.IncrementViewCountAsync(request.ArticleId);
+            await dashboardService.IncrementPvAsync();
         });
 
         return Result<ArticleDto>.Ok(result);

@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using System.Text;
+using System.Text.Json;
 using Weblog.Core.Common.Helpers;
 using Weblog.Core.Common.Result;
 using Weblog.Core.Model.DTOs;
@@ -31,21 +33,28 @@ public class CommentPortalController : ControllerBase
     [HttpPost("publish")]
     public async Task<Result<CommentDto>> Create([FromBody] CreateCommentRequest request)
     {
-        // 获取真实 IP 地址
         var ipAddress = IpHelper.GetRealIpAddress(Request.Headers, HttpContext.Connection.RemoteIpAddress);
-        
-        // 获取 User-Agent 并解析
         var userAgent = Request.Headers.UserAgent.ToString();
-        var (deviceType, browser, os) = IpHelper.ParseUserAgent(userAgent);
-        
-        // 解析 IP 属地
+        var (deviceType, browser, _) = IpHelper.ParseUserAgent(userAgent);
         var ipLocation = IpHelper.GetIpLocation(ipAddress);
-        
-        // 设置到请求中
+
         request.IpAddress = ipAddress;
         request.DeviceType = deviceType;
         request.Browser = browser;
         request.IpLocation = ipLocation;
+        request.Website = NormalizeWebsite(request.Website);
+
+        if (IsQQNumber(request.Nickname))
+        {
+            var qqInfo = await ResolveQQUserInfoAsync(request.Nickname!);
+            request.Nickname = string.IsNullOrWhiteSpace(qqInfo.Nickname) ? GenerateGuestName() : qqInfo.Nickname;
+            request.Avatar = string.IsNullOrWhiteSpace(request.Avatar) ? qqInfo.Avatar : request.Avatar;
+            request.Mail = string.IsNullOrWhiteSpace(request.Mail) ? qqInfo.Mail : request.Mail;
+        }
+        else if (string.IsNullOrWhiteSpace(request.Nickname))
+        {
+            request.Nickname = GenerateGuestName();
+        }
 
         var result = await _commentService.CreateAsync(request);
         return Result<CommentDto>.Ok(result);
@@ -56,73 +65,22 @@ public class CommentPortalController : ControllerBase
     {
         try
         {
-            var qq = request.QQ;
-            if (string.IsNullOrWhiteSpace(qq))
+            if (string.IsNullOrWhiteSpace(request.QQ))
             {
                 return Result<QQUserInfoDto>.Ok(new QQUserInfoDto());
             }
 
-            using var httpClient = new HttpClient();
-            httpClient.Timeout = TimeSpan.FromSeconds(5);
-            httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
-            
-            // 使用稳定的 api.oioweb.cn API
-            string? nickname = null;
-            try
-            {
-                var apiUrl = $"https://api.oioweb.cn/api/qq/info?qq={qq}";
-                var response = await httpClient.GetStringAsync(apiUrl);
-                
-                // 解析 JSON: {"code":1,"data":{"qq":"123456","name":"昵称","avatar":"url","mail":"123456@qq.com"}}
-                if (response.Contains("\"code\":1") || response.Contains("\"code\":200"))
-                {
-                    // 尝试多种 name 字段模式
-                    var patterns = new[] { "\"name\":\"", "\"nickname\":\"" };
-                    foreach (var pattern in patterns)
-                    {
-                        var start = response.IndexOf(pattern);
-                        if (start >= 0)
-                        {
-                            start += pattern.Length;
-                            var end = response.IndexOf("\"", start);
-                            if (end > start)
-                            {
-                                nickname = response.Substring(start, end - start);
-                                if (!string.IsNullOrWhiteSpace(nickname) && nickname != "null" && nickname != qq)
-                                    break;
-                            }
-                        }
-                    }
-                }
-            }
-            catch
-            {
-                // 忽略错误，继续使用备用方案
-            }
-
-            // 使用QQ官方头像API
-            var avatar = $"https://q1.qlogo.cn/g?b=qq&nk={qq}&s=100";
-            var mail = $"{qq}@qq.com";
-
-            return Result<QQUserInfoDto>.Ok(new QQUserInfoDto
-            {
-                Nickname = nickname ?? qq, // 如果获取不到昵称，返回QQ号
-                Avatar = avatar,
-                Mail = mail
-            });
+            return Result<QQUserInfoDto>.Ok(await ResolveQQUserInfoAsync(request.QQ));
         }
         catch
         {
-            // 忽略错误，返回空
+            return Result<QQUserInfoDto>.Ok(new QQUserInfoDto());
         }
-        
-        return Result<QQUserInfoDto>.Ok(new QQUserInfoDto());
     }
 
     [HttpPost("flower")]
     public async Task<Result<bool>> SendFlower([FromBody] FlowerRequest request)
     {
-        // 获取用户标识（优先使用IP）
         var userKey = HttpContext.Connection.RemoteIpAddress?.ToString() ?? request.UserKey;
         var result = await _commentService.SendFlowerAsync(request.CommentId, userKey);
         return Result<bool>.Ok(result);
@@ -163,6 +121,112 @@ public class CommentPortalController : ControllerBase
         {
             return Result<SecretContentResponse>.Fail(ex.Message);
         }
+    }
+
+    private static bool IsQQNumber(string? value)
+    {
+        return !string.IsNullOrWhiteSpace(value) && value.All(char.IsDigit);
+    }
+
+    private static string GenerateGuestName()
+    {
+        var names = new[]
+        {
+            "路过的风", "山海访客", "星河旅人", "云边来客", "代码旅人",
+            "清晨来信", "晚风同学", "蓝色便签", "小小宇宙", "温柔访客"
+        };
+        return $"{names[Random.Shared.Next(names.Length)]}{Random.Shared.Next(100, 999)}";
+    }
+
+    private static string? NormalizeWebsite(string? website)
+    {
+        if (string.IsNullOrWhiteSpace(website)) return null;
+        var value = website.Trim();
+        if (value.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            value.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            return value;
+        }
+        return $"https://{value}";
+    }
+
+    private static async Task<QQUserInfoDto> ResolveQQUserInfoAsync(string qq)
+    {
+        qq = qq.Trim();
+        var nickname = await TryGetQQNicknameFromQzoneAsync(qq) ?? await TryGetQQNicknameFromFallbackAsync(qq);
+        return new QQUserInfoDto
+        {
+            Nickname = string.IsNullOrWhiteSpace(nickname) || nickname == qq ? GenerateGuestName() : nickname,
+            Avatar = $"https://q1.qlogo.cn/g?b=qq&nk={qq}&s=100",
+            Mail = $"{qq}@qq.com"
+        };
+    }
+
+    private static async Task<string?> TryGetQQNicknameFromQzoneAsync(string qq)
+    {
+        try
+        {
+            using var httpClient = CreateQQHttpClient();
+            var bytes = await httpClient.GetByteArrayAsync($"https://r.qzone.qq.com/fcg-bin/cgi_get_portrait.fcg?uins={qq}");
+            var response = DecodeQQResponse(bytes);
+            var marker = $"\"{qq}\":[";
+            var start = response.IndexOf(marker, StringComparison.Ordinal);
+            if (start < 0) return null;
+            start = response.IndexOf('[', start) + 1;
+            var end = response.IndexOf(']', start);
+            if (end <= start) return null;
+            using var doc = JsonDocument.Parse($"[{response.Substring(start, end - start)}]");
+            var values = doc.RootElement.EnumerateArray().ToArray();
+            return values.Length > 6 ? CleanQQNickname(values[6].GetString()) : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static async Task<string?> TryGetQQNicknameFromFallbackAsync(string qq)
+    {
+        try
+        {
+            using var httpClient = CreateQQHttpClient();
+            var response = await httpClient.GetStringAsync($"https://api.oioweb.cn/api/qq/info?qq={qq}");
+            using var doc = JsonDocument.Parse(response);
+            if (!doc.RootElement.TryGetProperty("data", out var data)) return null;
+            if (data.TryGetProperty("name", out var name)) return CleanQQNickname(name.GetString());
+            if (data.TryGetProperty("nickname", out var nickname)) return CleanQQNickname(nickname.GetString());
+        }
+        catch
+        {
+        }
+        return null;
+    }
+
+    private static HttpClient CreateQQHttpClient()
+    {
+        var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+        httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+        return httpClient;
+    }
+
+    private static string DecodeQQResponse(byte[] bytes)
+    {
+        try
+        {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            return Encoding.GetEncoding("GB18030").GetString(bytes);
+        }
+        catch
+        {
+            return Encoding.UTF8.GetString(bytes);
+        }
+    }
+
+    private static string? CleanQQNickname(string? nickname)
+    {
+        if (string.IsNullOrWhiteSpace(nickname)) return null;
+        var value = nickname.Trim();
+        return value.Equals("null", StringComparison.OrdinalIgnoreCase) ? null : value;
     }
 }
 

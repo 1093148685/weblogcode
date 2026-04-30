@@ -1,11 +1,11 @@
 import axios from "@/axios";
 
-export function getMessageWallComments() {
-    return axios.post("/comment/list", { routerUrl: "/message-wall" })
+export function getMessageWallComments(routerUrl = "/message-wall") {
+    return axios.post("/comment/list", { routerUrl })
 }
 
-export function publishMessageWallComment(data) {
-    return axios.post("/comment/publish", { ...data, routerUrl: "/message-wall" })
+export function publishMessageWallComment(data, routerUrl = "/message-wall") {
+    return axios.post("/comment/publish", { ...data, routerUrl })
 }
 
 export function sendFlower(commentId) {

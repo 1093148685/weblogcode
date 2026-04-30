@@ -27,6 +27,11 @@ public class BlogSettingsDto
     public bool SmtpEnableSsl { get; set; } = true;
     public string? SmtpFromEmail { get; set; }
     public string? SmtpFromName { get; set; }
+    public bool IsSubscribeCardOpen { get; set; } = true;
+    public string SubscribeTitle { get; set; } = "订阅更新";
+    public string SubscribeDescription { get; set; } = "订阅后，最新文章将通过邮件发送给你";
+    public string SubscribePlaceholder { get; set; } = "输入你的邮箱地址";
+    public string SubscribeButtonText { get; set; } = "订阅";
 }
 
 public class UpdateBlogSettingsRequest
@@ -55,4 +60,9 @@ public class UpdateBlogSettingsRequest
     public bool SmtpEnableSsl { get; set; } = true;
     public string? SmtpFromEmail { get; set; }
     public string? SmtpFromName { get; set; }
+    public bool IsSubscribeCardOpen { get; set; } = true;
+    public string SubscribeTitle { get; set; } = "订阅更新";
+    public string SubscribeDescription { get; set; } = "订阅后，最新文章将通过邮件发送给你";
+    public string SubscribePlaceholder { get; set; } = "输入你的邮箱地址";
+    public string SubscribeButtonText { get; set; } = "订阅";
 }

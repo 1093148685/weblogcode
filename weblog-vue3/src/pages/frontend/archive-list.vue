@@ -31,12 +31,17 @@
                         <ol class="mt-3 space-y-4">
                             <li v-for="(article, index2) in archive.articles" :key="index2" class="border border-[var(--border-base)] rounded-xl overflow-hidden bg-[var(--bg-card)]">
                                 <a @click="goArticleDetailPage(article.id)" class="items-center block p-4 sm:flex gap-4 hover:bg-[var(--bg-hover)] cursor-pointer">
-                                    <img v-if="article.cover" class="w-24 h-12 mb-3 mr-3 rounded-lg sm:mb-0 object-cover flex-shrink-0"
-                                        :src="article.cover"/>
-                                    <div v-else class="w-24 h-12 mb-3 mr-3 rounded-lg sm:mb-0 bg-[var(--bg-hover)] flex items-center justify-center flex-shrink-0">
-                                        <svg class="w-5 h-5 text-[var(--text-placeholder)]" fill="none" viewBox="0 0 24 24">
-                                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m3 16 5-7 6 6.5m6.5 2.5L16 13l-4.286 6M14 10h.01M4 19h16a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1Z"/>
-                                        </svg>
+                                    <div class="archive-cover">
+                                        <img v-if="article.cover"
+                                            class="archive-cover__image"
+                                            :src="article.cover"
+                                            alt=""
+                                            @error="article.cover = ''" />
+                                        <div v-else class="archive-cover__placeholder">
+                                            <svg class="archive-cover__icon" fill="none" viewBox="0 0 24 24">
+                                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m3 16 5-7 6 6.5m6.5 2.5L16 13l-4.286 6M14 10h.01M4 19h16a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1Z"/>
+                                            </svg>
+                                        </div>
                                     </div>
                                     <div class="text-[var(--text-secondary)] flex-1 min-w-0">
                                         <h2 class="text-base font-normal text-[var(--text-heading)] truncate">
@@ -181,3 +186,61 @@ const goArticleDetailPage = (articleId) => {
     router.push('/article/' + articleId)
 }
 </script>
+
+<style scoped>
+.archive-cover {
+    position: relative;
+    width: 112px;
+    height: 64px;
+    margin-right: 16px;
+    flex-shrink: 0;
+    overflow: hidden;
+    border-radius: 10px;
+    background: var(--bg-hover);
+    border: 1px solid var(--border-light);
+}
+
+.archive-cover__image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.45s ease;
+}
+
+li:hover .archive-cover__image {
+    transform: scale(1.04);
+}
+
+.archive-cover__placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    color: var(--text-muted);
+    background:
+        linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(16, 185, 129, 0.16)),
+        var(--bg-hover);
+}
+
+.archive-cover__icon {
+    width: 28px;
+    height: 28px;
+    opacity: 0.9;
+}
+
+@media (max-width: 640px) {
+    .archive-cover {
+        width: 100%;
+        height: 150px;
+        margin-right: 0;
+        margin-bottom: 12px;
+    }
+
+    .archive-cover__icon {
+        width: 42px;
+        height: 42px;
+    }
+}
+</style>

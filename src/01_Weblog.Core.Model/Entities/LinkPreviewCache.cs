@@ -5,7 +5,10 @@ namespace Weblog.Core.Model.Entities;
 [SugarTable("t_link_preview_cache")]
 public class LinkPreviewCache
 {
-    [SugarColumn(IsPrimaryKey = true, Length = 2000)]
+    [SugarColumn(IsPrimaryKey = true, IsIdentity = true)]
+    public long Id { get; set; }
+
+    [SugarColumn(Length = 2000)]
     public string Url { get; set; } = string.Empty;
 
     [SugarColumn(Length = 500)]

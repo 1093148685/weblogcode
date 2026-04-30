@@ -49,24 +49,28 @@
         </el-dialog>
 
         <!-- 文章视图 -->
-        <div v-if="currentView === 'article'" class="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
+        <div v-if="currentView === 'article'" class="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
             <!-- 文章列表 -->
-            <div class="min-w-0">
-                <div class="space-y-4">
+            <div class="min-w-0 article-list-panel">
+                <div class="article-section-heading">
+                    <h1>最新文章</h1>
+                    <p>记录技术点滴，分享学习与实践经验</p>
+                </div>
+                <div class="article-grid">
                     <!-- 骨架屏 -->
-                    <div v-if="isLoading" class="space-y-4">
-                        <div v-for="i in 5" :key="i" class="bg-[var(--bg-card)] border border-[var(--border-base)] rounded-card p-4 flex gap-4">
-                            <Skeleton width="176px" height="144px" border-radius="8px" class="hidden sm:block flex-shrink-0" />
-                            <div class="flex-1 space-y-3 py-1">
+                    <template v-if="isLoading">
+                        <div v-for="i in 6" :key="i" class="article-grid-skeleton">
+                            <Skeleton width="100%" height="170px" border-radius="8px" />
+                            <div class="space-y-3 p-4">
                                 <Skeleton width="80%" height="1.5rem" />
-                                <Skeleton width="100%" height="3rem" />
+                                <Skeleton width="100%" height="2.5rem" />
                                 <div class="flex gap-4">
                                     <Skeleton width="80px" height="1rem" />
                                     <Skeleton width="60px" height="1rem" />
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </template>
 
                     <template v-else>
                     <article v-for="(article, index) in articles" :key="index"
@@ -87,6 +91,7 @@
                                 <div class="article-stream-card__cover-inner">
                                     <img
                                         class="article-stream-card__image"
+                                        @error="article.cover = ''"
                                         :src="article.cover" alt="" />
                                     <div class="article-stream-card__image-mask"></div>
                                 </div>
@@ -127,7 +132,7 @@
                                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 20 20">
                                             <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 1v3m5-3v3m5-3v3M1 7h18M5 11h10M2 3h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
                                         </svg>
-                                        {{ article.createTime }}
+                                        {{ formatArticleDate(article.createTime || article.createDate) }}
                                     </span>
                                     <a v-if="article.category"
                                         @click.stop="goCategoryArticleListPage(article.category.id, article.category.name)"
@@ -188,9 +193,26 @@
             </div>
 
             <!-- 侧边栏 -->
-            <aside class="hidden lg:block w-[280px] flex-shrink-0">
-                <div class="sticky top-24 space-y-4">
+            <aside class="block w-full xl:w-[320px] xl:flex-shrink-0">
+                <div class="space-y-4 lg:sticky lg:top-24">
                     <UserInfoCard></UserInfoCard>
+                    <section v-if="subscribeCardVisible" class="subscribe-card">
+                        <div class="subscribe-card__title">
+                            <i class="far fa-envelope"></i>
+                            <span>{{ subscribeCard.title }}</span>
+                        </div>
+                        <p>{{ subscribeCard.description }}</p>
+                        <form class="subscribe-card__form" @submit.prevent="handleSubscribeSubmit">
+                            <input
+                                v-model.trim="subscribeEmail"
+                                type="email"
+                                :placeholder="subscribeCard.placeholder"
+                                autocomplete="email" />
+                            <button type="submit" :disabled="subscribeSubmitting">
+                                {{ subscribeSubmitting ? '订阅中...' : subscribeCard.buttonText }}
+                            </button>
+                        </form>
+                    </section>
                     <!-- 侧边栏公告 -->
                     <div v-if="announcement && announcement.isEnabled && announcementHidden"
                         class="bg-[var(--bg-card)] border border-[var(--border-base)] rounded-card shadow-card p-4">
@@ -213,15 +235,80 @@
         </div>
 
         <!-- 留言墙视图 -->
-        <div v-else-if="currentView === 'message-wall'" class="max-w-4xl mx-auto">
-            <div class="space-y-5">
-                <div class="bg-[var(--bg-card)] border border-[var(--border-base)] rounded-card p-5 shadow-card">
-                    <TypingPoem />
+        <div v-else-if="currentView === 'message-wall'" class="message-wall-page">
+            <section class="message-wall-hero">
+                <div class="message-wall-hero__content">
+                    <div class="message-wall-hero__title-row">
+                        <h1>留言板</h1>
+                    </div>
+                    <p>路过山海，欢迎在这里留下你的足迹与想法。</p>
+                    <div class="message-wall-stats">
+                        <div class="message-wall-stat">
+                            <span>
+                                <small>留言总数</small>
+                                <strong>{{ messageWallStats.total }}</strong>
+                            </span>
+                        </div>
+                        <div class="message-wall-stat">
+                            <span>
+                                <small>今日留言</small>
+                                <strong>{{ messageWallStats.today }}</strong>
+                            </span>
+                        </div>
+                        <div class="message-wall-stat">
+                            <span>
+                                <small>活跃访客</small>
+                                <strong>{{ messageWallStats.visitors }}</strong>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="message-wall-hero__visual" aria-hidden="true">
+                    <img :src="messageWallHeroImage" alt="" />
+                </div>
+            </section>
+
+            <div class="message-wall-layout">
+                <div class="message-wall-main">
                     <MessageWallForm @comment-published="handleMessageWallPublished" />
+                    <MessageWallPanel ref="messageWallRef" @stats-change="handleMessageWallStatsChange" />
                 </div>
-                <div class="bg-[var(--bg-card)] border border-[var(--border-base)] rounded-card p-5 shadow-card">
-                    <MessageWallPanel ref="messageWallRef" />
-                </div>
+
+                <aside class="message-wall-aside">
+                    <section class="message-wall-side-card message-wall-about">
+                        <img :src="blogSettingsStore.blogSettings.avatar" alt="" />
+                        <div>
+                            <h2>关于留言板</h2>
+                            <p>每一条留言都是一份温暖的遇见，感谢你的到来与支持。</p>
+                        </div>
+                    </section>
+
+                    <section class="message-wall-side-card">
+                        <h2><i class="fas fa-bullhorn"></i> 留言须知</h2>
+                        <ul>
+                            <li>请文明留言，友善交流</li>
+                            <li>禁止发布广告、违法及敏感信息</li>
+                            <li>尊重他人观点，理性讨论</li>
+                            <li>有问题请先搜索，感谢理解</li>
+                        </ul>
+                    </section>
+
+                    <section class="message-wall-side-card">
+                        <h2><i class="fas fa-chart-line"></i> 今日动态</h2>
+                        <div class="message-wall-dynamics">
+                            <span>今日留言</span>
+                            <strong>{{ messageWallStats.today }}</strong>
+                        </div>
+                        <div class="message-wall-dynamics">
+                            <span>最新评论</span>
+                            <strong>{{ messageWallStats.lastTime || '--' }}</strong>
+                        </div>
+                        <div class="message-wall-dynamics">
+                            <span>活跃访客</span>
+                            <strong>{{ messageWallStats.visitors }}</strong>
+                        </div>
+                    </section>
+                </aside>
             </div>
         </div>
 
@@ -247,12 +334,14 @@ import TagListCard from '@/layouts/frontend/components/TagListCard.vue'
 import ScrollToTopButton from '@/layouts/frontend/components/ScrollToTopButton.vue'
 import MessageWallPanel from '@/components/MessageWallPanel.vue'
 import MessageWallForm from '@/components/MessageWallForm.vue'
-import TypingPoem from '@/components/TypingPoem.vue'
 import ChatPanel from '@/components/chat/ChatPanel.vue'
+import messageWallHeroImage from '@/assets/liuyanban.png'
 import { onMounted, ref, computed, watch, nextTick } from 'vue'
 import { marked } from 'marked'
 import { setCache, getCache } from '@/composables/useCache'
 import { useBlogSettingsStore } from '@/stores/blogsettings'
+import { showMessage } from '@/composables/util'
+import { subscribeByEmail } from '@/api/frontend/subscribe'
 
 defineOptions({
     name: 'index'
@@ -273,6 +362,29 @@ const showAnnouncementModal = ref(false)
 // 当前视图：article 或 message-wall
 const currentView = ref('article')
 const messageWallRef = ref(null)
+const messageWallStats = ref({
+    total: 0,
+    today: 0,
+    visitors: 0,
+    lastTime: ''
+})
+const subscribeEmail = ref('')
+const subscribeSubmitting = ref(false)
+
+const subscribeCard = computed(() => {
+    const settings = blogSettingsStore.blogSettings || {}
+    return {
+        title: '订阅更新',
+        description: '订阅后，最新文章将通过邮件发送给你',
+        placeholder: '输入你的邮箱地址',
+        buttonText: '订阅'
+    }
+})
+
+const subscribeCardVisible = computed(() => {
+    const settings = blogSettingsStore.blogSettings || {}
+    return settings.isSubscribeCardOpen !== false
+})
 
 // 打字机效果
 const slogans = [
@@ -376,6 +488,37 @@ function showAnnouncement() {
 }
 
 // 获取公告（带缓存）
+const formatArticleDate = (time) => {
+    if (!time) return ''
+    const date = new Date(time)
+    if (Number.isNaN(date.getTime())) return time
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+}
+
+const handleSubscribeSubmit = async () => {
+    const email = subscribeEmail.value.trim()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showMessage('请输入正确的邮箱地址', 'warning')
+        return
+    }
+    if (subscribeSubmitting.value) return
+    subscribeSubmitting.value = true
+    try {
+        const res = await subscribeByEmail(email)
+        if (res.success) {
+            subscribeEmail.value = ''
+            showMessage(res.message || '订阅成功，请查收确认邮件', 'success')
+        } else {
+            showMessage(res.message || '订阅失败', 'warning')
+        }
+    } finally {
+        subscribeSubmitting.value = false
+    }
+}
+
 const loadAnnouncement = () => {
     const cached = getCache('announcement')
     if (cached) {
@@ -401,6 +544,13 @@ const goCategoryArticleListPage = (id, name) => {
 const handleMessageWallPublished = () => {
     if (messageWallRef.value) {
         messageWallRef.value.refresh()
+    }
+}
+
+const handleMessageWallStatsChange = (stats) => {
+    messageWallStats.value = {
+        ...messageWallStats.value,
+        ...stats
     }
 }
 
@@ -522,34 +672,75 @@ const goTagArticleListPage = (id, name) => {
     opacity: 0;
 }
 
+.article-list-panel {
+    padding: 28px;
+    border: 1px solid var(--border-base);
+    border-radius: 8px;
+    background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
+}
+
+.article-section-heading {
+    margin-bottom: 22px;
+}
+
+.article-section-heading h1 {
+    margin: 0 0 6px;
+    color: var(--text-heading);
+    font-size: 22px;
+    line-height: 1.25;
+    font-weight: 800;
+    letter-spacing: 0;
+}
+
+.article-section-heading p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.article-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 22px;
+}
+
+.article-grid-skeleton {
+    overflow: hidden;
+    border: 1px solid var(--border-base);
+    border-radius: 8px;
+    background: var(--bg-card);
+}
+
 .article-stream-card {
     position: relative;
     overflow: hidden;
-    border-radius: 18px;
-    background:
-        linear-gradient(135deg, rgba(59, 130, 246, 0.05), transparent 42%),
-        var(--bg-card);
+    display: flex;
+    flex-direction: column;
+    border-radius: 8px;
+    background: var(--bg-card);
     border: 1px solid var(--border-base);
-    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+    box-shadow: var(--shadow-sm);
     transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
 }
 
 .article-stream-card:hover {
     transform: translateY(-3px);
-    border-color: rgba(59, 130, 246, 0.36);
-    box-shadow: 0 22px 56px rgba(15, 23, 42, 0.14);
+    border-color: var(--border-heavy);
+    box-shadow: var(--shadow-md);
 }
 
 .article-stream-card__inner {
     display: grid;
-    grid-template-columns: minmax(220px, 31%) minmax(0, 1fr);
-    min-height: 214px;
+    grid-template-columns: 1fr;
+    height: 100%;
 }
 
 .article-stream-card__cover {
     position: relative;
     display: block;
-    min-height: 214px;
+    aspect-ratio: 16 / 8;
+    min-height: 0;
     cursor: pointer;
     overflow: hidden;
     background: linear-gradient(135deg, #1f2937, #111827);
@@ -587,6 +778,10 @@ const goTagArticleListPage = (id, name) => {
     display: flex;
     align-items: center;
     justify-content: center;
+    background:
+        linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(16, 185, 129, 0.16)),
+        var(--bg-hover);
+    color: var(--text-muted);
 }
 
 .article-stream-card__body {
@@ -594,15 +789,16 @@ const goTagArticleListPage = (id, name) => {
     min-width: 0;
     flex-direction: column;
     justify-content: space-between;
-    gap: 18px;
-    padding: 26px 30px;
+    gap: 22px;
+    min-height: 210px;
+    padding: 18px;
 }
 
 .article-stream-card__tags {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
 }
 
 .article-stream-card__tag {
@@ -629,9 +825,9 @@ const goTagArticleListPage = (id, name) => {
     margin: 0 0 10px;
     overflow: hidden;
     color: var(--text-heading);
-    font-size: 21px;
+    font-size: 18px;
     font-weight: 800;
-    line-height: 1.38;
+    line-height: 1.42;
     letter-spacing: 0;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -648,7 +844,7 @@ const goTagArticleListPage = (id, name) => {
     overflow: hidden;
     color: var(--text-secondary);
     font-size: 14px;
-    line-height: 1.85;
+    line-height: 1.65;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
 }
@@ -657,9 +853,9 @@ const goTagArticleListPage = (id, name) => {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 14px;
-    padding-top: 16px;
-    border-top: 1px solid var(--border-light);
+    gap: 12px;
+    padding-top: 0;
+    border-top: 0;
     color: var(--text-muted);
     font-size: 12px;
 }
@@ -700,20 +896,410 @@ const goTagArticleListPage = (id, name) => {
 }
 
 .dark .article-stream-card {
-    background:
-        radial-gradient(circle at 0 0, rgba(59, 130, 246, 0.09), transparent 32%),
-        rgba(30, 41, 53, 0.92);
-    box-shadow: 0 18px 46px rgba(0, 0, 0, 0.22);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
 }
 
 .dark .article-stream-card:hover {
-    box-shadow: 0 24px 58px rgba(0, 0, 0, 0.34);
+    box-shadow: var(--shadow-md);
 }
 
 .dark .article-pin-badge {
     color: #fbbf24;
     background: rgba(120, 53, 15, 0.78);
     border-color: rgba(251, 191, 36, 0.28);
+}
+
+/* 留言板布局 */
+.subscribe-card {
+    padding: 20px;
+    border: 1px solid var(--border-base);
+    border-radius: 8px;
+    background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
+}
+
+.subscribe-card__title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    color: var(--text-heading);
+    font-size: 18px;
+    line-height: 1.3;
+    font-weight: 800;
+}
+
+.subscribe-card__title i {
+    color: var(--text-heading);
+    font-size: 18px;
+}
+
+.subscribe-card p {
+    margin: 0 0 16px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+.subscribe-card__form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+}
+
+.subscribe-card__form input {
+    min-width: 0;
+    height: 40px;
+    padding: 0 14px;
+    border: 1px solid var(--border-base);
+    border-radius: 6px;
+    color: var(--text-heading);
+    background: var(--bg-base);
+    outline: none;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.subscribe-card__form input::placeholder {
+    color: var(--text-placeholder);
+}
+
+.subscribe-card__form input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.subscribe-card__form button {
+    height: 40px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 6px;
+    color: #fff;
+    background: var(--color-primary);
+    font-weight: 700;
+    white-space: nowrap;
+    transition: transform 0.18s ease, filter 0.18s ease;
+}
+
+.subscribe-card__form button:hover {
+    filter: brightness(1.04);
+    transform: translateY(-1px);
+}
+
+.subscribe-card__form button:disabled {
+    cursor: not-allowed;
+    opacity: 0.72;
+    transform: none;
+}
+
+.message-wall-page {
+    max-width: 1280px;
+    margin: 0 auto;
+}
+
+.message-wall-hero {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(390px, 0.78fr) minmax(0, 1.22fr);
+    align-items: center;
+    gap: 18px;
+    min-height: 250px;
+    margin-bottom: 24px;
+    padding: 34px 40px 28px;
+    border: 1px solid var(--border-base);
+    border-radius: 12px;
+    background:
+        radial-gradient(circle at 63% 12%, rgba(59, 130, 246, 0.12), transparent 32%),
+        linear-gradient(115deg, var(--bg-card) 0%, var(--bg-card) 46%, rgba(239, 246, 255, 0.56) 100%),
+        var(--bg-card);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+}
+
+.message-wall-hero::after {
+    display: none;
+}
+
+.message-wall-hero__content {
+    position: relative;
+    z-index: 3;
+    max-width: 560px;
+    min-width: 0;
+}
+
+.message-wall-hero__title-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 12px;
+}
+
+.message-wall-hero__title-row h1 {
+    margin: 0;
+    color: var(--text-heading);
+    font-size: 34px;
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: 0;
+}
+
+.message-wall-hero p {
+    margin: 0 0 28px;
+    color: var(--text-secondary);
+    font-size: 15px;
+}
+
+.message-wall-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(118px, 1fr));
+    gap: 14px;
+}
+
+.message-wall-stat {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    padding: 13px 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+    background: rgba(255, 255, 255, 0.66);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
+}
+
+.message-wall-stat::before {
+    content: "";
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    flex: 0 0 34px;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.22)),
+        var(--color-primary);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45), 0 10px 20px rgba(37, 99, 235, 0.16);
+}
+
+.message-wall-stat:nth-child(2)::before {
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.2)),
+        #fb7185;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45), 0 10px 20px rgba(251, 113, 133, 0.16);
+}
+
+.message-wall-stat:nth-child(3)::before {
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.2)),
+        #22c55e;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45), 0 10px 20px rgba(34, 197, 94, 0.16);
+}
+
+.message-wall-stat small,
+.message-wall-dynamics span {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.message-wall-stat strong,
+.message-wall-dynamics strong {
+    display: block;
+    color: var(--text-heading);
+    font-size: 19px;
+    line-height: 1.2;
+    font-weight: 800;
+}
+
+.message-wall-hero__visual {
+    position: relative;
+    z-index: 2;
+    min-height: 214px;
+    align-self: stretch;
+    pointer-events: none;
+    overflow: hidden;
+    border-radius: 10px;
+    background: rgba(239, 246, 255, 0.42);
+}
+
+.message-wall-hero__visual::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.84) 0%, rgba(255, 255, 255, 0.34) 18%, transparent 42%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, transparent 20%, transparent 82%, rgba(255, 255, 255, 0.18) 100%);
+}
+
+.message-wall-hero__visual img {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    object-fit: cover;
+    object-position: center center;
+    transform: none;
+    filter: brightness(1.08) saturate(0.92) contrast(0.96);
+    opacity: 0.92;
+    mix-blend-mode: normal;
+}
+
+.dark .message-wall-hero {
+    background:
+        radial-gradient(circle at 64% 14%, rgba(96, 165, 250, 0.12), transparent 34%),
+        linear-gradient(115deg, var(--bg-card) 0%, var(--bg-card) 46%, rgba(30, 41, 59, 0.48) 100%),
+        var(--bg-card);
+}
+
+.dark .message-wall-stat {
+    background: rgba(15, 23, 42, 0.5);
+}
+
+.dark .message-wall-hero__visual {
+    background: rgba(15, 23, 42, 0.3);
+}
+
+.dark .message-wall-hero__visual::before {
+    background:
+        linear-gradient(90deg, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.42) 18%, transparent 42%),
+        linear-gradient(180deg, rgba(15, 23, 42, 0.18) 0%, transparent 22%, transparent 82%, rgba(15, 23, 42, 0.18) 100%);
+}
+
+.dark .message-wall-hero__visual img {
+    filter: brightness(0.82) saturate(0.96) contrast(1.02);
+    opacity: 0.7;
+    mix-blend-mode: normal;
+}
+
+.message-wall-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 28px;
+    align-items: start;
+}
+
+.message-wall-main {
+    display: grid;
+    gap: 18px;
+    min-width: 0;
+}
+
+.message-wall-aside {
+    display: grid;
+    gap: 18px;
+    position: sticky;
+    top: 96px;
+}
+
+.message-wall-side-card {
+    padding: 22px;
+    border: 1px solid var(--border-base);
+    border-radius: 8px;
+    background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
+}
+
+.message-wall-side-card h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 14px;
+    color: var(--text-heading);
+    font-size: 18px;
+    line-height: 1.3;
+    font-weight: 800;
+}
+
+.message-wall-side-card h2 i {
+    color: var(--color-primary);
+}
+
+.message-wall-about {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.message-wall-about img {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--border-base);
+    background: var(--bg-hover);
+    flex-shrink: 0;
+}
+
+.message-wall-about p,
+.message-wall-side-card li {
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+.message-wall-about p {
+    margin: 0;
+}
+
+.message-wall-side-card ul {
+    display: grid;
+    gap: 9px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.message-wall-side-card li {
+    position: relative;
+    padding-left: 18px;
+}
+
+.message-wall-side-card li::before {
+    content: "";
+    position: absolute;
+    left: 2px;
+    top: 0.72em;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--color-primary);
+}
+
+.message-wall-dynamics {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 11px 0;
+    border-top: 1px solid var(--border-light);
+}
+
+.message-wall-dynamics:first-of-type {
+    border-top: 0;
+    padding-top: 0;
+}
+
+.message-wall-dynamics span {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.message-wall-dynamics strong {
+    min-width: 46px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    color: var(--color-primary);
+    background: var(--bg-hover);
+    font-size: 16px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.message-wall-side-card:last-child {
+    padding-bottom: 16px;
 }
 
 /* 滚动淡入动画 */
@@ -749,6 +1335,102 @@ const goTagArticleListPage = (id, name) => {
     .article-pin-badge {
         top: 10px;
         right: 10px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .message-wall-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .message-wall-hero {
+        grid-template-columns: minmax(0, 1fr);
+        min-height: 0;
+        padding: 30px 32px;
+    }
+
+    .message-wall-hero::after {
+        display: none;
+    }
+
+    .message-wall-hero__content {
+        max-width: none;
+    }
+
+    .message-wall-hero__visual {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        min-height: 0;
+        border-radius: inherit;
+    }
+
+    .message-wall-hero__visual::before {
+        inset: 0;
+        background:
+            linear-gradient(90deg, var(--bg-card) 0%, rgba(255, 255, 255, 0.44) 34%, transparent 82%);
+    }
+
+    .message-wall-hero__visual img {
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center center;
+        transform: none;
+        opacity: 0.42;
+        filter: brightness(1.08) saturate(0.86) contrast(0.94);
+    }
+
+    .message-wall-aside {
+        position: static;
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .message-wall-hero {
+        padding: 26px 20px 22px;
+        border-radius: 10px;
+    }
+
+    .message-wall-hero__visual img {
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center top;
+        opacity: 0.48;
+    }
+
+    .message-wall-stats {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-top: 168px;
+    }
+
+    .message-wall-stat {
+        padding: 15px 16px;
+        background: rgba(255, 255, 255, 0.82);
+    }
+
+    .message-wall-hero__title-row h1 {
+        font-size: 30px;
+    }
+
+    .message-wall-hero p {
+        max-width: 23em;
+        margin-bottom: 0;
+        line-height: 1.75;
+    }
+
+    .dark .message-wall-hero__visual::before {
+        background:
+            linear-gradient(90deg, var(--bg-card) 0%, rgba(15, 23, 42, 0.46) 34%, transparent 82%);
+    }
+
+    .dark .message-wall-stat {
+        background: rgba(15, 23, 42, 0.68);
     }
 }
 </style>

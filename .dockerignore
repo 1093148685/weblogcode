@@ -1,12 +1,15 @@
 .git
 .vs
 .vscode
+.claude
+**/.claude
 **/obj
 **/bin
 *.user
 *.suo
 *.log
 publish
+FeiTwnd-Website-master (1)
 weblog-vue3
 weblog-vue3-2
 weblog-springboot

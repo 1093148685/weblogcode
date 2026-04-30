@@ -144,4 +144,33 @@ public class BlogSettings
     /// </summary>
     [SugarColumn(Length = 50, IsNullable = true)]
     public string? SmtpFromName { get; set; }
+
+    /// <summary>
+    /// 是否展示侧边栏订阅卡片
+    /// </summary>
+    public bool IsSubscribeCardOpen { get; set; } = true;
+
+    /// <summary>
+    /// 订阅卡片标题
+    /// </summary>
+    [SugarColumn(Length = 40, DefaultValue = "订阅更新")]
+    public string SubscribeTitle { get; set; } = "订阅更新";
+
+    /// <summary>
+    /// 订阅卡片说明
+    /// </summary>
+    [SugarColumn(Length = 120, DefaultValue = "订阅后，最新文章将通过邮件发送给你")]
+    public string SubscribeDescription { get; set; } = "订阅后，最新文章将通过邮件发送给你";
+
+    /// <summary>
+    /// 订阅输入框占位文案
+    /// </summary>
+    [SugarColumn(Length = 40, DefaultValue = "输入你的邮箱地址")]
+    public string SubscribePlaceholder { get; set; } = "输入你的邮箱地址";
+
+    /// <summary>
+    /// 订阅按钮文案
+    /// </summary>
+    [SugarColumn(Length = 20, DefaultValue = "订阅")]
+    public string SubscribeButtonText { get; set; } = "订阅";
 }

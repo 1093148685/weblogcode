@@ -183,6 +183,20 @@
                 <el-divider />
 
                 <el-form-item>
+                    <h2 class="font-bold text-base mb-1">订阅卡片设置</h2>
+                </el-form-item>
+                <el-form-item label="显示订阅卡片">
+                    <el-switch v-model="form.isSubscribeCardOpen" inline-prompt :active-icon="Check" :inactive-icon="Close" />
+                    <div class="flex items-center ml-3">
+                        <el-icon class="mr-2" color="#909399"><InfoFilled /></el-icon>
+                        <el-text class="mx-1" type="info" size="small">订阅依赖邮件通知设置，未配置 SMTP 时订阅不会生效</el-text>
+                    </div>
+                </el-form-item>
+
+                <!-- 分割线 -->
+                <el-divider />
+
+                <el-form-item>
                     <h2 class="font-bold text-base mb-1">贴纸设置</h2>
                 </el-form-item>
                 <el-form-item label="ZIP解压最大张数">
@@ -249,7 +263,8 @@ const form = reactive({
     smtpPassword: '', // SMTP 密码
     smtpEnableSsl: true, // 是否启用 SSL
     smtpFromEmail: '', // 发件人邮箱
-    smtpFromName: '' // 发件人名称
+    smtpFromName: '', // 发件人名称
+    isSubscribeCardOpen: true // 是否显示订阅卡片
 })
 
 // 规则校验
@@ -350,6 +365,7 @@ function initBlogSettings() {
             form.smtpEnableSsl = e.data.smtpEnableSsl ?? true
             form.smtpFromEmail = e.data.smtpFromEmail || ''
             form.smtpFromName = e.data.smtpFromName || ''
+            form.isSubscribeCardOpen = e.data.isSubscribeCardOpen ?? true
             dataLoaded.value = true
         }
     })

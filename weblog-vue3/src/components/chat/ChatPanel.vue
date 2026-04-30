@@ -1,21 +1,27 @@
 <template>
-    <div class="flex h-full chat-panel panel-card overflow-hidden">
+    <div class="flex h-full chat-panel overflow-hidden">
         <!-- 侧边栏 -->
         <transition name="slide">
             <div
                 v-if="showSidebar"
-                class="w-[280px] flex-shrink-0 flex flex-col bg-[var(--bg-card)] border-r border-[var(--border-base)] h-full"
+                class="chat-sidebar w-[300px] flex-shrink-0 flex flex-col h-full"
             >
                 <!-- 侧边栏头部：Logo + 操作按钮 -->
-                <div class="flex items-center justify-between px-5 py-4 border-b border-[var(--border-base)] bg-[var(--bg-card)]/90">
+                <div class="chat-assistant-card flex items-center justify-between">
                     <div class="flex items-center gap-2.5">
-                        <div class="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-sm">
+                        <div class="assistant-avatar w-12 h-12 flex items-center justify-center">
                             <span class="text-white text-sm font-bold">J</span>
                         </div>
-                        <span class="text-lg font-bold text-[var(--text-heading)]">小J 助手</span>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg font-bold text-[var(--text-heading)]">小J 助手</span>
+                                <span class="pro-badge">Pro</span>
+                            </div>
+                            <span class="block text-xs text-[var(--text-muted)]">你的专属 AI 助手</span>
+                        </div>
                     </div>
                     <button @click="showSidebar = false"
-                        class="p-2 rounded-full hover:bg-[var(--bg-hover)] transition-colors text-[var(--text-muted)]">
+                        class="p-2 rounded-full hover:bg-white/80 transition-colors text-indigo-500">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24">
                             <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                         </svg>
@@ -23,7 +29,7 @@
                 </div>
 
                 <!-- 新对话按钮 -->
-                <div class="px-4 mb-4">
+                <div class="px-5 mb-5">
                     <button @click="createNewChat"
                         class="sidebar-item sidebar-item-new w-full justify-center">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24">
@@ -34,7 +40,8 @@
                 </div>
 
                 <!-- 模型选择 -->
-                <div class="px-4 mb-4">
+                <div class="px-5 mb-3">
+                    <div class="text-xs text-[var(--text-muted)] mb-2 px-1 font-semibold">AI 能力</div>
                     <button @click="showSettings = true"
                         class="sidebar-item w-full">
                         <div class="w-8 h-8 bg-violet-100 dark:bg-violet-900/30 rounded-full flex items-center justify-center flex-shrink-0">
@@ -52,8 +59,8 @@
                 </div>
 
                 <!-- AI 对话模式 -->
-                <div class="px-4 mb-4">
-                    <div class="text-xs text-[var(--text-muted)] mb-1 px-1">AI 模式</div>
+                <div class="px-5 mb-4">
+                    <div class="text-xs text-[var(--text-muted)] mb-2 px-1 font-semibold">AI 模式</div>
                     <div class="chat-mode-switch">
                         <button
                             type="button"
@@ -91,7 +98,7 @@
                 </div>
 
                 <!-- 知识库选择（RAG） -->
-                <div class="px-4 mb-4" :class="{ 'opacity-55': selectedChatMode !== 'rag' && selectedChatMode !== 'auto' }">
+                <div class="px-5 mb-5" :class="{ 'opacity-55': selectedChatMode !== 'rag' && selectedChatMode !== 'auto' }">
                     <div class="flex items-center justify-between text-xs text-[var(--text-muted)] mb-1 px-1">
                         <span>知识库</span>
                         <span v-if="selectedChatMode === 'auto' && selectedKbOption" class="text-[var(--color-primary)]">智能可用</span>
@@ -110,10 +117,10 @@
                 </div>
 
                 <!-- 最近对话标题 -->
-                <div class="px-5 mb-2 text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">最近对话</div>
+                <div class="px-5 mb-2 text-xs font-semibold text-[var(--text-muted)]">最近对话</div>
 
                 <!-- 会话列表 -->
-                <div class="flex-1 overflow-y-auto px-4 pb-4 chat-sidebar-scroll">
+                <div class="flex-1 overflow-y-auto px-5 pb-4 chat-sidebar-scroll">
                     <div class="space-y-1">
                         <div
                             v-for="session in chatSessions"
@@ -165,13 +172,26 @@
                         <p class="text-xs text-[var(--text-placeholder)] mt-1">点击上方开启新对话</p>
                     </div>
                 </div>
+
+                <div class="px-5 pb-5 pt-2">
+                    <button
+                        class="clear-all-btn"
+                        type="button"
+                        @click="clearAllSessions"
+                    >
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24">
+                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165"/>
+                        </svg>
+                        清空所有对话
+                    </button>
+                </div>
             </div>
         </transition>
 
         <!-- 主内容区 -->
-        <div class="flex-1 flex flex-col min-w-0 relative bg-[var(--bg-base)]">
+        <div class="chat-main flex-1 flex flex-col min-w-0 relative">
             <!-- 标题栏 -->
-            <div class="flex items-center justify-between px-5 py-3 border-b border-[var(--border-base)] bg-[var(--bg-card)]">
+            <div class="chat-topbar flex items-center justify-between">
                 <div class="flex items-center gap-3">
                     <!-- 展开侧边栏按钮（侧边栏隐藏时显示） -->
                     <button v-if="!showSidebar" @click="showSidebar = true"
@@ -180,16 +200,14 @@
                             <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
                         </svg>
                     </button>
-                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm">
-                        <span class="text-white text-xs font-bold">J</span>
-                    </div>
                     <div class="flex flex-col">
-                        <span class="font-semibold text-[var(--text-heading)] text-sm">小J智能 AI 助手</span>
+                        <span class="font-semibold text-[var(--text-heading)] text-base">{{ currentSessionTitle || '新会话' }}</span>
                         <span v-if="currentSessionTitle && currentSessionTitle !== '新会话'" class="text-xs text-[var(--text-muted)] truncate max-w-[300px]">
-                            {{ currentSessionTitle }}
+                            小J智能 AI 助手
                         </span>
                     </div>
-                    <div class="flex items-center gap-2">
+                </div>
+                <div class="flex items-center gap-2">
                         <el-button
                             v-if="currentSessionId && displayMessages.length"
                             size="small"
@@ -207,9 +225,7 @@
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                             导出
                         </el-button>
-                    </div>
                 </div>
-
             </div>
 
             <!-- 消息区域 -->
@@ -221,7 +237,7 @@
                             <span class="text-white text-2xl font-bold">J</span>
                         </div>
                         <h2 class="text-xl font-bold text-[var(--text-heading)] mb-2">你好，有什么可以帮你的？</h2>
-                        <p class="text-sm text-[var(--text-muted)] mb-8 text-center max-w-md">我是小J，博客智能问答助手。可以解答博客内容、推荐文章、讨论话题。</p>
+                        <p class="text-sm text-[var(--text-muted)] mb-8 text-center max-w-md">{{ welcomeDescription }}</p>
 
                         <div class="grid grid-cols-2 gap-3 w-full max-w-lg">
                             <button
@@ -242,9 +258,9 @@
                     <template v-else>
                         <template v-for="(chat, index) in displayMessages" :key="index">
                             <!-- 用户消息 -->
-                            <div v-if="chat.role === 'user'" class="flex justify-end mb-6">
+                            <div v-if="chat.role === 'user'" class="flex justify-end mb-7 gap-3">
                                 <div class="max-w-[85%]">
-                                    <div class="bg-[var(--color-primary)] text-white px-4 py-3 rounded-2xl rounded-br-md shadow-sm">
+                                    <div class="user-bubble text-white px-5 py-3 shadow-sm">
                                         <div v-if="chat.quotedArticleTitle" class="mb-2 pb-2 border-b border-white/20">
                                             <div class="flex items-center gap-1 text-xs text-white/75">
                                                 <el-icon><Document /></el-icon>
@@ -255,11 +271,12 @@
                                     </div>
                                     <p class="text-xs text-[var(--text-muted)] mt-1.5 text-right">{{ formatTime(chat.timestamp) }}</p>
                                 </div>
+                                <div class="user-avatar flex-shrink-0 mt-0.5">你</div>
                             </div>
 
                             <!-- AI 回复 -->
                             <div v-else class="flex mb-6 gap-3 group">
-                                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
+                                <div class="assistant-avatar assistant-avatar-sm flex items-center justify-center flex-shrink-0 mt-1 shadow-sm">
                                     <span class="text-white text-xs font-bold">J</span>
                                 </div>
                                 <div class="min-w-0 flex-1">
@@ -402,7 +419,7 @@
             </Transition>
 
             <!-- 输入区域 -->
-            <div class="chat-composer px-4 sm:px-6 lg:px-8 pb-5 pt-3">
+            <div class="chat-composer px-4 sm:px-6 lg:px-8 pb-7 pt-3">
                 <div class="max-w-4xl mx-auto">
                     <!-- 使用次数提示 -->
                     <div
@@ -950,6 +967,26 @@ const deleteSession = async (sessionId) => {
         ElMessage.success('删除成功')
     } catch (e) {
         if (e !== 'cancel') ElMessage.error('删除失败')
+    }
+}
+
+const clearAllSessions = async () => {
+    if (isStreaming.value) return
+    if (!chatSessions.value.length) {
+        ElMessage.info('暂无对话')
+        return
+    }
+
+    try {
+        await ElMessageBox.confirm('确定清空所有对话吗？此操作不可恢复。', '提示', { type: 'warning' })
+        const sessionIds = chatSessions.value.map(s => s.id)
+        await Promise.allSettled(sessionIds.map(id => deleteUserSession(id, clientId)))
+        chatSessions.value = []
+        currentSessionId.value = null
+        createNewChat()
+        ElMessage.success('已清空所有对话')
+    } catch (e) {
+        if (e !== 'cancel') ElMessage.error('清空失败')
     }
 }
 
@@ -2259,5 +2296,291 @@ const selectArticle = async (article) => {
 .chat-messages-scroll::-webkit-scrollbar-thumb:hover,
 .chat-sidebar-scroll::-webkit-scrollbar-thumb:hover {
     background: var(--text-placeholder);
+}
+
+/* 参考图布局：颜色跟随站点主题变量 */
+.chat-panel {
+    --chat-primary: var(--color-primary);
+    --chat-primary-2: var(--color-accent);
+    width: 100%;
+    min-height: 0;
+    background: var(--bg-base);
+    border: 1px solid var(--border-base);
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.chat-sidebar {
+    padding-top: 20px;
+    background: var(--bg-card);
+    border-right: 1px solid var(--border-base);
+    box-shadow: var(--shadow-sm);
+}
+
+.chat-main {
+    background: var(--bg-base);
+}
+
+.chat-assistant-card {
+    margin: 0 20px 18px;
+    padding: 14px;
+    border-radius: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-base);
+    box-shadow: var(--shadow-sm);
+}
+
+.assistant-avatar {
+    border-radius: 50%;
+    background: var(--color-primary);
+    box-shadow: var(--shadow-md);
+}
+
+.assistant-avatar-sm {
+    width: 36px;
+    height: 36px;
+}
+
+.user-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--text-heading);
+    background: var(--bg-active);
+    box-shadow: var(--shadow-sm);
+}
+
+.pro-badge {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 999px;
+    color: var(--color-primary);
+    font-size: 11px;
+    font-weight: 800;
+    background: var(--bg-hover);
+}
+
+.chat-topbar {
+    min-height: 72px;
+    padding: 16px 28px 10px;
+    border-bottom: 0;
+    background: transparent;
+}
+
+.chat-topbar :deep(.el-button) {
+    min-height: 36px;
+    border-radius: 8px;
+    border-color: var(--border-base);
+    color: var(--text-secondary);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
+}
+
+.sidebar-item {
+    border-radius: 8px;
+    border: 1px solid var(--border-base);
+    background: var(--bg-card);
+}
+
+.sidebar-item:hover {
+    transform: translateY(-1px);
+    border-color: var(--border-heavy);
+    background: var(--bg-hover);
+    box-shadow: var(--shadow-sm);
+}
+
+.sidebar-item-new {
+    min-height: 46px;
+    color: #fff;
+    border: 0;
+    background: var(--chat-primary);
+    box-shadow: var(--shadow-md);
+}
+
+.sidebar-item-new:hover {
+    color: #fff;
+    background: var(--link-hover);
+}
+
+.chat-mode-switch {
+    display: grid;
+    gap: 10px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.chat-mode-option {
+    min-height: 50px;
+    padding: 0 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border-base);
+    color: var(--text-secondary);
+    text-align: left;
+    background: var(--bg-card);
+}
+
+.chat-mode-option:hover {
+    color: var(--chat-primary);
+    background: var(--bg-hover);
+}
+
+.chat-mode-option-active {
+    color: var(--chat-primary);
+    border-color: var(--border-heavy);
+    background: var(--bg-active);
+    box-shadow: inset 3px 0 0 var(--chat-primary);
+}
+
+.chat-mode-option-active:hover {
+    color: var(--chat-primary);
+    background: var(--bg-active);
+}
+
+.sidebar-item-session {
+    min-height: 40px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    color: var(--text-body);
+}
+
+.sidebar-item-session-active {
+    color: var(--chat-primary);
+    background: var(--bg-active);
+}
+
+.clear-all-btn {
+    width: 100%;
+    min-height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 8px;
+    border: 1px solid var(--border-base);
+    color: var(--text-secondary);
+    background: var(--bg-card);
+    transition: all 0.18s ease;
+}
+
+.clear-all-btn:hover {
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.28);
+    background: var(--bg-hover);
+}
+
+.chat-messages-scroll {
+    padding-bottom: 18px;
+}
+
+.chat-ai-bubble {
+    max-width: 100%;
+    padding: 20px 22px;
+    border-radius: 8px;
+    border-top-left-radius: 8px;
+    border: 1px solid var(--border-base);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-md);
+}
+
+.user-bubble {
+    border-radius: 8px;
+    background: var(--chat-primary);
+    box-shadow: var(--shadow-md);
+}
+
+.chat-answer-mode,
+.chat-answer-kb {
+    min-height: 24px;
+    border-radius: 999px;
+}
+
+.rag-step-list,
+.rag-source-panel {
+    border-radius: 8px;
+    border-color: var(--border-base);
+    background: var(--bg-hover);
+}
+
+.ai-follow-up-list button {
+    border-radius: 999px;
+    background: var(--bg-hover);
+}
+
+.chat-composer {
+    border-top: 0;
+    background: linear-gradient(180deg, transparent, var(--bg-base) 34%);
+}
+
+.chat-input-wrapper {
+    border-radius: 8px;
+    border: 1px solid var(--border-base);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-md);
+}
+
+.chat-input-wrapper:focus-within {
+    border-color: var(--chat-primary);
+    box-shadow: var(--shadow-md), 0 0 0 3px var(--focus-ring);
+}
+
+.chat-input-wrapper textarea {
+    min-height: 84px;
+    padding-bottom: 52px;
+}
+
+.chat-input-wrapper .absolute.right-3.bottom-3 {
+    left: 14px;
+    right: 14px;
+    justify-content: flex-end;
+}
+
+.chat-send-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+}
+
+.chat-send-btn.bg-\[var\(--color-primary\)\] {
+    background: var(--chat-primary) !important;
+}
+
+.quick-prompt-card {
+    border-radius: 8px;
+    background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
+}
+
+@media (max-width: 768px) {
+    .chat-panel {
+        position: relative;
+    }
+
+    .chat-sidebar {
+        position: absolute;
+        inset: 0 auto 0 0;
+        z-index: 30;
+        width: min(86vw, 300px) !important;
+    }
+
+    .chat-topbar {
+        padding: 12px 16px 8px;
+    }
+
+    .chat-ai-bubble {
+        padding: 16px;
+    }
+
+    .chat-input-wrapper textarea {
+        padding-right: 18px;
+    }
 }
 </style>

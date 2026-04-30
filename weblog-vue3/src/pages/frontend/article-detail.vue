@@ -1,1065 +1,1519 @@
 <template>
-    <Header></Header>
+  <div class="article-detail-page min-h-screen bg-[#f8fafc] text-[#0f172a]">
+    <Header />
 
-    <!-- 阅读进度条 -->
-    <div class="fixed top-0 left-0 right-0 z-[70] h-1 bg-[var(--bg-hover)]">
-        <div class="h-full bg-gradient-to-r from-blue-500 to-blue-400 transition-all duration-150 ease-out"
-            :style="{ width: `${readingProgress}%` }"></div>
-    </div>
+    <main class="article-detail-layout">
+      <ArticleToc
+        :title="article.title"
+        :items="tocItems"
+        :active-id="activeHeadingId"
+        :auto-expand="tocAutoExpand"
+        :article-tree="articleTree"
+        :current-article-id="articleIdNumber"
+        @navigate="scrollToHeading"
+        @article="goArticleDetail"
+      />
 
+      <section class="article-detail-main-column">
+        <ArticleContent
+          v-if="!loading"
+          ref="articleContentRef"
+          :article="article"
+          :rendered-content="renderedContent"
+          @go-tag="goTagArticleListPage"
+          @go-category="goCategoryArticleListPage"
+        >
+          <AuthorCard :article="article" />
+          <AiSummaryCard :article-id="articleIdNumber" :content="article.content" :ready="articleReady" />
+        </ArticleContent>
 
-    <!-- 文章标题、标签、Meta 信息 -->
-    <div class="article-hero" :class="{ 'is-loading': articleLoading }">
-        <div v-if="articleLoading" class="article-hero__inner max-w-content flex flex-col mx-auto px-6 pb-10 pt-8">
-            <div class="article-hero-skeleton article-hero-skeleton__tag"></div>
-            <div class="article-hero-skeleton article-hero-skeleton__title"></div>
-            <div class="article-hero-skeleton article-hero-skeleton__meta"></div>
+        <div v-else class="space-y-5 rounded-2xl border border-[#e5e7eb] bg-white p-8 shadow-[0_12px_40px_rgba(15,23,42,.08)]">
+          <div class="h-7 w-24 animate-pulse rounded-full bg-slate-100"></div>
+          <div class="h-12 w-4/5 animate-pulse rounded-xl bg-slate-100"></div>
+          <div class="h-5 w-80 animate-pulse rounded-full bg-slate-100"></div>
+          <div class="h-28 animate-pulse rounded-2xl bg-slate-100"></div>
+          <div class="h-72 animate-pulse rounded-2xl bg-slate-100"></div>
         </div>
-        <div v-else class="article-hero__inner max-w-content flex flex-col mx-auto px-6 pb-10 pt-8 article-reveal">
-            <!-- 标签集合 -->
-            <div v-if="article.tags && article.tags.length > 0" class="flex flex-wrap gap-1.5 mb-4">
-                <span @click="goTagArticleListPage(tag.id, tag.name)" v-for="(tag, index) in article.tags" :key="index"
-                    class="cursor-pointer inline-block px-2.5 py-0.5 text-xs font-medium
-                           text-[var(--text-secondary)] bg-[var(--bg-hover)] border border-[var(--border-base)]
-                           rounded-full hover:bg-[var(--bg-active)] hover:text-[var(--color-primary)]
-                           hover:border-[var(--color-primary)] transition-all duration-200">
-                    # {{ tag.name }}
-                </span>
-            </div>
 
-            <!-- 文章标题 -->
-            <h1 class="article-title">{{ article.title }}</h1>
-
-            <!-- Meta 信息 -->
-            <div class="flex flex-wrap gap-4 text-[var(--text-muted)] items-center text-sm">
-
-                <!-- 发布时间 -->
-                <span class="flex items-center gap-1" title="发布时间">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 20 20">
-                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                            d="M5 1v3m5-3v3m5-3v3M1 7h18M5 11h10M2 3h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/>
-                    </svg>
-                    {{ article.createTime }}
-                </span>
-
-                <!-- 分类 -->
-                <a v-if="article.categoryName"
-                    @click="goCategoryArticleListPage(article.categoryId, article.categoryName)"
-                    class="cursor-pointer flex items-center gap-1 hover:text-[var(--color-primary)] transition-colors" title="分类">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 18 18">
-                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                            d="M1 5v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H1Zm0 0V2a1 1 0 0 1 1-1h5.443a1 1 0 0 1 .8.4l2.7 3.6H1Z"/>
-                    </svg>
-                    {{ article.categoryName }}
-                </a>
-
-                <!-- 阅读量 -->
-                <span class="flex items-center gap-1" title="阅读量">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24">
-                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7Z"/>
-                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                            d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
-                    </svg>
-                    {{ article.readNum }}
-                </span>
-
-            </div>
+        <div ref="commentSectionRef" class="article-detail-comments mt-12 space-y-6 pb-16">
+          <MessageWallForm
+            :router-url="commentRouterUrl"
+            title="发表评论"
+            collapsible
+            @comment-published="handleArticleCommentPublished"
+          />
+          <MessageWallPanel
+            ref="articleCommentsPanelRef"
+            :router-url="commentRouterUrl"
+            title="全部评论"
+          />
         </div>
-    </div>
+      </section>
 
-    <!-- 主内容区域 -->
-    <main class="article-main max-w-content mx-auto px-6 py-6">
-        <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_280px] gap-6">
-            <!-- 左边：文章内容 -->
-            <div class="min-w-0">
-                <!-- 文章卡片 -->
-                <div v-if="articleLoading" class="article-card article-card--loading">
-                    <div class="article-loading-block article-loading-block--summary"></div>
-                    <div class="article-loading-line w-4/5"></div>
-                    <div class="article-loading-line"></div>
-                    <div class="article-loading-line w-11/12"></div>
-                    <div class="article-loading-line w-3/4"></div>
-                    <div class="article-loading-paragraph"></div>
-                    <div class="article-loading-line"></div>
-                    <div class="article-loading-line w-5/6"></div>
+      <ShareDrawer
+        :article="article"
+        :url="shareUrl"
+        :excerpt="plainExcerpt"
+        :visible="activePanel === 'share' && !isMobileViewport"
+        @close="closeShare"
+        @copy="copyShareLink"
+      />
+
+      <NotesDrawer
+        :visible="notesVisible"
+        @close="closeNotes"
+        @bookmark="toggleBookmark"
+      />
+
+      <FloatingActionBar
+        :active-panel="activePanel"
+        :liked="liked"
+        :bookmarked="bookmarked"
+        :like-count="likeCount"
+        @toggle-panel="togglePanel"
+        @like="toggleLike"
+        @bookmark="toggleBookmark"
+        @top="scrollToTop"
+        @comment="scrollToComments"
+      />
+
+      <SelectionToolbar
+        :visible="selectionToolbar.visible"
+        :x="selectionToolbar.x"
+        :y="selectionToolbar.y"
+        :placement="selectionToolbar.placement"
+        @search="searchSelectedText"
+        @copy="copySelectedText"
+        @translate="translateSelectedText"
+        @ask-ai="openSnippetAi"
+        @comment="openSnippetComment"
+      />
+
+      <SnippetAiPanel
+        :visible="snippetAiVisible"
+        :selected-text="selectedText"
+        @close="snippetAiVisible = false"
+      />
+
+      <SnippetCommentPanel
+        :visible="snippetCommentVisible"
+        :selected-text="selectedText"
+        :comments="activeSnippetComments"
+        @close="snippetCommentVisible = false"
+        @ask-ai="openSnippetAi"
+        @submit="submitSnippetComment"
+      />
+
+      <Teleport to="body">
+        <transition name="mobile-sheet-fade">
+          <div v-if="mobileTocVisible" class="mobile-sheet-layer" @click.self="mobileTocVisible = false">
+            <section class="mobile-sheet">
+              <div class="mobile-sheet-handle"></div>
+              <div class="mobile-sheet-header">
+                <div>
+                  <h2>文章目录</h2>
+                  <p>当前章节会跟随阅读位置高亮</p>
                 </div>
-                <div v-else class="article-card article-reveal">
-                    <article>
-                        <!-- AI 摘要 -->
-                        <AiSummaryCard ref="aiSummaryRef" :content="article.content" :ready="articleRenderReady" />
+                <button @click="mobileTocVisible = false" aria-label="关闭"><i class="fas fa-times"></i></button>
+              </div>
+              <nav class="mobile-toc-list">
+                <button
+                  v-for="item in tocItems"
+                  :key="item.id"
+                  :class="['mobile-toc-item', `level-${item.level}`, { active: activeHeadingId === item.id }]"
+                  @click="scrollToHeadingFromMobile(item.id)"
+                >
+                  <span>{{ item.title }}</span>
+                </button>
+              </nav>
+            </section>
+          </div>
+        </transition>
+      </Teleport>
 
-                        <section v-if="article.id" class="article-ai-hub">
-                            <div class="article-ai-hub__head">
-                                <div>
-                                    <p class="article-ai-hub__eyebrow">AI 阅读助手</p>
-                                    <h2>围绕这篇文章继续探索</h2>
-                                </div>
-                                <button class="article-ai-hub__primary" type="button" @click="askArticleAi('请用通俗语言总结这篇文章，并列出 5 个关键知识点。')">
-                                    问这篇文章
-                                </button>
-                            </div>
-                            <div class="article-ai-hub__actions">
-                                <button type="button" @click="askArticleAi('请把这篇文章整理成适合复习的学习路线，按先后顺序列出。')">生成学习路线</button>
-                                <button type="button" @click="askArticleAi('请根据这篇文章生成 8 道面试题，并附上参考答案。')">生成面试题</button>
-                                <button type="button" @click="askArticleAi('请提取这篇文章中的代码、架构或技术要点，并解释容易踩坑的地方。')">解释技术要点</button>
-                                <button type="button" @click="askArticleAi('请基于这篇文章推荐下一步应该阅读或学习的方向。')">推荐下一步</button>
-                            </div>
-                        </section>
-
-                        <!-- 正文 -->
-                        <div :class="{ 'dark': isDark }">
-                            <div ref="articleContentRef" class="mt-5 article-content" v-viewer v-html="renderedContent"></div>
-                        </div>
-
-                        <!-- 上下篇 -->
-                        <nav class="article-pager">
-                            <div class="basis-1/2">
-                                <a v-if="article.preArticle"
-                                    @click="router.push('/article/' + article.preArticle.articleId)"
-                                    class="article-pager-link">
-                                    <div class="flex items-center gap-1 mb-1 text-xs text-[var(--text-muted)]">
-                                        <svg class="w-3 h-3" fill="none" viewBox="0 0 14 10">
-                                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                                stroke-width="2" d="M13 5H1m0 0 4 4M1 5l4-4"/>
-                                        </svg>
-                                        上一篇
-                                    </div>
-                                    <div class="line-clamp-2 leading-snug">{{ article.preArticle.articleTitle }}</div>
-                                </a>
-                            </div>
-                            <div class="basis-1/2">
-                                <a v-if="article.nextArticle"
-                                    @click="router.push('/article/' + article.nextArticle.articleId)"
-                                    class="article-pager-link article-pager-link--next">
-                                    <div class="flex items-center justify-end gap-1 mb-1 text-xs text-[var(--text-muted)]">
-                                        下一篇
-                                        <svg class="w-3 h-3" fill="none" viewBox="0 0 14 10">
-                                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                                stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"/>
-                                        </svg>
-                                    </div>
-                                    <div class="line-clamp-2 leading-snug">{{ article.nextArticle.articleTitle }}</div>
-                                </a>
-                            </div>
-                        </nav>
-                    </article>
+      <Teleport to="body">
+        <transition name="mobile-sheet-fade">
+          <div v-if="mobileShareVisible" class="mobile-sheet-layer" @click.self="closeMobileShare">
+            <section class="mobile-sheet mobile-share-sheet">
+              <div class="mobile-sheet-handle"></div>
+              <div class="mobile-sheet-header">
+                <div>
+                  <h2>分享文章</h2>
+                  <p>复制链接，或选择一个分享方式</p>
                 </div>
+                <button @click="closeMobileShare" aria-label="关闭"><i class="fas fa-times"></i></button>
+              </div>
+              <div class="mobile-copy-box">
+                <input :value="shareUrl" readonly>
+                <button @click="copyShareLink">复制</button>
+              </div>
+              <div class="mobile-share-grid">
+                <button v-for="item in mobileShareActions" :key="item.label">
+                  <i :class="item.icon"></i>
+                  <span>{{ item.label }}</span>
+                </button>
+              </div>
+            </section>
+          </div>
+        </transition>
+      </Teleport>
 
-                <!-- 评论组件 -->
-                <div id="comments">
-                    <Comment></Comment>
-                </div>
-            </div>
+      <Teleport to="body">
+        <transition name="mobile-sheet-fade">
+          <div v-if="mobileMoreVisible" class="mobile-sheet-layer mobile-more-layer" @click.self="mobileMoreVisible = false">
+            <section class="mobile-more-sheet">
+              <div class="mobile-sheet-handle"></div>
+              <div class="mobile-more-grid">
+                <button :class="{ active: liked }" @click="handleMobileLike">
+                  <span><i :class="liked ? 'fas fa-thumbs-up' : 'far fa-thumbs-up'"></i></span>
+                  <em>点赞</em>
+                </button>
+                <button @click="handleMobileShare">
+                  <span><i class="fas fa-share-nodes"></i></span>
+                  <em>分享</em>
+                </button>
+                <button :class="{ active: notesVisible }" @click="handleMobileNotes">
+                  <span><i class="far fa-pen-to-square"></i></span>
+                  <em>笔记</em>
+                </button>
+                <button @click="handleMobileCopyLink">
+                  <span><i class="fas fa-link"></i></span>
+                  <em>复制链接</em>
+                </button>
+                <button @click="showMessage('字体设置稍后开放', 'info')">
+                  <span><i class="fas fa-font"></i></span>
+                  <em>字体</em>
+                </button>
+                <button @click="toggleMobileTheme">
+                  <span><i class="far fa-moon"></i></span>
+                  <em>夜间</em>
+                </button>
+              </div>
+            </section>
+          </div>
+        </transition>
+      </Teleport>
 
-            <!-- 右边侧边栏 -->
-            <aside class="hidden lg:block w-[280px] flex-shrink-0">
-                <div class="sticky top-[80px]">
-                    <Toc :ready="articleRenderReady"></Toc>
-                </div>
-            </aside>
-        </div>
+      <nav class="mobile-action-bar" aria-label="文章操作">
+        <button @click="mobileTocVisible = true">
+          <i class="fas fa-list-ul"></i>
+          <span>目录</span>
+        </button>
+        <button class="mobile-comment-action" @click="scrollToComments">
+          <i class="far fa-comment-dots"></i>
+          <em>{{ commentCount }}</em>
+          <span>评论</span>
+        </button>
+        <button :class="{ active: bookmarked }" @click="toggleBookmark">
+          <i :class="bookmarked ? 'fas fa-star' : 'far fa-star'"></i>
+          <span>收藏</span>
+        </button>
+        <button :class="{ active: mobileMoreVisible }" @click="mobileMoreVisible = true">
+          <i class="fas fa-ellipsis"></i>
+          <span>更多</span>
+        </button>
+      </nav>
+
+      <button v-show="showMobileTopButton" class="mobile-top-button" aria-label="回到顶部" @click="scrollToTop">
+        <i class="fas fa-arrow-up"></i>
+      </button>
     </main>
 
-    <!-- 返回顶部 -->
-    <ScrollToTopButton :show-comment-button="true"></ScrollToTopButton>
-
-    <Footer></Footer>
+  </div>
 </template>
 
 <script setup>
-import Header from '@/layouts/frontend/components/Header.vue'
-import Footer from '@/layouts/frontend/components/Footer.vue'
-import ScrollToTopButton from '@/layouts/frontend/components/ScrollToTopButton.vue'
-import Toc from '@/layouts/frontend/components/Toc.vue'
-import { getArticleDetail, clearArticleDetailCache } from '@/api/frontend/article'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ref, watch, onMounted, onBeforeUnmount, nextTick, computed } from 'vue'
-import hljs from 'highlight.js'
-import 'highlight.js/styles/tokyo-night-dark.css'
 import { marked } from 'marked'
-import Comment from '@/components/Comment.vue'
+import hljs from 'highlight.js'
+import 'highlight.js/styles/github.css'
+import Header from '@/layouts/frontend/components/Header.vue'
+import ArticleToc from '@/components/article-detail/ArticleToc.vue'
+import ArticleContent from '@/components/article-detail/ArticleContent.vue'
+import AuthorCard from '@/components/article-detail/AuthorCard.vue'
+import ShareDrawer from '@/components/article-detail/ShareDrawer.vue'
+import NotesDrawer from '@/components/article-detail/NotesDrawer.vue'
+import FloatingActionBar from '@/components/article-detail/FloatingActionBar.vue'
+import SelectionToolbar from '@/components/article-detail/SelectionToolbar.vue'
+import SnippetAiPanel from '@/components/article-detail/SnippetAiPanel.vue'
+import SnippetCommentPanel from '@/components/article-detail/SnippetCommentPanel.vue'
 import AiSummaryCard from '@/components/AiSummaryCard.vue'
-
-// 是否是暗黑模式（通过 html.dark class 判断）
-const isDark = ref(document.documentElement.classList.contains('dark'))
-// 监听 dark 类的变化
-const darkObserver = new MutationObserver(() => {
-    isDark.value = document.documentElement.classList.contains('dark')
-})
-
-// 阅读进度
-const readingProgress = ref(0)
-let scrollHandler = null
+import MessageWallForm from '@/components/MessageWallForm.vue'
+import MessageWallPanel from '@/components/MessageWallPanel.vue'
+import { getArticleDetail, getArticlePageList, clearArticleDetailCache } from '@/api/frontend/article'
+import { showMessage } from '@/composables/util'
 
 const route = useRoute()
 const router = useRouter()
 
-// 文章数据
 const article = ref({})
+const loading = ref(true)
+const articleReady = ref(false)
+const activePanel = ref('')
+const notesVisible = ref(false)
+const tocAutoExpand = ref(false)
+const activeHeadingId = ref('')
+const liked = ref(false)
+const bookmarked = ref(false)
+const likeCount = ref(23)
+const articleContentRef = ref(null)
+const articleNavList = ref([])
+const commentSectionRef = ref(null)
+const articleCommentsPanelRef = ref(null)
+const selectedText = ref('')
+const selectedRange = ref(null)
+const selectedAnchor = ref(null)
+const selectionToolbar = ref({ visible: false, x: 0, y: 0, placement: 'top' })
+const snippetAiVisible = ref(false)
+const snippetCommentVisible = ref(false)
+const snippetComments = ref([])
+const activeSnippetComments = ref([])
+const mobileTocVisible = ref(false)
+const mobileShareVisible = ref(false)
+const mobileMoreVisible = ref(false)
+const showMobileTopButton = ref(false)
+const isMobileViewport = ref(false)
 
-// 文章主体加载状态，AI 摘要等正文稳定后再加载
-const articleLoading = ref(true)
+const mobileShareActions = [
+  { label: '微信', icon: 'fab fa-weixin text-green-500' },
+  { label: '微博', icon: 'fab fa-weibo text-red-500' },
+  { label: 'QQ', icon: 'fab fa-qq text-blue-500' },
+  { label: '二维码', icon: 'fas fa-qrcode text-slate-600' },
+  { label: '海报', icon: 'far fa-image text-slate-600' }
+]
 
-// 文章是否渲染完毕
-const articleRenderReady = ref(false)
+const articleIdNumber = computed(() => Number(route.params.articleId || article.value.id || 0))
+const commentRouterUrl = computed(() => `/article/${articleIdNumber.value || route.params.articleId}`)
+const shareUrl = computed(() => window.location.href)
+const storageKey = computed(() => `article_actions_${route.params.articleId}`)
+const snippetCommentKey = computed(() => `article_snippet_comments_${route.params.articleId}`)
+const commentCount = computed(() => Number(article.value.commentCount || article.value.commentNum || article.value.comments || article.value.commentTotal || 0))
 
-// AI 摘要组件引用
-const aiSummaryRef = ref(null)
-
-// Markdown 转 HTML
 const renderedContent = computed(() => {
-    if (!article.value.content) return ''
-    const content = article.value.content
-    return /<\/?[a-z][\s\S]*>/i.test(content)
-        ? content
-        : marked.parse(content, { breaks: true, gfm: true })
+  const content = article.value.content || ''
+  return /<\/?[a-z][\s\S]*>/i.test(content)
+    ? content
+    : marked.parse(content, { breaks: true, gfm: true })
 })
 
-// 获取文章详情
-function refreshArticleDetail(articleId) {
-    if (!articleId) {
-        console.error('articleId is required')
-        return
-    }
+const plainExcerpt = computed(() => {
+  const raw = article.value.summary || article.value.description || article.value.content || ''
+  return String(raw)
+    .replace(/<[^>]+>/g, '')
+    .replace(/[#*_`>[\]()]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 96)
+})
 
-    articleLoading.value = true
-    articleRenderReady.value = false
-    article.value = {}
-    
-    // 清除缓存，确保获取最新数据
+const tocItems = computed(() => {
+  const html = renderedContent.value || ''
+  const matches = [...html.matchAll(/<h([2-4])([^>]*)>(.*?)<\/h\1>/gi)]
+  const items = matches
+    .map((match, index) => {
+      const idMatch = match[2].match(/id=["']?([^"'>\s]+)["']?/i)
+      return {
+        id: idMatch?.[1] || `heading-${index}`,
+        level: Number(match[1]),
+        title: match[3].replace(/<[^>]+>/g, '').trim()
+      }
+    })
+    .filter(item => item.title)
+
+  if (items.length) return items
+  return [
+    { id: 'intro', level: 2, title: '引言：ChatGPT很好，但贵是个问题' },
+    { id: 'principle', level: 2, title: '一、核心原理：API按量计费 vs 固定月费' },
+    { id: 'prepare', level: 2, title: '二、准备工作：所需工具' },
+    { id: 'steps', level: 2, title: '三、实操步骤：从注册到接入' },
+    { id: 'tips', level: 2, title: '四、省钱技巧：如何把成本降到5元以内' }
+  ]
+})
+
+const fallbackArticleTree = computed(() => [
+  {
+    id: 'category-root',
+    title: '分类',
+    kind: 'group',
+    children: [
+      {
+        id: 'category-backend',
+        title: '后端开发',
+        kind: 'folder',
+        children: [
+          { id: 'sample-aspnet', articleId: article.value.id || route.params.articleId || 1, title: 'ASP.NET Core 8.0 全栈博客系统', kind: 'article' },
+          { id: 'sample-springboot', articleId: 'springboot-demo', title: 'SpringBoot 项目实战', kind: 'article' },
+          { id: 'sample-fastapi', articleId: 'fastapi-demo', title: 'FastAPI 入门教程', kind: 'article' }
+        ]
+      },
+      {
+        id: 'category-frontend',
+        title: '前端开发',
+        kind: 'folder',
+        children: [
+          { id: 'sample-vue3', articleId: 'vue3-demo', title: 'Vue3 博客前台设计', kind: 'article' },
+          { id: 'sample-react', articleId: 'react-demo', title: 'React 管理后台布局', kind: 'article' }
+        ]
+      },
+      {
+        id: 'category-db',
+        title: '数据库',
+        kind: 'folder',
+        children: [
+          { id: 'sample-mysql', articleId: 'mysql-demo', title: 'MySQL 索引优化', kind: 'article' },
+          { id: 'sample-redis', articleId: 'redis-demo', title: 'Redis 缓存设计', kind: 'article' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'tag-root',
+    title: '标签',
+    kind: 'group',
+    children: [
+      {
+        id: 'tag-python',
+        title: 'python',
+        kind: 'folder',
+        children: [
+          { id: 'sample-chatgpt', articleId: article.value.id || route.params.articleId || 1, title: '如何实现6块钱以内使用官方正版ChatGPT', kind: 'article' },
+          { id: 'sample-fastapi-api', articleId: 'fastapi-api-demo', title: 'FastAPI 接口开发', kind: 'article' }
+        ]
+      },
+      {
+        id: 'tag-aspnet',
+        title: 'Asp.Net Core',
+        kind: 'folder',
+        children: [
+          { id: 'sample-aspnet-tag', articleId: article.value.id || route.params.articleId || 1, title: 'ASP.NET Core 8.0 全栈博客系统', kind: 'article' },
+          { id: 'sample-sqlsugar', articleId: 'sqlsugar-demo', title: 'SqlSugar 使用笔记', kind: 'article' }
+        ]
+      },
+      {
+        id: 'tag-springboot',
+        title: 'SpringBoot',
+        kind: 'folder',
+        children: [
+          { id: 'sample-spring-login', articleId: 'spring-login-demo', title: 'SpringBoot 登录认证', kind: 'article' },
+          { id: 'sample-spring-deploy', articleId: 'spring-deploy-demo', title: 'SpringBoot 项目部署', kind: 'article' }
+        ]
+      }
+    ]
+  }
+])
+
+const articleTree = computed(() => {
+  if (!articleNavList.value.length) return fallbackArticleTree.value
+  const categoryMap = new Map()
+  const tagMap = new Map()
+
+  articleNavList.value.forEach((item) => {
+    const articleId = item.id || item.articleId
+    if (!articleId) return
+    const title = item.title || '未命名文章'
+    const category = item.category || { id: item.categoryId || 'uncategorized', name: item.categoryName || '未分类' }
+    const categoryId = `category-${category.id || category.name}`
+    if (!categoryMap.has(categoryId)) {
+      categoryMap.set(categoryId, { id: categoryId, title: category.name || '未分类', kind: 'folder', children: [] })
+    }
+    categoryMap.get(categoryId).children.push({ id: `category-article-${articleId}`, articleId, title, kind: 'article' })
+
+    const tags = item.tags?.length ? item.tags : [{ id: item.tagId || 'untagged', name: item.tagName || '未标记' }]
+    tags.forEach((tag) => {
+      const tagId = `tag-${tag.id || tag.name}`
+      if (!tagMap.has(tagId)) {
+        tagMap.set(tagId, { id: tagId, title: tag.name || '未标记', kind: 'folder', children: [] })
+      }
+      tagMap.get(tagId).children.push({ id: `tag-article-${tagId}-${articleId}`, articleId, title, kind: 'article' })
+    })
+  })
+
+  return [
+    { id: 'category-root', title: '分类', kind: 'group', children: [...categoryMap.values()] },
+    { id: 'tag-root', title: '标签', kind: 'group', children: [...tagMap.values()] }
+  ]
+})
+
+const loadArticleNav = async () => {
+  try {
+    const res = await getArticlePageList({ current: 1, size: 50 })
+    if (res.success) {
+      articleNavList.value = res.data?.list || []
+    }
+  } catch (error) {
+    console.warn('load article navigation failed:', error)
+  }
+}
+
+const loadArticle = async (articleId) => {
+  if (!articleId) return
+  loading.value = true
+  articleReady.value = false
+  try {
     clearArticleDetailCache(articleId)
-    
-    getArticleDetail(articleId).then((res) => {
-        // 该文章不存在(错误码为 20010)
-        if (!res.success && res.errorCode == '20010') {
-            // 手动跳转 404 页面
-            router.push({ name: 'NotFound' })
-            return
-        }
+    const res = await getArticleDetail(articleId)
+    if (!res.success) {
+      router.push({ name: 'NotFound' })
+      return
+    }
 
-        article.value = res.data
-
-        nextTick(() => {
-            // 获取所有 pre code 节点
-            let highlight = document.querySelectorAll('pre code')
-            // 循环高亮
-            highlight.forEach((block) => {
-                hljs.highlightElement(block)
-            })
-
-            // 获取所有的 pre 节点
-            let preElements = document.querySelectorAll('pre')
-            preElements.forEach(preElement => {
-                // 找到第一个 code 元素
-                let firstCode = preElement.querySelector('code');
-                if (firstCode) {
-                    let copyCodeBtn = '<button class="hidden copy-code-btn flex items-center justify-center"><div class="copy-icon"></div></button>'
-                    firstCode.insertAdjacentHTML('beforebegin', copyCodeBtn);
-
-                    // 获取刚插入的按钮
-                    let copyBtn = firstCode.previousSibling;
-                    copyBtn.addEventListener('click', () => {
-                        // 添加 copied 样式
-                        copyBtn.classList.add('copied');
-                        copyToClipboard(preElement.textContent)
-                        // 1.5 秒后移除 copied 样式
-                        setTimeout(() => {
-                            copyBtn.classList.remove('copied');
-                        }, 1500);
-                    });
-                }
-
-                // 添加事件监听器
-                preElement.addEventListener('mouseenter', handleMouseEnter);
-                preElement.addEventListener('mouseleave', handleMouseLeave);
-            })
-
-            // 文章渲染完毕后，加载 AI 摘要
-            articleLoading.value = false
-            articleRenderReady.value = true
-        })
-    }).catch((error) => {
-        console.error('load article detail failed:', error)
-        articleLoading.value = false
-        articleRenderReady.value = false
-    })
-}
-refreshArticleDetail(route.params.articleId)
-
-const askArticleAi = (prompt) => {
-    router.push({
-        path: '/',
-        query: {
-            view: 'ai-chat',
-            articleId: article.value.id || route.params.articleId,
-            prompt,
-            autoSend: '1'
-        }
-    })
+    article.value = res.data || {}
+    likeCount.value = Number(article.value.readNum || 23)
+    loadActionState()
+    loading.value = false
+    await nextTick()
+    decorateArticle()
+    loadSnippetComments()
+    applySnippetHighlights()
+    articleReady.value = true
+  } catch (error) {
+    console.error('load article detail failed:', error)
+    showMessage('文章加载失败，请检查接口服务', 'error')
+    loading.value = false
+    articleReady.value = false
+  }
 }
 
-// 启动暗色模式监听
+const decorateArticle = () => {
+  document.querySelectorAll('.article-prose pre code').forEach((block) => hljs.highlightElement(block))
+  document.querySelectorAll('.article-prose pre').forEach((pre) => {
+    if (pre.querySelector('.code-copy-btn')) return
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'code-copy-btn'
+    button.textContent = '复制'
+    button.addEventListener('click', async () => {
+      const code = pre.querySelector('code')?.innerText || ''
+      if (!code) return
+      try {
+        await navigator.clipboard?.writeText(code)
+        button.textContent = '已复制'
+        button.classList.add('copied')
+        window.setTimeout(() => {
+          button.textContent = '复制'
+          button.classList.remove('copied')
+        }, 1400)
+      } catch (error) {
+        console.error('copy code failed:', error)
+        showMessage('复制失败，请手动选择代码', 'warning')
+      }
+    })
+    pre.appendChild(button)
+  })
+  document.querySelectorAll('.article-prose h2, .article-prose h3, .article-prose h4').forEach((heading, index) => {
+    if (!heading.id) heading.id = `heading-${index}`
+  })
+  assignSnippetAnchors()
+  updateActiveHeading()
+}
+
+const updateActiveHeading = () => {
+  if (window.scrollY > 20) {
+    tocAutoExpand.value = true
+  }
+  showMobileTopButton.value = window.scrollY > 520
+  const headings = [...document.querySelectorAll('.article-prose h2, .article-prose h3, .article-prose h4')]
+  const current = headings.filter((heading) => heading.getBoundingClientRect().top <= 120).pop()
+  activeHeadingId.value = current?.id || tocItems.value[0]?.id || ''
+}
+
+const scrollToHeading = (id) => {
+  const heading = document.getElementById(id)
+  if (!heading) return
+  tocAutoExpand.value = true
+  activeHeadingId.value = id
+  const headerOffset = isMobileViewport.value ? 76 : 96
+  const targetTop = heading.getBoundingClientRect().top + window.scrollY - headerOffset
+  window.scrollTo({
+    top: Math.max(0, targetTop),
+    behavior: 'smooth'
+  })
+}
+
+const scrollToHeadingFromMobile = (id) => {
+  scrollToHeading(id)
+  mobileTocVisible.value = false
+}
+
+const loadActionState = () => {
+  const state = JSON.parse(localStorage.getItem(storageKey.value) || '{}')
+  liked.value = !!state.liked
+  bookmarked.value = !!state.bookmarked
+  likeCount.value = Number(state.likeCount || likeCount.value || 23)
+}
+
+const getProseRoot = () => document.querySelector('.article-prose')
+
+const getSnippetBlocks = () => [...document.querySelectorAll('.article-prose p, .article-prose li, .article-prose blockquote, .article-prose td')]
+  .filter((node) => !node.closest('pre'))
+
+const assignSnippetAnchors = () => {
+  getSnippetBlocks().forEach((node, index) => {
+    node.dataset.snippetAnchor = String(index)
+  })
+}
+
+const loadSnippetComments = () => {
+  try {
+    snippetComments.value = JSON.parse(localStorage.getItem(snippetCommentKey.value) || '[]')
+  } catch {
+    snippetComments.value = []
+  }
+}
+
+const saveSnippetComments = () => {
+  localStorage.setItem(snippetCommentKey.value, JSON.stringify(snippetComments.value))
+}
+
+const clearSnippetHighlights = () => {
+  document.querySelectorAll('.snippet-comment-highlight').forEach((node) => {
+    const text = document.createTextNode(node.textContent || '')
+    node.replaceWith(text)
+  })
+}
+
+const wrapTextInNode = (root, targetText, commentId, count) => {
+  if (!root || !targetText) return false
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      if (!node.nodeValue?.includes(targetText)) return NodeFilter.FILTER_REJECT
+      if (node.parentElement?.closest('.snippet-comment-highlight, pre, code')) return NodeFilter.FILTER_REJECT
+      return NodeFilter.FILTER_ACCEPT
+    }
+  })
+  const textNode = walker.nextNode()
+  if (!textNode) return false
+  const start = textNode.nodeValue.indexOf(targetText)
+  if (start < 0) return false
+  const range = document.createRange()
+  range.setStart(textNode, start)
+  range.setEnd(textNode, start + targetText.length)
+  const mark = document.createElement('span')
+  mark.className = 'snippet-comment-highlight'
+  mark.dataset.commentId = String(commentId)
+  mark.title = `${count} 条片段评论`
+  range.surroundContents(mark)
+  return true
+}
+
+const applySnippetHighlights = () => {
+  clearSnippetHighlights()
+  assignSnippetAnchors()
+  const groups = new Map()
+  snippetComments.value.forEach((item) => {
+    const key = item.anchorId || item.selectedText
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key).push(item)
+  })
+  groups.forEach((comments) => {
+    const first = comments[0]
+    const anchor = document.querySelector(`[data-snippet-anchor="${first.anchorId}"]`) || getProseRoot()
+    wrapTextInNode(anchor, first.selectedText, first.id, comments.length)
+  })
+}
+
+const getSelectionAnchor = (range, text) => {
+  const blocks = getSnippetBlocks()
+  const block = blocks.find((node) => node.contains(range.commonAncestorContainer))
+  const anchorIndex = block?.dataset.snippetAnchor || ''
+  const blockText = block?.innerText || ''
+  return {
+    anchorId: anchorIndex,
+    paragraphIndex: anchorIndex ? Number(anchorIndex) : -1,
+    startOffset: blockText.indexOf(text),
+    endOffset: blockText.indexOf(text) + text.length
+  }
+}
+
+const hideSelectionToolbar = () => {
+  selectionToolbar.value = { ...selectionToolbar.value, visible: false }
+}
+
+const updateSelectionToolbar = () => {
+  const selection = window.getSelection()
+  const text = selection?.toString().trim() || ''
+  const prose = getProseRoot()
+  if (!selection || selection.rangeCount === 0 || !text || !prose) {
+    hideSelectionToolbar()
+    return
+  }
+  const range = selection.getRangeAt(0)
+  const container = range.commonAncestorContainer.nodeType === Node.TEXT_NODE
+    ? range.commonAncestorContainer.parentElement
+    : range.commonAncestorContainer
+  if (!container || !prose.contains(container) || container.closest('pre, code')) {
+    hideSelectionToolbar()
+    return
+  }
+  const rect = range.getBoundingClientRect()
+  if (!rect.width && !rect.height) {
+    hideSelectionToolbar()
+    return
+  }
+  const placement = rect.top > 86 ? 'top' : 'bottom'
+  selectedText.value = text.slice(0, 1000)
+  selectedRange.value = range.cloneRange()
+  selectedAnchor.value = getSelectionAnchor(range, selectedText.value)
+  selectionToolbar.value = {
+    visible: true,
+    x: Math.min(Math.max(rect.left + rect.width / 2, 220), window.innerWidth - 220),
+    y: placement === 'top' ? rect.top : rect.bottom,
+    placement
+  }
+}
+
+const handleSelectionChange = () => {
+  window.requestAnimationFrame(updateSelectionToolbar)
+}
+
+const handleDocumentMouseDown = (event) => {
+  if (event.target.closest('.floating-selection-toolbar, .snippet-ai-panel, .snippet-comment-panel, .snippet-comment-highlight')) return
+  window.setTimeout(() => {
+    if (!window.getSelection()?.toString().trim()) hideSelectionToolbar()
+  }, 0)
+}
+
+const searchSelectedText = () => {
+  if (!selectedText.value) return
+  window.open(`https://www.baidu.com/s?wd=${encodeURIComponent(selectedText.value)}`, '_blank', 'noopener,noreferrer')
+  hideSelectionToolbar()
+}
+
+const copySelectedText = async () => {
+  if (!selectedText.value) return
+  await navigator.clipboard?.writeText(selectedText.value)
+  showMessage('选中文字已复制', 'success')
+  hideSelectionToolbar()
+}
+
+const translateSelectedText = () => {
+  if (!selectedText.value) return
+  snippetAiVisible.value = true
+  snippetCommentVisible.value = false
+  hideSelectionToolbar()
+}
+
+const openSnippetAi = () => {
+  if (!selectedText.value) return
+  snippetAiVisible.value = true
+  snippetCommentVisible.value = false
+  hideSelectionToolbar()
+}
+
+const openSnippetComment = () => {
+  if (!selectedText.value) return
+  activeSnippetComments.value = snippetComments.value.filter((item) =>
+    item.selectedText === selectedText.value || item.anchorId === selectedAnchor.value?.anchorId
+  )
+  snippetCommentVisible.value = true
+  snippetAiVisible.value = false
+  hideSelectionToolbar()
+}
+
+const submitSnippetComment = (payload) => {
+  const content = typeof payload === 'string' ? payload : payload?.content
+  const userInfo = typeof payload === 'string'
+    ? { nickname: '读者' }
+    : (payload?.userInfo || { nickname: '读者' })
+  if (!String(content || '').trim()) return
+  const createTime = new Date().toLocaleString()
+
+  if (payload?.mode === 'reply' && payload?.parentCommentId) {
+    const replyRecord = {
+      id: Date.now(),
+      parentCommentId: payload.parentCommentId,
+      replyToUserId: payload.replyToUserId || null,
+      replyToNickname: payload.replyToNickname || '',
+      commentContent: String(content).trim(),
+      images: Array.isArray(payload.images) ? payload.images.join(',') : (payload.images || ''),
+      userInfo,
+      createTime,
+      likes: 0
+    }
+
+    const appendReply = (items) => {
+      for (const item of items) {
+        if (String(item.id) === String(payload.parentCommentId)) {
+          item.replies = Array.isArray(item.replies) ? item.replies : []
+          item.replies.push(replyRecord)
+          return true
+        }
+        if (Array.isArray(item.replies) && appendReply(item.replies)) return true
+      }
+      return false
+    }
+
+    if (appendReply(snippetComments.value)) {
+      activeSnippetComments.value = snippetComments.value.filter((item) =>
+        item.selectedText === selectedText.value || item.anchorId === selectedAnchor.value?.anchorId
+      )
+      saveSnippetComments()
+      showMessage('回复已发送', 'success')
+      return
+    }
+  }
+  const record = {
+    id: Date.now(),
+    articleId: article.value.id || route.params.articleId,
+    selectedText: selectedText.value,
+    anchorId: selectedAnchor.value?.anchorId || '',
+    paragraphIndex: selectedAnchor.value?.paragraphIndex ?? -1,
+    startOffset: selectedAnchor.value?.startOffset ?? -1,
+    endOffset: selectedAnchor.value?.endOffset ?? -1,
+    commentContent: String(content).trim(),
+    images: Array.isArray(payload?.images) ? payload.images.join(',') : (payload?.images || ''),
+    userInfo,
+    createTime,
+    likes: 0,
+    replies: []
+  }
+  snippetComments.value.unshift(record)
+  activeSnippetComments.value = snippetComments.value.filter((item) =>
+    item.selectedText === record.selectedText || item.anchorId === record.anchorId
+  )
+  saveSnippetComments()
+  nextTick(applySnippetHighlights)
+  showMessage('片段评论已发布', 'success')
+}
+
+const handleSnippetHighlightClick = (event) => {
+  const target = event.target.closest('.snippet-comment-highlight')
+  if (!target) return
+  const id = Number(target.dataset.commentId)
+  const seed = snippetComments.value.find((item) => item.id === id)
+  if (!seed) return
+  selectedText.value = seed.selectedText
+  selectedAnchor.value = {
+    anchorId: seed.anchorId,
+    paragraphIndex: seed.paragraphIndex,
+    startOffset: seed.startOffset,
+    endOffset: seed.endOffset
+  }
+  activeSnippetComments.value = snippetComments.value.filter((item) =>
+    item.selectedText === seed.selectedText || item.anchorId === seed.anchorId
+  )
+  snippetCommentVisible.value = true
+  snippetAiVisible.value = false
+}
+
+const saveActionState = () => {
+  localStorage.setItem(storageKey.value, JSON.stringify({
+    liked: liked.value,
+    bookmarked: bookmarked.value,
+    likeCount: likeCount.value
+  }))
+}
+
+const togglePanel = (panel) => {
+  if (panel === 'share') {
+    if (isMobileViewport.value) {
+      mobileShareVisible.value = !mobileShareVisible.value
+      notesVisible.value = false
+      activePanel.value = mobileShareVisible.value ? 'share' : ''
+      return
+    }
+    notesVisible.value = false
+    activePanel.value = activePanel.value === 'share' ? '' : 'share'
+    return
+  }
+  if (panel === 'notes') {
+    notesVisible.value = !notesVisible.value
+    activePanel.value = notesVisible.value ? 'notes' : ''
+    return
+  }
+  notesVisible.value = false
+  activePanel.value = ''
+}
+
+const closeShare = () => {
+  activePanel.value = ''
+  mobileShareVisible.value = false
+}
+
+const closeMobileShare = () => {
+  mobileShareVisible.value = false
+  if (activePanel.value === 'share') activePanel.value = ''
+}
+
+const closeNotes = () => {
+  notesVisible.value = false
+  activePanel.value = ''
+}
+
+const toggleLike = () => {
+  liked.value = !liked.value
+  likeCount.value += liked.value ? 1 : -1
+  saveActionState()
+  showMessage(liked.value ? '已点赞' : '已取消点赞', 'success')
+}
+
+const toggleBookmark = () => {
+  bookmarked.value = !bookmarked.value
+  saveActionState()
+  showMessage(bookmarked.value ? '已收藏' : '已取消收藏', 'success')
+}
+
+const copyShareLink = async () => {
+  await navigator.clipboard?.writeText(shareUrl.value)
+  showMessage('链接已复制', 'success')
+}
+
+const toggleMobileTheme = () => {
+  document.documentElement.classList.toggle('dark')
+  mobileMoreVisible.value = false
+}
+
+const handleMobileLike = () => {
+  toggleLike()
+  mobileMoreVisible.value = false
+}
+
+const handleMobileShare = () => {
+  mobileMoreVisible.value = false
+  openMobileShare()
+}
+
+const handleMobileNotes = () => {
+  mobileMoreVisible.value = false
+  togglePanel('notes')
+}
+
+const handleMobileCopyLink = async () => {
+  await copyShareLink()
+  mobileMoreVisible.value = false
+}
+
+const handleArticleCommentPublished = () => {
+  articleCommentsPanelRef.value?.refresh?.()
+}
+
+const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
+
+const scrollToComments = () => {
+  mobileTocVisible.value = false
+  mobileShareVisible.value = false
+  mobileMoreVisible.value = false
+  commentSectionRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+const openMobileShare = () => {
+  mobileShareVisible.value = true
+  notesVisible.value = false
+  activePanel.value = 'share'
+}
+
+const updateViewportState = () => {
+  isMobileViewport.value = window.innerWidth <= 768
+  if (!isMobileViewport.value) {
+    mobileTocVisible.value = false
+    mobileShareVisible.value = false
+    mobileMoreVisible.value = false
+  }
+}
+
+const goArticleDetail = (id) => {
+  if (!id || String(id).includes('demo')) return
+  router.push({ path: `/article/${id}` })
+}
+
+const goCategoryArticleListPage = (id, name) => router.push({ path: '/category/article/list', query: { id, name } })
+const goTagArticleListPage = (id, name) => router.push({ path: '/tag/article/list', query: { id, name } })
+
 onMounted(() => {
-    darkObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
-
-    // 阅读进度监听
-    scrollHandler = () => {
-        const scrollTop = window.scrollY
-        const docHeight = document.documentElement.scrollHeight - window.innerHeight
-        readingProgress.value = docHeight > 0 ? Math.min((scrollTop / docHeight) * 100, 100) : 0
-    }
-    window.addEventListener('scroll', scrollHandler, { passive: true })
+  updateViewportState()
+  loadArticle(route.params.articleId)
+  loadArticleNav()
+  window.addEventListener('scroll', updateActiveHeading, { passive: true })
+  window.addEventListener('resize', updateViewportState, { passive: true })
+  document.addEventListener('selectionchange', handleSelectionChange)
+  document.addEventListener('mousedown', handleDocumentMouseDown)
+  document.addEventListener('click', handleSnippetHighlightClick)
 })
+
 onBeforeUnmount(() => {
-    darkObserver.disconnect()
-    if (scrollHandler) window.removeEventListener('scroll', scrollHandler)
+  window.removeEventListener('scroll', updateActiveHeading)
+  window.removeEventListener('resize', updateViewportState)
+  document.removeEventListener('selectionchange', handleSelectionChange)
+  document.removeEventListener('mousedown', handleDocumentMouseDown)
+  document.removeEventListener('click', handleSnippetHighlightClick)
 })
 
-// 跳转分类文章列表页
-const goCategoryArticleListPage = (id, name) => {
-    // 跳转时通过 query 携带参数（分类 ID、分类名称）
-    router.push({ path: '/category/article/list', query: { id, name } })
-}
-
-// 跳转标签文章列表页
-const goTagArticleListPage = (id, name) => {
-    // 跳转时通过 query 携带参数（标签 ID、标签名称）
-    router.push({ path: '/tag/article/list', query: { id, name } })
-}
-
-// 监听路由
-watch(route, (newRoute, oldRoute) => {
-    // 重新渲染文章详情
-    refreshArticleDetail(newRoute.params.articleId)
+watch(() => route.params.articleId, (id) => {
+  snippetAiVisible.value = false
+  snippetCommentVisible.value = false
+  mobileTocVisible.value = false
+  mobileShareVisible.value = false
+  mobileMoreVisible.value = false
+  hideSelectionToolbar()
+  loadArticle(id)
 })
-
-// 复制内容到剪切板
-function copyToClipboard(text) {
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textarea);
-}
-
-const handleMouseEnter = (event) => {
-    // 鼠标移入，显示按钮
-    let copyBtn = event.target.querySelector('button');
-    if (copyBtn) {
-        copyBtn.classList.remove('hidden');
-        copyBtn.classList.add('block');
-    }
-}
-
-const handleMouseLeave = (event) => {
-    // 鼠标移出，隐藏按钮
-    let copyBtn = event.target.querySelector('button');
-    if (copyBtn) {
-        copyBtn.classList.add('hidden');
-    }
-}
 </script>
 
 <style scoped>
-.article-hero {
-    position: relative;
-    overflow: hidden;
-    background:
-        radial-gradient(circle at 18% 0%, rgba(59, 130, 246, 0.10), transparent 34%),
-        linear-gradient(180deg, var(--bg-card), var(--bg-body));
-    border-bottom: 1px solid var(--border-base);
-}
-
-.article-hero::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.42), transparent);
-}
-
-.article-hero__inner {
-    position: relative;
-    z-index: 1;
-}
-
-.article-title {
-    max-width: 920px;
-    margin-bottom: 20px;
-    color: var(--text-heading);
-    font-size: 34px;
-    font-weight: 800;
-    line-height: 1.24;
-    letter-spacing: 0;
-}
-
-.article-card {
-    margin-bottom: 20px;
-    padding: 30px;
-    border-radius: 18px;
-    background: var(--bg-card);
-    border: 1px solid var(--border-base);
-    box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
-}
-
-.article-reveal {
-    animation: articleReveal 0.42s ease both;
-}
-
-.article-hero.is-loading {
-    min-height: 178px;
-}
-
-.article-hero-skeleton,
-.article-loading-line,
-.article-loading-block,
-.article-loading-paragraph {
-    position: relative;
-    overflow: hidden;
-    border-radius: 999px;
-    background: linear-gradient(90deg, var(--bg-hover) 25%, var(--bg-active) 50%, var(--bg-hover) 75%);
-    background-size: 240% 100%;
-    animation: articleSkeleton 1.35s ease-in-out infinite;
-}
-
-.article-hero-skeleton__tag {
-    width: 128px;
-    height: 26px;
-    margin-bottom: 22px;
-}
-
-.article-hero-skeleton__title {
-    width: min(760px, 82%);
-    height: 44px;
-    margin-bottom: 22px;
-    border-radius: 14px;
-}
-
-.article-hero-skeleton__meta {
-    width: 360px;
-    max-width: 70%;
-    height: 18px;
-}
-
-.article-card--loading {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    min-height: 520px;
-}
-
-.article-loading-block--summary {
-    height: 112px;
-    margin-bottom: 18px;
-    border-radius: 18px;
-}
-
-.article-loading-line {
-    height: 18px;
-}
-
-.article-loading-paragraph {
-    height: 160px;
-    margin: 12px 0;
-    border-radius: 18px;
-}
-
-@keyframes articleSkeleton {
-    0% { background-position: 120% 0; }
-    100% { background-position: -120% 0; }
-}
-
-@keyframes articleReveal {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-        filter: blur(4px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-        filter: blur(0);
-    }
-}
-
-.article-ai-hub {
-    margin-top: 18px;
-    margin-bottom: 24px;
-    padding: 18px;
-    border-radius: 18px;
-    border: 1px solid rgba(59, 130, 246, 0.18);
-    background:
-        linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(34, 211, 238, 0.08)),
-        var(--bg-card);
-}
-
-.article-ai-hub__head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 14px;
-}
-
-.article-ai-hub__eyebrow {
-    margin: 0 0 4px;
-    color: var(--color-primary);
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.article-ai-hub h2 {
-    margin: 0;
-    color: var(--text-heading);
-    font-size: 18px;
-    font-weight: 800;
-}
-
-.article-ai-hub__primary,
-.article-ai-hub__actions button {
-    border-radius: 12px;
-    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
-}
-
-.article-ai-hub__primary {
-    flex-shrink: 0;
-    padding: 10px 16px;
-    color: #fff;
-    font-size: 14px;
-    font-weight: 700;
-    background: linear-gradient(135deg, #2563eb, #06b6d4);
-    box-shadow: 0 12px 26px rgba(37, 99, 235, 0.22);
-}
-
-.article-ai-hub__actions {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
-}
-
-.article-ai-hub__actions button {
-    min-height: 44px;
-    padding: 10px 12px;
-    color: var(--text-secondary);
-    font-size: 13px;
-    font-weight: 650;
-    background: rgba(255, 255, 255, 0.58);
-    border: 1px solid var(--border-base);
-}
-
-.article-ai-hub__primary:hover,
-.article-ai-hub__actions button:hover {
-    transform: translateY(-1px);
-}
-
-.article-ai-hub__actions button:hover {
-    color: var(--color-primary);
-    border-color: rgba(59, 130, 246, 0.35);
-    background: var(--bg-card);
-}
-
-.dark .article-ai-hub__actions button {
-    background: rgba(15, 23, 42, 0.54);
-}
-
-.article-pager {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    margin-top: 32px;
-}
-
-.article-pager-link {
-    display: flex;
-    min-height: 88px;
-    height: 100%;
-    cursor: pointer;
-    flex-direction: column;
-    justify-content: center;
-    padding: 16px;
-    border-radius: 14px;
-    background: var(--bg-hover);
-    border: 1px solid var(--border-base);
-    color: var(--text-secondary);
-    font-size: 14px;
-    font-weight: 600;
-    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
-}
-
-.article-pager-link:hover {
-    transform: translateY(-2px);
-    color: var(--color-primary);
-    background: var(--bg-active);
-    border-color: var(--color-primary);
-}
-
-.article-pager-link--next {
-    text-align: right;
-}
-
-/* h1, h2, h3, h4, h5, h6 标题样式 */
-::v-deep(.article-content h1,
-.article-content h2,
-.article-content h3,
-.article-content h4,
-.article-content h5,
-.article-content h6) {
-    color: #292525;
-    line-height: 150%;
-    font-family: PingFang SC, Helvetica Neue, Helvetica, Hiragino Sans GB, Microsoft YaHei, "\5FAE\8F6F\96C5\9ED1", Arial, sans-serif;
-}
-
-::v-deep(.article-content h1) {
-    margin-top: 18px;
-    margin-bottom: 28px;
-    padding-bottom: 16px;
-    color: var(--text-heading);
-    font-size: 32px;
-    font-weight: 850;
-    line-height: 1.28;
-    border-bottom: 1px solid var(--border-base);
-}
-
-::v-deep(.dark .article-content h1) {
-    color: rgb(241 245 249);
-    border-bottom-color: rgb(55 65 81 / 1);
-}
-
-::v-deep(.article-content h2) {
-    line-height: 1.5;
-    font-weight: 700;
-    font-synthesis: style;
-    font-size: 24px;
-    margin-top: 40px;
-    margin-bottom: 26px;
-    line-height: 140%;
-    border-bottom: 1px solid rgb(241 245 249);
-    padding-bottom: 15px;
-}
-
-::v-deep(.dark .article-content h2) {
-    --tw-text-opacity: 1;
-    color: rgb(226 232 240/var(--tw-text-opacity));
-    border-bottom: 1px solid;
-    border-color: rgb(55 65 81 / 1);
-}
-
-::v-deep(.article-content h3) {
-    font-size: 20px;
-    margin-top: 40px;
-    margin-bottom: 16px;
-    font-weight: 600;
-}
-
-::v-deep(.dark .article-content h3) {
-    --tw-text-opacity: 1;
-    color: rgb(226 232 240/var(--tw-text-opacity));
-}
-
-::v-deep(.article-content h4) {
-    font-size: 18px;
-    margin-top: 30px;
-    margin-bottom: 16px;
-    font-weight: 600;
-}
-
-::v-deep(.dark .article-content h4) {
-    --tw-text-opacity: 1;
-    color: rgb(226 232 240/var(--tw-text-opacity));
-}
+@import '@fortawesome/fontawesome-free/css/all.min.css';
 
-::v-deep(.article-content h5) {
-    font-size: 16px;
-    margin-top: 30px;
-    margin-bottom: 14px;
-    font-weight: 600;
+:global(html) {
+  scroll-padding-top: 92px;
 }
 
-::v-deep(.dark .article-content h5) {
-    --tw-text-opacity: 1;
-    color: rgb(226 232 240/var(--tw-text-opacity));
+.mobile-action-bar,
+.mobile-top-button {
+  display: none;
 }
 
-::v-deep(.article-content h6) {
-    font-size: 16px;
-    margin-top: 30px;
-    margin-bottom: 14px;
-    font-weight: 600;
+.article-detail-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  align-items: start;
+  column-gap: 24px;
+  width: 100%;
+  max-width: 1680px;
+  margin: 0 auto;
+  padding: 42px 156px 80px 28px;
 }
 
-::v-deep(.dark .article-content h6) {
-    --tw-text-opacity: 1;
-    color: rgb(226 232 240/var(--tw-text-opacity));
+.article-detail-main-column {
+  min-width: 0;
+  width: 100%;
+  max-width: 960px;
+  justify-self: center;
 }
 
-/* p 段落样式 */
-::v-deep(.article-content p) {
-    letter-spacing: .3px;
-    margin: 0 0 20px;
-    line-height: 30px;
-    color: #4c4e4d;
-    font-weight: 400;
-    word-break: normal;
-    word-wrap: break-word;
-    font-family: -apple-system, BlinkMacSystemFont, PingFang SC, Hiragino Sans GB, Microsoft Yahei, Arial, sans-serif;
+:deep(.article-toc) {
+  position: sticky;
+  top: 88px;
+  align-self: start;
+  width: 280px;
+  max-height: calc(100vh - 88px - 24px);
 }
 
-::v-deep(.dark .article-content p) {
-    color: #9e9e9e;
+.article-detail-comments {
+  width: 100%;
 }
 
-/* blockquote 引用样式 */
-::v-deep(.article-content blockquote) {
-    border-left: 2.3px solid rgb(52, 152, 219);
-    quotes: none;
-    background: rgb(236, 240, 241);
-    color: #777;
-    font-size: 16px;
-    margin-bottom: 20px;
-    padding: 24px;
-}
-
-::v-deep(.dark .article-content blockquote) {
-    quotes: none;
-    --tw-bg-opacity: 1;
-    background-color: rgb(31 41 55 / var(--tw-bg-opacity));
-    border-left: 2.3px solid #555;
-    color: #666;
-    font-size: 16px;
-    margin-bottom: 20px;
-    padding: 0.25rem 0 0.25rem 1rem;
-}
-
-/* 设置 blockquote 中最后一个 p 标签的 margin-bottom 为 0 */
-::v-deep(.article-content blockquote p:last-child) {
-    margin-bottom: 0;
-}
-
-/* 斜体样式 */
-::v-deep(.article-content em) {
-    color: #c849ff;
-}
-
-/* 超链接样式 */
-::v-deep(.article-content a) {
-    color: #167bc2;
-}
-
-::v-deep(.article-content a:hover) {
-    text-decoration: underline;
-}
-
-/* ul 样式 */
-::v-deep(.article-content ul) {
-    padding-left: 2rem;
-}
-
-::v-deep(.dark .article-content ul) {
-    padding-left: 2rem;
-    color: #9e9e9e;
-}
-
-::v-deep(.article-content > ul) {
-    margin-bottom: 20px;
-}
-
-::v-deep(.article-content ul li) {
-    list-style-type: disc;
-    padding-top: 5px;
-    padding-bottom: 5px;
-    font-size: 16px;
-}
-
-::v-deep(.article-content ul li p) {
-    margin-bottom: 0!important;
-}
-
-::v-deep(.article-content ul ul li) {
-    list-style-type: square;
-}
-
-/* ol 样式 */
-::v-deep(.article-content ol) {
-    list-style-type: decimal;
-    padding-left: 2rem;
-}
-
-::v-deep(.dark .article-content ol) {
-    color: #9e9e9e;
-}
-
-/* 图片样式 */
-::v-deep(.article-content img) {
-    max-width: 100%;
-    overflow: hidden;
-    display: block;
-    margin: 24px auto;
-    border-radius: 14px;
-    border: 1px solid var(--border-base);
-    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.10);
-}
-
-::v-deep(.article-content img:hover,
-img:focus) {
-    box-shadow: 2px 2px 10px 0 rgba(0, 0, 0, .15);
-}
-
-/* 图片描述文字 */
-::v-deep(.image-caption) {
-    min-width: 20%;
-    max-width: 80%;
-    min-height: 43px;
-    display: block;
-    padding: 10px;
-    margin: 0 auto;
-    font-size: 13px;
-    color: #999;
-    text-align: center;
-}
-
-/* code 样式 */
-::v-deep(.article-content code:not(pre code)) {
-    padding: 2px 4px;
-    margin: 0 2px;
-    font-size: 95% !important;
-    border-radius: 4px;
-    color: rgb(41, 128, 185);
-    background-color: rgba(27, 31, 35, 0.05);
-    font-family: Operator Mono, Consolas, Monaco, Menlo, monospace;
-}
-
-::v-deep(.dark .article-content code:not(pre code)) {
-    padding: 2px 4px;
-    margin: 0 2px;
-    font-size: .85em;
-    border-radius: 5px;
-    color: #abb2bf;
-    background: #333;
-    font-family: Operator Mono, Consolas, Monaco, Menlo, monospace;
-}
-
-::v-deep(code) {
-    font-size: 98%;
-}
-
-/* pre 样式 */
-::v-deep(.article-content pre) {
-    margin-bottom: 20px;
-    padding-top: 30px;
-    background: #21252b;
-    border-radius: 12px;
-    position: relative;
-    box-shadow: 0 18px 38px rgba(15, 23, 42, 0.18);
-    overflow: hidden;
-}
+@media (max-width: 1500px) {
+  .article-detail-layout {
+    grid-template-columns: 260px minmax(0, 1fr);
+    column-gap: 22px;
+    padding-right: 132px;
+  }
 
-::v-deep(.article-content pre code),
-::v-deep(.article-content pre code.hljs) {
-    display: block;
-    padding: 0.7rem 1rem;
-    border-bottom-left-radius: 6px;
-    border-bottom-right-radius: 6px;
-    color: #c9d1d9;
-    background: transparent;
-    font-family: Operator Mono, Consolas, Monaco, Menlo, monospace;
-    font-size: 15px;
-    line-height: 1.8;
-    white-space: pre;
-    overflow-x: auto;
-}
-
-::v-deep(.article-content pre:before) {
-    background: #fc625d;
-    border-radius: 50%;
-    box-shadow: 20px 0 #fdbc40, 40px 0 #35cd4b;
-    content: ' ';
-    height: 10px;
-    margin-top: -19px;
-    margin-left: 10px;
-    position: absolute;
-    width: 10px;
-}
-
-::v-deep(.article-content pre code *) {
-    font-family: inherit;
-}
-
-::v-deep(.article-content pre code ul),
-::v-deep(.article-content pre code ol),
-::v-deep(.article-content pre code li),
-::v-deep(.article-content pre code p) {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-/* 表格样式 */
-::v-deep(table) {
-    margin-bottom: 20px;
-    width: 100%;
-}
-
-::v-deep(table tr) {
-    background-color: #fff;
-    border-top: 1px solid #c6cbd1;
-}
-
-::v-deep(table th) {
-    padding: 6px 13px;
-    border: 1px solid #dfe2e5;
-}
-
-::v-deep(table td) {
-    padding: 6px 13px;
-    border: 1px solid #dfe2e5;
-}
-
-::v-deep(table tr:nth-child(2n)) {
-    background-color: #f6f8fa;
-}
-
-::v-deep(.dark table tr) {
-    background-color: rgb(31 41 55 / 1);
-}
-
-::v-deep(.dark table) {
-    color: #9e9e9e;
-}
-
-::v-deep(.dark table th) {
-    border: 1px solid #394048;
-}
-
-::v-deep(.dark table td) {
-    border: 1px solid #394048;
-}
-
-::v-deep(.dark table tr:nth-child(2n)) {
-    background-color: rgb(21 41 55 / 1);
-}
-
-/* hr 横线 */
-::v-deep(hr) {
-    margin-bottom: 20px;
-}
-
-::v-deep(.dark hr) {
-    --tw-border-opacity: 1;
-    border-color: rgb(55 65 81 / var(--tw-border-opacity));
-}
-
-::v-deep(.copy-code-btn) {
-    border-width: 0;
-    cursor: pointer;
-    position: absolute;
-    top: 0.5em;
-    right: 0.5em;
-    z-index: 5;
-    width: 2.5rem;
-    height: 2.5rem;
-    padding: 0;
-    border-radius: 0.5rem;
-    opacity: 0;
-    transition: opacity .4s;
-    opacity: 1
-}
-
-::v-deep(.copy-code-btn:hover) {
-    background: #2f3542;
-}
+  :deep(.article-toc) {
+    width: 260px;
+  }
 
-::v-deep(.copy-icon) {
-    --copy-icon: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' height='20' width='20' stroke='rgba(128,128,128,1)' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2'/%3E%3C/svg%3E");
-    background: currentcolor;
-    -webkit-mask-image: var(--copy-icon);
-    mask-image: var(--copy-icon);
-    -webkit-mask-position: 50%;
-    mask-position: 50%;
-    -webkit-mask-repeat: no-repeat;
-    mask-repeat: no-repeat;
-    -webkit-mask-size: 1em;
-    mask-size: 1em;
-    width: 1.25rem;
-    height: 1.25rem;
-    padding: 0.625rem;
-    color: #9e9e9e;
-    font-size: 1.25rem;
 }
 
-::v-deep(.copied) {
-    display: flex;
-    background: #2f3542;
-}
-
-::v-deep(.copied:after) {
-    content: "已复制";
-    position: absolute;
-    top: 0;
-    right: calc(100% + .25rem);
-    display: block;
-    height: 2.5rem;
-    padding: .625rem;
-    border-radius: .5rem;
-    background: #2f3542;
-    color: #9e9e9e;
-    font-weight: 500;
-    line-height: 1.25rem;
-    white-space: nowrap;
-    font-size: 14px;
-    font-family: -apple-system, BlinkMacSystemFont, PingFang SC, Hiragino Sans GB, Microsoft Yahei, Arial, sans-serif;
-}
+@media (max-width: 1280px) {
+  .article-detail-layout {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 860px;
+    padding: 28px 20px 70px;
+  }
 
-::v-deep(.copied .copy-icon) {
-    --copied-icon: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' height='20' width='20' stroke='rgba(128,128,128,1)' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2m-6 9 2 2 4-4'/%3E%3C/svg%3E");
-    -webkit-mask-image: var(--copied-icon);
-    mask-image: var(--copied-icon);
-}
-
-/* 阅读标题栏动画 */
-.reading-bar-enter-active,
-.reading-bar-leave-active {
-    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
-}
-.reading-bar-enter-from,
-.reading-bar-leave-to {
-    transform: translateY(100%);
-    opacity: 0;
+  :deep(.article-toc),
+  :deep(.article-floating-actions) {
+    display: none;
+  }
 }
 
 @media (max-width: 768px) {
-    .article-title {
-        font-size: 28px;
-    }
+  :global(html) {
+    scroll-padding-top: 72px;
+  }
 
-    .article-main {
-        padding-left: 16px;
-        padding-right: 16px;
-    }
+  .article-detail-layout {
+    max-width: none;
+    padding: 18px 12px 96px;
+  }
 
-    .article-card {
-        padding: 20px;
-        border-radius: 14px;
-    }
+  .article-detail-main-column {
+    max-width: none;
+  }
 
-    .article-ai-hub__head {
-        align-items: stretch;
-        flex-direction: column;
-    }
+  .article-detail-comments {
+    padding-bottom: 86px;
+  }
 
-    .article-ai-hub__actions {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+  .mobile-action-bar {
+    position: fixed;
+    left: 24px;
+    right: 24px;
+    bottom: calc(env(safe-area-inset-bottom) + 16px);
+    z-index: 70;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.94);
+    padding: 10px 8px;
+    box-shadow: 0 16px 44px rgba(15, 23, 42, 0.16);
+    backdrop-filter: blur(18px);
+  }
 
-    .article-pager {
-        grid-template-columns: 1fr;
-    }
+  .mobile-action-bar button {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border-radius: 999px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+    padding: 8px 0;
+    transition: background-color 0.16s ease, color 0.16s ease;
+  }
 
-    .article-pager-link--next {
-        text-align: left;
-    }
+  .mobile-action-bar i {
+    font-size: 16px;
+  }
+
+  .mobile-action-bar button.active,
+  .mobile-action-bar button:active {
+    background: #eff6ff;
+    color: #2563eb;
+  }
+
+  .mobile-top-button {
+    position: fixed;
+    right: 24px;
+    bottom: calc(env(safe-area-inset-bottom) + 110px);
+    z-index: 68;
+    display: grid;
+    height: 44px;
+    width: 44px;
+    place-items: center;
+    border: 1px solid #dbe3ee;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #2563eb;
+    box-shadow: 0 12px 34px rgba(15, 23, 42, 0.16);
+  }
+}
+
+.mobile-sheet-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: none;
+  align-items: flex-end;
+  background: rgba(15, 23, 42, 0.34);
+  backdrop-filter: blur(3px);
+}
+
+.mobile-sheet {
+  width: 100%;
+  max-height: min(76vh, 640px);
+  overflow: hidden;
+  border-radius: 24px 24px 0 0;
+  border: 1px solid #e5e7eb;
+  border-bottom: 0;
+  background: #ffffff;
+  padding: 8px 16px 18px;
+  box-shadow: 0 -18px 60px rgba(15, 23, 42, 0.18);
+}
+
+.mobile-sheet-handle {
+  margin: 0 auto 10px;
+  height: 4px;
+  width: 42px;
+  border-radius: 999px;
+  background: #cbd5e1;
+}
+
+.mobile-sheet-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #edf2f7;
+  padding-bottom: 12px;
+}
+
+.mobile-sheet-header h2 {
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.mobile-sheet-header p {
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.mobile-sheet-header button {
+  display: grid;
+  height: 34px;
+  width: 34px;
+  place-items: center;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.mobile-toc-list {
+  max-height: calc(min(76vh, 640px) - 92px);
+  overflow-y: auto;
+  padding: 12px 0 6px;
+}
+
+.mobile-toc-item {
+  position: relative;
+  display: block;
+  width: 100%;
+  border-radius: 12px;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.55;
+  margin-bottom: 6px;
+  padding: 9px 12px;
+  text-align: left;
+}
+
+.mobile-toc-item.level-3 {
+  padding-left: 28px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.mobile-toc-item.level-4 {
+  padding-left: 44px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.mobile-toc-item.active {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.mobile-toc-item.active::before {
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 999px;
+  background: #64748b;
+  content: '';
+}
+
+.mobile-copy-box {
+  display: flex;
+  gap: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #f8fafc;
+  margin-top: 14px;
+  padding: 8px;
+}
+
+.mobile-copy-box input {
+  min-width: 0;
+  flex: 1;
+  background: transparent;
+  color: #64748b;
+  font-size: 13px;
+  outline: none;
+}
+
+.mobile-copy-box button {
+  border-radius: 10px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+  padding: 0 14px;
+}
+
+.mobile-share-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.mobile-share-grid button {
+  display: flex;
+  min-height: 72px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.mobile-share-grid i {
+  font-size: 20px;
+}
+
+.mobile-more-sheet {
+  width: 100%;
+  border-radius: 24px 24px 0 0;
+  border: 1px solid #e5e7eb;
+  border-bottom: 0;
+  background: #ffffff;
+  padding: 10px 22px calc(env(safe-area-inset-bottom) + 22px);
+  box-shadow: 0 -18px 60px rgba(15, 23, 42, 0.18);
+}
+
+.mobile-more-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px 22px;
+}
+
+.mobile-more-grid button {
+  display: flex;
+  min-height: 76px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 18px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.mobile-more-grid button span {
+  display: grid;
+  height: 44px;
+  width: 44px;
+  place-items: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+}
+
+.mobile-more-grid button.active,
+.mobile-more-grid button:active {
+  color: #2563eb;
+}
+
+.mobile-comment-action {
+  position: relative;
+}
+
+.mobile-comment-action em {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  min-width: 18px;
+  border: 1px solid #2563eb;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #2563eb;
+  font-size: 10px;
+  font-style: normal;
+  line-height: 14px;
+  padding: 0 4px;
+  transform: translateX(8px);
+}
+
+.mobile-sheet-fade-enter-active,
+.mobile-sheet-fade-leave-active {
+  transition: opacity 0.18s ease;
+}
+
+.mobile-sheet-fade-enter-active .mobile-sheet,
+.mobile-sheet-fade-leave-active .mobile-sheet {
+  transition: transform 0.2s ease;
+}
+
+.mobile-sheet-fade-enter-from,
+.mobile-sheet-fade-leave-to {
+  opacity: 0;
+}
+
+.mobile-sheet-fade-enter-from .mobile-sheet,
+.mobile-sheet-fade-leave-to .mobile-sheet {
+  transform: translateY(100%);
+}
+
+@media (max-width: 768px) {
+  .mobile-sheet-layer {
+    display: flex;
+  }
+}
+
+:global(html.dark .article-detail-page) {
+  background: #22272e !important;
+  color: #adbac7 !important;
+}
+
+:global(html.dark) .mobile-header-btn,
+:global(html.dark) .mobile-action-bar,
+:global(html.dark) .mobile-top-button,
+:global(html.dark) .mobile-sheet,
+:global(html.dark) .mobile-more-sheet,
+:global(html.dark) .mobile-share-grid button,
+:global(html.dark) .mobile-more-grid button span {
+  border-color: #444c56;
+  background: #2d333b;
+  color: #c9d1d9;
+}
+
+:global(html.dark) .mobile-action-bar button,
+:global(html.dark) .mobile-sheet-header p,
+:global(html.dark) .mobile-toc-item,
+:global(html.dark) .mobile-copy-box input {
+  color: #adbac7;
+}
+
+:global(html.dark) .mobile-action-bar button.active,
+:global(html.dark) .mobile-action-bar button:active,
+:global(html.dark) .mobile-toc-item.active {
+  background: rgba(56, 139, 253, 0.14);
+  color: #58a6ff;
+}
+
+:global(html.dark) .mobile-sheet-header {
+  border-color: #444c56;
+}
+
+:global(html.dark) .mobile-sheet-header h2 {
+  color: #f0f6fc;
+}
+
+:global(html.dark) .mobile-sheet-header button,
+:global(html.dark) .mobile-copy-box {
+  border-color: #444c56;
+  background: #22272e;
+  color: #c9d1d9;
+}
+
+:global(html.dark .article-detail-layout) {
+  background: #22272e;
+}
+
+:global(html.dark .article-detail-page .article-detail-main-column) {
+  color: #adbac7;
+}
+
+:global(html.dark .article-detail-page .rounded-2xl),
+:global(html.dark .article-detail-page .article-content-shell > div:not(.article-prose)) {
+  border-color: #444c56 !important;
+}
+
+:global(html.dark .article-detail-page .bg-white) {
+  background-color: #2d333b !important;
+}
+
+:global(html.dark .article-detail-page .bg-\[\#f8fafc\]) {
+  background-color: #22272e !important;
+}
+
+:global(html.dark .article-detail-page .text-\[\#0f172a\]),
+:global(html.dark .article-detail-page .text-\[\#111827\]) {
+  color: #f0f6fc !important;
+}
+
+:global(html.dark .article-detail-page .text-\[\#64748b\]),
+:global(html.dark .article-detail-page .text-slate-500),
+:global(html.dark .article-detail-page .text-slate-600) {
+  color: #94a3b8 !important;
+}
+
+:global(html.dark .article-detail-page .border-\[\#e5e7eb\]) {
+  border-color: #444c56 !important;
+}
+
+:global(html.dark .article-detail-page .bg-slate-100),
+:global(html.dark .article-detail-page .bg-slate-50) {
+  background-color: #373e47 !important;
+}
+
+:global(html.dark .article-detail-page .hover\:bg-slate-50:hover),
+:global(html.dark .article-detail-page .hover\:bg-slate-100:hover),
+:global(html.dark .article-detail-page .hover\:bg-slate-200:hover) {
+  background-color: #444c56 !important;
+}
+
+:global(html.dark .article-detail-page .shadow-sm),
+:global(html.dark .article-detail-page .shadow-\[0_12px_40px_rgba\(15\,23\,42\,\.08\)\]) {
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22) !important;
+}
+
+:global(html.dark .article-detail-page .article-prose) {
+  color: #adbac7 !important;
+}
+
+:global(html.dark .article-detail-page .article-prose h1),
+:global(html.dark .article-detail-page .article-prose h2),
+:global(html.dark .article-detail-page .article-prose h3),
+:global(html.dark .article-detail-page .article-prose h4) {
+  color: #f0f6fc !important;
+}
+
+:global(html.dark .article-detail-page .article-prose p),
+:global(html.dark .article-detail-page .article-prose li) {
+  color: #adbac7 !important;
+}
+
+:global(html.dark .article-detail-page .article-prose table) {
+  background: transparent;
+  border-color: #444c56 !important;
+}
+
+:global(html.dark .article-detail-page .article-prose th),
+:global(html.dark .article-detail-page .article-prose td) {
+  border-color: #444c56 !important;
+}
+
+:global(html.dark .article-detail-page .article-prose th) {
+  background: transparent;
+  color: #adbac7 !important;
+}
+
+:global(html.dark .article-detail-page .article-prose tr) {
+  background: #22272e !important;
+}
+
+:global(html.dark .article-detail-page .article-prose tr:nth-child(2n)) {
+  background: #2d333b !important;
+}
+
+:global(html.dark .article-detail-page .article-prose pre) {
+  background: #2d333b !important;
+  border-color: #444c56 !important;
+}
+
+:global(html.dark .article-detail-page .article-prose code:not(pre code)) {
+  background: rgba(110, 118, 129, 0.4) !important;
+  color: #c9d1d9 !important;
+}
+
+:global(.article-prose .snippet-comment-highlight) {
+  border-bottom: 2px solid rgba(234, 179, 8, 0.72);
+  background: rgba(254, 240, 138, 0.42);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+:global(.article-prose .snippet-comment-highlight:hover) {
+  background: rgba(254, 240, 138, 0.7);
+}
+
+:global(html.dark .article-prose .snippet-comment-highlight) {
+  border-bottom-color: rgba(250, 204, 21, 0.78);
+  background: rgba(234, 179, 8, 0.18);
+}
+
+:global(html.dark .article-prose .snippet-comment-highlight:hover) {
+  background: rgba(234, 179, 8, 0.26);
 }
 </style>

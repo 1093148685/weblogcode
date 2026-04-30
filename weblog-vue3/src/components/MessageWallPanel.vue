@@ -2,24 +2,27 @@
     <div class="message-wall-panel" ref="panelRef">
         <!-- 标题栏 -->
         <div class="panel-header mb-4">
-            <div class="flex items-center justify-between">
+            <div class="panel-header-row">
                 <div class="flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-[var(--bg-active)]"></span>
-                    <span class="text-sm font-medium text-[var(--text-secondary)]">{{ comments.length }} 条留言</span>
+                    <span class="panel-title-icon"><i class="fas fa-comment-dots"></i></span>
+                    <span class="panel-title hidden">最新留言</span>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="panel-actions">
                     <!-- 排序按钮 -->
-                    <button v-for="option in sortOptions" :key="option.value"
-                        @click="currentSort = option.value"
-                        :class="['px-2 py-1 text-xs rounded transition-colors',
-                            currentSort === option.value
-                                ? 'bg-[var(--bg-hover)] text-[var(--text-body)]'
-                                : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]']">
-                        {{ option.label }}
-                    </button>
+                    <div class="sort-tabs" role="tablist" aria-label="留言排序">
+                        <button v-for="option in sortOptions" :key="option.value"
+                            type="button"
+                            @click="currentSort = option.value"
+                            :class="['sort-tab',
+                                currentSort === option.value
+                                    ? 'sort-tab-active'
+                                    : 'sort-tab-idle']">
+                            {{ option.label }}
+                        </button>
+                    </div>
                     <!-- 刷新按钮 -->
                     <button @click="handleRefresh" :disabled="loading"
-                        class="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors disabled:opacity-50">
+                        class="refresh-btn text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors disabled:opacity-50">
                         <i class="fas fa-sync-alt text-xs" :class="{ 'animate-spin': loading }"></i>
                     </button>
                 </div>
@@ -67,6 +70,17 @@ import { useCommentStore } from '@/stores/comment'
 import { showMessage } from '@/composables/util'
 import { setCache, getCache } from '@/composables/useCache'
 
+const props = defineProps({
+    routerUrl: {
+        type: String,
+        default: '/message-wall'
+    },
+    title: {
+        type: String,
+        default: '最新评论'
+    }
+})
+
 const commentStore = useCommentStore()
 const comments = ref([])
 const loading = ref(true)
@@ -78,6 +92,14 @@ const commentRefs = ref([])
 const visibleCount = ref(20)
 const loadingMore = ref(false)
 const hasMoreComments = computed(() => visibleCount.value < sortedComments.value.length)
+const guestNames = ['路过的风', '山海访客', '星河旅人', '云边来客', '代码旅人', '清晨来信', '晚风同学', '蓝色便签']
+const isQQNumber = (value) => /^\d+$/.test(String(value || '').trim())
+const generateGuestName = () => `${guestNames[Math.floor(Math.random() * guestNames.length)]}${Math.floor(Math.random() * 900 + 100)}`
+const normalizeWebsite = (value) => {
+    const website = String(value || '').trim()
+    if (!website) return ''
+    return /^https?:\/\//i.test(website) ? website : `https://${website}`
+}
 
 const sortOptions = [
     { value: 'latest', label: '最新', icon: 'fas fa-clock', field: 'createTime', order: 'desc' },
@@ -140,7 +162,32 @@ const handleScroll = () => {
     loadMoreIfNeeded()
 }
 
-const emit = defineEmits(['reply'])
+const emit = defineEmits(['reply', 'stats-change'])
+
+const formatPanelTime = (time) => {
+    if (!time) return ''
+    const date = new Date(time)
+    if (Number.isNaN(date.getTime())) return ''
+    return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+}
+
+const emitStats = () => {
+    const list = comments.value || []
+    const todayKey = new Date().toDateString()
+    const today = list.filter(comment => {
+        const date = new Date(comment.createTime)
+        return !Number.isNaN(date.getTime()) && date.toDateString() === todayKey
+    }).length
+    const visitors = new Set(list.map(comment => comment.nickname || comment.mail || comment.id).filter(Boolean)).size
+    const latest = [...list].sort((a, b) => new Date(b.createTime) - new Date(a.createTime))[0]
+
+    emit('stats-change', {
+        total: list.length,
+        today,
+        visitors,
+        lastTime: formatPanelTime(latest?.createTime)
+    })
+}
 
 onMounted(() => {
     initComments()
@@ -156,22 +203,25 @@ const initComments = async () => {
     visibleCount.value = 20
 
     // 尝试读取缓存（首次加载快速展示）
-    const cached = getCache('message_wall_comments')
+    const cacheKey = `message_wall_comments:${props.routerUrl}`
+    const cached = getCache(cacheKey)
     if (cached && comments.value.length === 0) {
         comments.value = cached
+        emitStats()
         loading.value = false
     } else {
         loading.value = true
     }
 
     try {
-        const res = await getMessageWallComments()
+        const res = await getMessageWallComments(props.routerUrl)
         if (res.success) {
             const oldIds = new Set(comments.value.map(c => c.id))
             comments.value = res.data.comments || []
+            emitStats()
 
             // 缓存留言数据 3 分钟
-            setCache('message_wall_comments', comments.value, 3 * 60 * 1000)
+            setCache(cacheKey, comments.value, 3 * 60 * 1000)
 
             comments.value.forEach(c => {
                 if (!oldIds.has(c.id)) {
@@ -215,16 +265,16 @@ const handleReply = async ({ replyCommentId, parentCommentId, content, replyNick
     const data = {
         content,
         avatar: commentStore.userInfo.avatar,
-        nickname: commentStore.userInfo.nickname,
+        nickname: isQQNumber(commentStore.userInfo.nickname) ? generateGuestName() : commentStore.userInfo.nickname,
         mail: commentStore.userInfo.mail,
-        website: commentStore.userInfo.website,
+        website: normalizeWebsite(commentStore.userInfo.website),
         replyCommentId,
         parentCommentId,
         images
     }
     
     try {
-        const res = await publishMessageWallComment(data)
+        const res = await publishMessageWallComment(data, props.routerUrl)
         if (res.success) {
             showMessage('回复成功')
             const newComment = res.data
@@ -292,19 +342,151 @@ defineExpose({
 
 .message-wall-panel {
     width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    padding: 18px;
+    border: 1px solid var(--border-base);
+    border-radius: 8px;
+    background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
 }
 
 .panel-header {
     padding-bottom: 12px;
-    border-bottom: 1px solid #dfe2e5;
+    border-bottom: 1px solid var(--border-light);
 }
 
-.dark .panel-header {
-    border-bottom-color: #30363d;
+.panel-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    min-width: 0;
+}
+
+.panel-title-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    color: #fff;
+    background: var(--color-primary);
+}
+
+.panel-title {
+    color: var(--text-heading);
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.panel-header button {
+    border-radius: 8px;
+}
+
+.panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 280px;
+    width: 280px;
+    min-width: 280px;
+    max-width: 280px;
+    justify-content: flex-end;
+}
+
+.sort-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, 72px);
+    gap: 6px;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 234px;
+    width: 234px !important;
+    min-width: 234px !important;
+    max-width: 234px !important;
+    padding: 4px;
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    background: var(--bg-base);
+    overflow: hidden;
+}
+
+.sort-tab {
+    box-sizing: border-box;
+    width: 72px !important;
+    min-width: 72px !important;
+    max-width: 72px !important;
+    flex: none;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 6px !important;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-align: center;
+    appearance: none;
+    -webkit-appearance: none;
+    transition: color 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
+}
+
+.refresh-btn {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 32px;
+    padding: 0;
+}
+
+.sort-tab-idle:hover {
+    color: var(--text-secondary);
+    background: var(--bg-hover);
+}
+
+.sort-tab-active {
+    color: var(--color-primary);
+    background: var(--bg-hover);
+    box-shadow: inset 0 0 0 1px var(--border-base);
+}
+
+@media (min-width: 769px) {
+    .panel-header-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .panel-actions {
+        width: 280px;
+        min-width: 280px;
+        max-width: 280px;
+        justify-content: flex-end;
+    }
+
+    .sort-tabs {
+        grid-template-columns: repeat(3, 72px) !important;
+    }
+
+    .sort-tab {
+        width: 72px !important;
+        min-width: 72px !important;
+    }
 }
 
 .comments-container {
     width: 100%;
+    min-width: 0;
+    overflow: hidden;
 }
 
 @keyframes slide-in-from-top {
@@ -323,14 +505,7 @@ defineExpose({
 }
 
 .comment-divider {
-    height: 1px;
-    width: 90%;
-    background: #e5e7eb;
-    margin: 16px auto;
-}
-
-.dark .comment-divider {
-    background: #30363d;
+    display: none;
 }
 
 @keyframes highlight-pulse {
