@@ -2,6 +2,7 @@ using Minio;
 using Minio.DataModel.Args;
 using Minio.Exceptions;
 using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 
 namespace Weblog.Core.Api.Services;
 
@@ -11,57 +12,59 @@ public class MinIOService
     private readonly string _bucketName;
     private readonly string _endpoint;
     private readonly string _publicUrl;
-    private readonly object _lock = new object();
-    private bool _bucketChecked = false;
+    private readonly SemaphoreSlim _bucketLock = new(1, 1);
+    private bool _bucketChecked;
 
     public MinIOService(IConfiguration configuration)
     {
         var minioConfig = configuration.GetSection("MinIO");
-        var endpoint = minioConfig["Endpoint"] ?? "127.0.0.1:9000";
-        endpoint = endpoint.Replace("http://", "").Replace("https://", "");
-
-        var accessKey = minioConfig["AccessKey"] ?? "your_access_key";
-        var secretKey = minioConfig["SecretKey"] ?? "your_secret_key";
-        _bucketName = minioConfig["BucketName"] ?? "weblog";
-
         var endpointUrl = minioConfig["Endpoint"] ?? "http://127.0.0.1:9000";
-        if (!endpointUrl.StartsWith("http"))
+        if (!endpointUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
         {
             endpointUrl = "http://" + endpointUrl;
         }
-        _endpoint = endpointUrl;
 
+        var endpoint = endpointUrl.Replace("http://", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("https://", "", StringComparison.OrdinalIgnoreCase);
+
+        var accessKey = minioConfig["AccessKey"] ?? "your_access_key";
+        var secretKey = minioConfig["SecretKey"] ?? "your_secret_key";
+
+        _bucketName = minioConfig["BucketName"] ?? "weblog";
+        _endpoint = endpointUrl;
         _publicUrl = minioConfig["PublicUrl"] ?? endpointUrl;
 
-        _minioClient = new MinioClient()
+        var clientBuilder = new MinioClient()
             .WithEndpoint(endpoint)
-            .WithCredentials(accessKey, secretKey)
-            .Build();
+            .WithCredentials(accessKey, secretKey);
+
+        if (endpointUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            clientBuilder = clientBuilder.WithSSL();
+        }
+
+        _minioClient = clientBuilder.Build();
 
         Console.WriteLine($"MinIOService initialized with endpoint: {_endpoint}, bucket: {_bucketName}");
     }
 
-    /// <summary>
-    /// 上传文件，如果相同内容的文件已存在则返回已存在的 URL
-    /// </summary>
-    /// <param name="folder">文件夹路径</param>
-    /// <param name="fileName">原始文件名</param>
-    /// <param name="fileData">文件数据</param>
-    /// <returns>文件的 URL</returns>
     public async Task<string> UploadFileAsync(string folder, string fileName, byte[] fileData)
     {
-        // 使用文件内容的 MD5 hash 作为文件名，实现去重
-        var extension = Path.GetExtension(fileName).ToLower();
+        if (fileData.Length == 0)
+        {
+            throw new ArgumentException("File data is empty.", nameof(fileData));
+        }
+
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        var safeExtension = Regex.Replace(extension, @"[^a-zA-Z0-9.]", string.Empty);
         var contentHash = GetContentHash(fileData);
         var safeFolder = string.IsNullOrWhiteSpace(folder)
             ? "uploads"
             : folder.Trim().Trim('/').Replace("\\", "/");
-        var objectName = $"{safeFolder}/{contentHash}{extension}";
+        var objectName = $"{safeFolder}/{contentHash}{safeExtension}";
 
-        // Ensure bucket exists (thread-safe)
         await EnsureBucketExistsAsync();
 
-        // 检查文件是否已存在
         var existingUrl = await GetExistingFileUrlAsync(objectName);
         if (!string.IsNullOrEmpty(existingUrl))
         {
@@ -69,19 +72,13 @@ public class MinIOService
             return existingUrl;
         }
 
-        // 上传新文件
-        await UploadAsync(objectName, fileData, extension);
-
-        await UploadAsync(objectName, fileData, extension);
+        await UploadAsync(objectName, fileData, safeExtension);
 
         var url = $"{_publicUrl.TrimEnd('/')}/{_bucketName}/{objectName}";
         Console.WriteLine($"File uploaded successfully: {url}");
         return url;
     }
 
-    /// <summary>
-    /// 检查文件是否已存在于 MinIO
-    /// </summary>
     private async Task<string?> GetExistingFileUrlAsync(string objectName)
     {
         try
@@ -91,13 +88,10 @@ public class MinIOService
                 .WithObject(objectName);
 
             await _minioClient.StatObjectAsync(statArgs);
-
-            // 文件存在，返回 URL
             return $"{_publicUrl.TrimEnd('/')}/{_bucketName}/{objectName}";
         }
         catch (ObjectNotFoundException)
         {
-            // 文件不存在
             return null;
         }
         catch (Exception ex)
@@ -107,43 +101,46 @@ public class MinIOService
         }
     }
 
-    /// <summary>
-    /// 确保桶存在
-    /// </summary>
     private async Task EnsureBucketExistsAsync()
     {
-        if (_bucketChecked) return;
-
-        lock (_lock)
+        if (_bucketChecked)
         {
-            if (_bucketChecked) return;
+            return;
+        }
 
-            try
+        await _bucketLock.WaitAsync();
+        try
+        {
+            if (_bucketChecked)
             {
-                var bucketExist = _minioClient.BucketExistsAsync(new BucketExistsArgs().WithBucket(_bucketName)).GetAwaiter().GetResult();
-                if (!bucketExist)
-                {
-                    _minioClient.MakeBucketAsync(new MakeBucketArgs().WithBucket(_bucketName)).GetAwaiter().GetResult();
-                    Console.WriteLine($"Bucket created: {_bucketName}");
-                }
-                _bucketChecked = true;
+                return;
             }
-            catch (Exception ex)
+
+            var bucketExist = await _minioClient.BucketExistsAsync(new BucketExistsArgs().WithBucket(_bucketName));
+            if (!bucketExist)
             {
-                Console.WriteLine($"MinIO bucket check error: {ex.Message}");
-                throw;
+                await _minioClient.MakeBucketAsync(new MakeBucketArgs().WithBucket(_bucketName));
+                Console.WriteLine($"Bucket created: {_bucketName}");
             }
+
+            _bucketChecked = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"MinIO bucket check error: {ex.Message}");
+            throw;
+        }
+        finally
+        {
+            _bucketLock.Release();
         }
     }
 
-    /// <summary>
-    /// 执行实际上传
-    /// </summary>
     private async Task UploadAsync(string objectName, byte[] fileData, string extension)
     {
-        int maxRetries = 3;
+        const int maxRetries = 3;
 
-        for (int i = 0; i < maxRetries; i++)
+        for (var i = 0; i < maxRetries; i++)
         {
             try
             {
@@ -179,19 +176,16 @@ public class MinIOService
         throw new Exception("MinIO upload failed after multiple attempts");
     }
 
-    /// <summary>
-    /// 计算文件内容的 MD5 Hash
-    /// </summary>
-    private string GetContentHash(byte[] data)
+    private static string GetContentHash(byte[] data)
     {
         using var md5 = MD5.Create();
         var hash = md5.ComputeHash(data);
-        return BitConverter.ToString(hash).Replace("-", "").ToLower();
+        return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
     }
 
-    private string GetContentType(string extension)
+    private static string GetContentType(string extension)
     {
-        return extension.ToLower() switch
+        return extension.ToLowerInvariant() switch
         {
             ".jpg" or ".jpeg" => "image/jpeg",
             ".png" => "image/png",

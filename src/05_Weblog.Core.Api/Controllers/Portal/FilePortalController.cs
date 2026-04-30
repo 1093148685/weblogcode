@@ -8,14 +8,23 @@ namespace Weblog.Core.Api.Controllers.Portal;
 [Route("api/comment/file")]
 public class FilePortalController : ControllerBase
 {
-    private readonly MinIOService _minIOService;
+    private const long MaxImageSize = 5 * 1024 * 1024;
+    private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"
+    };
 
-    public FilePortalController(MinIOService minIOService)
+    private readonly MinIOService _minIOService;
+    private readonly ILogger<FilePortalController> _logger;
+
+    public FilePortalController(MinIOService minIOService, ILogger<FilePortalController> logger)
     {
         _minIOService = minIOService;
+        _logger = logger;
     }
 
     [HttpPost("upload")]
+    [RequestSizeLimit(MaxImageSize + 1024 * 1024)]
     public async Task<Result<string>> Upload([FromForm] FileUploadRequest request)
     {
         if (request.File == null || request.File.Length == 0)
@@ -23,32 +32,38 @@ public class FilePortalController : ControllerBase
             return Result<string>.Fail("请选择文件");
         }
 
-        // Validate file type
-        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp" };
-        var extension = Path.GetExtension(request.File.FileName).ToLower();
-        if (!allowedExtensions.Contains(extension))
-        {
-            return Result<string>.Fail("只允许上传图片文件");
-        }
-
-        // Validate file size (max 5MB)
-        if (request.File.Length > 5 * 1024 * 1024)
+        if (request.File.Length > MaxImageSize)
         {
             return Result<string>.Fail("图片大小不能超过 5MB");
         }
 
+        var extension = Path.GetExtension(request.File.FileName);
+        if (string.IsNullOrWhiteSpace(extension) || !AllowedExtensions.Contains(extension))
+        {
+            return Result<string>.Fail("只允许上传图片文件");
+        }
+
+        var contentType = request.File.ContentType ?? string.Empty;
+        if (!contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            return Result<string>.Fail("文件类型不是有效图片");
+        }
+
         try
         {
-            using var ms = new MemoryStream();
+            await using var ms = new MemoryStream();
             await request.File.CopyToAsync(ms);
-            var fileData = ms.ToArray();
-
-            var url = await _minIOService.UploadFileAsync("comments", request.File.FileName, fileData);
+            var url = await _minIOService.UploadFileAsync("comments", request.File.FileName, ms.ToArray());
             return Result<string>.Ok(url);
         }
         catch (Exception ex)
         {
-            return Result<string>.Fail($"上传失败: {ex.Message}");
+            _logger.LogError(ex, "Comment image upload failed. FileName={FileName}, Length={Length}, ContentType={ContentType}",
+                request.File.FileName,
+                request.File.Length,
+                request.File.ContentType);
+
+            return Result<string>.Fail("图片上传失败，请稍后再试");
         }
     }
 }
