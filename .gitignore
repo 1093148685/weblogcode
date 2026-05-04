@@ -65,6 +65,7 @@ Desktop.ini
 nul
 
 # ===== Excluded directories (not part of the project) =====
+.worktrees/
 weblog-springboot/
 weblog-vue3-2/
 hongjin-ai-robot/
