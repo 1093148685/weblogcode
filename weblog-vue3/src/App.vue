@@ -2,7 +2,7 @@
 <template>
    <!-- 设置语言为中文 -->
    <el-config-provider :locale="locale">
-      <div class="flex flex-col min-h-screen bg-[var(--bg-base)] transition-colors duration-300">
+      <div class="flex flex-col min-h-screen w-full overflow-x-hidden bg-[var(--bg-base)] transition-colors duration-300">
          <router-view v-slot="{ Component }">
             <transition name="page-fade" appear>
                <keep-alive :include="cachedViews">

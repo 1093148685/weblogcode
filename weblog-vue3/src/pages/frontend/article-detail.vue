@@ -1,7 +1,6 @@
 <template>
-  <div class="article-detail-page min-h-screen bg-[#f8fafc] text-[#0f172a]">
-    <Header />
-
+  <Header />
+  <div class="article-detail-page min-h-screen bg-[#FCFAF9] text-[#0f172a]">
     <main class="article-detail-layout">
       <ArticleToc
         :title="article.title"
@@ -20,10 +19,10 @@
           ref="articleContentRef"
           :article="article"
           :rendered-content="renderedContent"
+          :style="readingStyle"
           @go-tag="goTagArticleListPage"
           @go-category="goCategoryArticleListPage"
         >
-          <AuthorCard :article="article" />
           <AiSummaryCard :article-id="articleIdNumber" :content="article.content" :ready="articleReady" />
         </ArticleContent>
 
@@ -67,14 +66,13 @@
 
       <FloatingActionBar
         :active-panel="activePanel"
-        :liked="liked"
-        :bookmarked="bookmarked"
-        :like-count="likeCount"
         @toggle-panel="togglePanel"
-        @like="toggleLike"
-        @bookmark="toggleBookmark"
         @top="scrollToTop"
         @comment="scrollToComments"
+        @copy-link="copyShareLink"
+        @font-decrease="decreaseReadingFont"
+        @font-increase="increaseReadingFont"
+        @template="showMessage('正文模板切换后续会接入更多样式', 'info')"
       />
 
       <SelectionToolbar
@@ -231,7 +229,6 @@ import 'highlight.js/styles/github.css'
 import Header from '@/layouts/frontend/components/Header.vue'
 import ArticleToc from '@/components/article-detail/ArticleToc.vue'
 import ArticleContent from '@/components/article-detail/ArticleContent.vue'
-import AuthorCard from '@/components/article-detail/AuthorCard.vue'
 import ShareDrawer from '@/components/article-detail/ShareDrawer.vue'
 import NotesDrawer from '@/components/article-detail/NotesDrawer.vue'
 import FloatingActionBar from '@/components/article-detail/FloatingActionBar.vue'
@@ -257,6 +254,7 @@ const activeHeadingId = ref('')
 const liked = ref(false)
 const bookmarked = ref(false)
 const likeCount = ref(23)
+const readingFontSize = ref(Number(localStorage.getItem('articleReadingFontSize') || 16))
 const articleContentRef = ref(null)
 const articleNavList = ref([])
 const commentSectionRef = ref(null)
@@ -286,6 +284,10 @@ const mobileShareActions = [
 const articleIdNumber = computed(() => Number(route.params.articleId || article.value.id || 0))
 const commentRouterUrl = computed(() => `/article/${articleIdNumber.value || route.params.articleId}`)
 const shareUrl = computed(() => window.location.href)
+const readingStyle = computed(() => ({
+  '--article-reading-font-size': `${readingFontSize.value}px`,
+  '--article-reading-line-height': '1.82'
+}))
 const storageKey = computed(() => `article_actions_${route.params.articleId}`)
 const snippetCommentKey = computed(() => `article_snippet_comments_${route.params.articleId}`)
 const commentCount = computed(() => Number(article.value.commentCount || article.value.commentNum || article.value.comments || article.value.commentTotal || 0))
@@ -307,9 +309,19 @@ const plainExcerpt = computed(() => {
     .slice(0, 96)
 })
 
+const stripDuplicatedTitleHeading = (html, title) => {
+  const text = String(title || '').trim()
+  if (!text) return html
+  const escaped = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const firstTitleReg = new RegExp(`^\\s*<h1([^>]*)>\\s*${escaped}\\s*</h1>`, 'i')
+  return String(html || '').replace(firstTitleReg, '')
+}
+
+const articleHeadingSelector = '.article-prose h1, .article-prose h2, .article-prose h3, .article-prose h4, .article-prose h5, .article-prose h6'
+
 const tocItems = computed(() => {
-  const html = renderedContent.value || ''
-  const matches = [...html.matchAll(/<h([2-4])([^>]*)>(.*?)<\/h\1>/gi)]
+  const html = stripDuplicatedTitleHeading(renderedContent.value || '', article.value.title)
+  const matches = [...html.matchAll(/<h([1-6])([^>]*)>(.*?)<\/h\1>/gi)]
   const items = matches
     .map((match, index) => {
       const idMatch = match[2].match(/id=["']?([^"'>\s]+)["']?/i)
@@ -501,11 +513,45 @@ const decorateArticle = () => {
     })
     pre.appendChild(button)
   })
-  document.querySelectorAll('.article-prose h2, .article-prose h3, .article-prose h4').forEach((heading, index) => {
+  document.querySelectorAll(articleHeadingSelector).forEach((heading, index) => {
     if (!heading.id) heading.id = `heading-${index}`
   })
   assignSnippetAnchors()
   updateActiveHeading()
+  renderMermaidBlocks()
+}
+
+const renderMermaidBlocks = async () => {
+  const blocks = [...document.querySelectorAll('.article-prose .mermaid:not(.mermaid-rendered)')]
+  if (!blocks.length) return
+
+  try {
+    const mermaidModule = await import('mermaid')
+    const mermaid = mermaidModule.default || mermaidModule
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: 'loose',
+      theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default'
+    })
+
+    for (const [index, block] of blocks.entries()) {
+      const source = block.textContent?.trim()
+      if (!source) continue
+
+      try {
+        const id = `article-mermaid-${articleIdNumber.value || 'current'}-${Date.now()}-${index}`
+        const result = await mermaid.render(id, source)
+        block.innerHTML = result.svg || result
+        block.classList.add('mermaid-rendered')
+        block.dataset.rendered = 'true'
+      } catch (error) {
+        console.warn('render mermaid failed:', error)
+        block.classList.add('mermaid-error')
+      }
+    }
+  } catch (error) {
+    console.warn('load mermaid failed:', error)
+  }
 }
 
 const updateActiveHeading = () => {
@@ -513,7 +559,7 @@ const updateActiveHeading = () => {
     tocAutoExpand.value = true
   }
   showMobileTopButton.value = window.scrollY > 520
-  const headings = [...document.querySelectorAll('.article-prose h2, .article-prose h3, .article-prose h4')]
+  const headings = [...document.querySelectorAll(articleHeadingSelector)]
   const current = headings.filter((heading) => heading.getBoundingClientRect().top <= 120).pop()
   activeHeadingId.value = current?.id || tocItems.value[0]?.id || ''
 }
@@ -676,7 +722,7 @@ const handleDocumentMouseDown = (event) => {
 
 const searchSelectedText = () => {
   if (!selectedText.value) return
-  window.open(`https://www.baidu.com/s?wd=${encodeURIComponent(selectedText.value)}`, '_blank', 'noopener,noreferrer')
+  window.open(`https://www.bing.com/search?q=${encodeURIComponent(selectedText.value)}`, '_blank', 'noopener,noreferrer')
   hideSelectionToolbar()
 }
 
@@ -689,8 +735,7 @@ const copySelectedText = async () => {
 
 const translateSelectedText = () => {
   if (!selectedText.value) return
-  snippetAiVisible.value = true
-  snippetCommentVisible.value = false
+  window.open(`https://www.bing.com/translator?from=auto&to=zh-Hans&text=${encodeURIComponent(selectedText.value)}`, '_blank', 'noopener,noreferrer')
   hideSelectionToolbar()
 }
 
@@ -859,6 +904,19 @@ const copyShareLink = async () => {
   showMessage('链接已复制', 'success')
 }
 
+const updateReadingFontSize = (nextSize) => {
+  readingFontSize.value = Math.min(20, Math.max(14, nextSize))
+  localStorage.setItem('articleReadingFontSize', String(readingFontSize.value))
+}
+
+const decreaseReadingFont = () => {
+  updateReadingFontSize(readingFontSize.value - 1)
+}
+
+const increaseReadingFont = () => {
+  updateReadingFontSize(readingFontSize.value + 1)
+}
+
 const toggleMobileTheme = () => {
   document.documentElement.classList.toggle('dark')
   mobileMoreVisible.value = false
@@ -981,11 +1039,14 @@ watch(() => route.params.articleId, (id) => {
 }
 
 :deep(.article-toc) {
-  position: sticky;
+  position: fixed;
   top: 88px;
-  align-self: start;
+  left: max(28px, calc((100vw - 1680px) / 2 + 28px));
+  z-index: 20;
   width: 280px;
-  max-height: calc(100vh - 88px - 24px);
+  height: calc(100vh - 112px);
+  max-height: calc(100vh - 112px);
+  overflow: hidden;
 }
 
 .article-detail-comments {
@@ -1000,9 +1061,9 @@ watch(() => route.params.articleId, (id) => {
   }
 
   :deep(.article-toc) {
+    left: 20px;
     width: 260px;
   }
-
 }
 
 @media (max-width: 1280px) {
@@ -1075,8 +1136,8 @@ watch(() => route.params.articleId, (id) => {
 
   .mobile-action-bar button.active,
   .mobile-action-bar button:active {
-    background: #eff6ff;
-    color: #2563eb;
+    background: #f7f0e6;
+    color: #8f6428;
   }
 
   .mobile-top-button {
@@ -1091,7 +1152,7 @@ watch(() => route.params.articleId, (id) => {
     border: 1px solid #dbe3ee;
     border-radius: 999px;
     background: #ffffff;
-    color: #2563eb;
+    color: #8f6428;
     box-shadow: 0 12px 34px rgba(15, 23, 42, 0.16);
   }
 }
@@ -1189,6 +1250,18 @@ watch(() => route.params.articleId, (id) => {
   color: #94a3b8;
 }
 
+.mobile-toc-item.level-5 {
+  padding-left: 58px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.mobile-toc-item.level-6 {
+  padding-left: 72px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
 .mobile-toc-item.active {
   background: #f1f5f9;
   color: #334155;
@@ -1226,7 +1299,7 @@ watch(() => route.params.articleId, (id) => {
 
 .mobile-copy-box button {
   border-radius: 10px;
-  background: #2563eb;
+  background: #8f6428;
   color: #fff;
   font-size: 13px;
   font-weight: 900;
@@ -1301,7 +1374,7 @@ watch(() => route.params.articleId, (id) => {
 
 .mobile-more-grid button.active,
 .mobile-more-grid button:active {
-  color: #2563eb;
+  color: #8f6428;
 }
 
 .mobile-comment-action {
@@ -1313,10 +1386,10 @@ watch(() => route.params.articleId, (id) => {
   top: 5px;
   left: 50%;
   min-width: 18px;
-  border: 1px solid #2563eb;
+  border: 1px solid #c8a36d;
   border-radius: 999px;
   background: #ffffff;
-  color: #2563eb;
+  color: #8f6428;
   font-size: 10px;
   font-style: normal;
   line-height: 14px;
@@ -1351,8 +1424,8 @@ watch(() => route.params.articleId, (id) => {
 }
 
 :global(html.dark .article-detail-page) {
-  background: #22272e !important;
-  color: #adbac7 !important;
+  background: #11151b !important;
+  color: #e8e2d8 !important;
 }
 
 :global(html.dark) .mobile-header-btn,
@@ -1362,139 +1435,91 @@ watch(() => route.params.articleId, (id) => {
 :global(html.dark) .mobile-more-sheet,
 :global(html.dark) .mobile-share-grid button,
 :global(html.dark) .mobile-more-grid button span {
-  border-color: #444c56;
-  background: #2d333b;
-  color: #c9d1d9;
+  border-color: #3a332a;
+  background: #1b2027;
+  color: #e8e2d8;
 }
 
 :global(html.dark) .mobile-action-bar button,
 :global(html.dark) .mobile-sheet-header p,
 :global(html.dark) .mobile-toc-item,
 :global(html.dark) .mobile-copy-box input {
-  color: #adbac7;
+  color: #afa79c;
 }
 
 :global(html.dark) .mobile-action-bar button.active,
 :global(html.dark) .mobile-action-bar button:active,
 :global(html.dark) .mobile-toc-item.active {
-  background: rgba(56, 139, 253, 0.14);
-  color: #58a6ff;
+  background: rgba(214, 181, 116, 0.14);
+  color: #d6b574;
 }
 
 :global(html.dark) .mobile-sheet-header {
-  border-color: #444c56;
+  border-color: #3a332a;
 }
 
 :global(html.dark) .mobile-sheet-header h2 {
-  color: #f0f6fc;
+  color: #f2eadf;
 }
 
 :global(html.dark) .mobile-sheet-header button,
 :global(html.dark) .mobile-copy-box {
-  border-color: #444c56;
-  background: #22272e;
-  color: #c9d1d9;
+  border-color: #3a332a;
+  background: #22252b;
+  color: #e8e2d8;
 }
 
 :global(html.dark .article-detail-layout) {
-  background: #22272e;
+  background: #11151b;
 }
 
 :global(html.dark .article-detail-page .article-detail-main-column) {
-  color: #adbac7;
+  color: #e8e2d8;
 }
 
 :global(html.dark .article-detail-page .rounded-2xl),
 :global(html.dark .article-detail-page .article-content-shell > div:not(.article-prose)) {
-  border-color: #444c56 !important;
+  border-color: #3a332a !important;
 }
 
 :global(html.dark .article-detail-page .bg-white) {
-  background-color: #2d333b !important;
+  background-color: #1b2027 !important;
 }
 
-:global(html.dark .article-detail-page .bg-\[\#f8fafc\]) {
-  background-color: #22272e !important;
+:global(html.dark .article-detail-page .bg-\[\#f8fafc\]),
+:global(html.dark .article-detail-page .bg-\[\#FCFAF9\]) {
+  background-color: #11151b !important;
 }
 
 :global(html.dark .article-detail-page .text-\[\#0f172a\]),
 :global(html.dark .article-detail-page .text-\[\#111827\]) {
-  color: #f0f6fc !important;
+  color: #f2eadf !important;
 }
 
 :global(html.dark .article-detail-page .text-\[\#64748b\]),
 :global(html.dark .article-detail-page .text-slate-500),
 :global(html.dark .article-detail-page .text-slate-600) {
-  color: #94a3b8 !important;
+  color: #afa79c !important;
 }
 
 :global(html.dark .article-detail-page .border-\[\#e5e7eb\]) {
-  border-color: #444c56 !important;
+  border-color: #3a332a !important;
 }
 
 :global(html.dark .article-detail-page .bg-slate-100),
 :global(html.dark .article-detail-page .bg-slate-50) {
-  background-color: #373e47 !important;
+  background-color: #22252b !important;
 }
 
 :global(html.dark .article-detail-page .hover\:bg-slate-50:hover),
 :global(html.dark .article-detail-page .hover\:bg-slate-100:hover),
 :global(html.dark .article-detail-page .hover\:bg-slate-200:hover) {
-  background-color: #444c56 !important;
+  background-color: rgba(214, 181, 116, 0.12) !important;
 }
 
 :global(html.dark .article-detail-page .shadow-sm),
 :global(html.dark .article-detail-page .shadow-\[0_12px_40px_rgba\(15\,23\,42\,\.08\)\]) {
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22) !important;
-}
-
-:global(html.dark .article-detail-page .article-prose) {
-  color: #adbac7 !important;
-}
-
-:global(html.dark .article-detail-page .article-prose h1),
-:global(html.dark .article-detail-page .article-prose h2),
-:global(html.dark .article-detail-page .article-prose h3),
-:global(html.dark .article-detail-page .article-prose h4) {
-  color: #f0f6fc !important;
-}
-
-:global(html.dark .article-detail-page .article-prose p),
-:global(html.dark .article-detail-page .article-prose li) {
-  color: #adbac7 !important;
-}
-
-:global(html.dark .article-detail-page .article-prose table) {
-  background: transparent;
-  border-color: #444c56 !important;
-}
-
-:global(html.dark .article-detail-page .article-prose th),
-:global(html.dark .article-detail-page .article-prose td) {
-  border-color: #444c56 !important;
-}
-
-:global(html.dark .article-detail-page .article-prose th) {
-  background: transparent;
-  color: #adbac7 !important;
-}
-
-:global(html.dark .article-detail-page .article-prose tr) {
-  background: #22272e !important;
-}
-
-:global(html.dark .article-detail-page .article-prose tr:nth-child(2n)) {
-  background: #2d333b !important;
-}
-
-:global(html.dark .article-detail-page .article-prose pre) {
-  background: #2d333b !important;
-  border-color: #444c56 !important;
-}
-
-:global(html.dark .article-detail-page .article-prose code:not(pre code)) {
-  background: rgba(110, 118, 129, 0.4) !important;
-  color: #c9d1d9 !important;
 }
 
 :global(.article-prose .snippet-comment-highlight) {
@@ -1510,10 +1535,12 @@ watch(() => route.params.articleId, (id) => {
 
 :global(html.dark .article-prose .snippet-comment-highlight) {
   border-bottom-color: rgba(250, 204, 21, 0.78);
-  background: rgba(234, 179, 8, 0.18);
+  background: rgba(234, 179, 8, 0.2);
+  color: #f0f6fc !important;
 }
 
 :global(html.dark .article-prose .snippet-comment-highlight:hover) {
   background: rgba(234, 179, 8, 0.26);
+  color: #ffffff !important;
 }
 </style>

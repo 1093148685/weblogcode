@@ -308,9 +308,10 @@
                                 </el-form-item>
                                 <el-form-item label="摘要长度范围">
                                     <el-select v-model="drawerForm.summaryLength" class="!w-40">
-                                        <el-option label="简短 (100-150字)" value="100-150" />
-                                        <el-option label="标准 (200-300字)" value="200-300" />
-                                        <el-option label="详细 (400-500字)" value="400-500" />
+                                        <el-option label="完整范围 (30-230字)" value="30-230" />
+                                        <el-option label="简短 (30-80字)" value="30-80" />
+                                        <el-option label="标准 (80-150字)" value="80-150" />
+                                        <el-option label="详细 (150-230字)" value="150-230" />
                                     </el-select>
                                 </el-form-item>
                             </template>
@@ -530,7 +531,7 @@ const drawerForm = reactive({
     enableFreeSearchFallback: true,
     // article_summary
     maxContentLength: 8000,
-    summaryLength: '200-300',
+    summaryLength: '30-230',
     // raw JSON fallback
     rawConfig: '{}'
 })
@@ -587,6 +588,11 @@ const missingProviders = (plugin) => {
 const pluginReady = (plugin) => {
     if (!plugin) return false
     return missingProviders(plugin).length === 0
+}
+
+const normalizeSummaryLength = (value) => {
+    const allowed = ['30-230', '30-80', '80-150', '150-230']
+    return allowed.includes(value) ? value : '30-230'
 }
 
 // ──────── 分类映射 ────────
@@ -661,7 +667,7 @@ const openDrawer = (plugin) => {
         drawerForm.enableFreeSearchFallback = saved.enableFreeSearchFallback ?? true
     } else if (plugin.pluginId === 'article_summary') {
         drawerForm.maxContentLength = saved.maxContentLength ?? 8000
-        drawerForm.summaryLength = saved.summaryLength || '200-300'
+        drawerForm.summaryLength = normalizeSummaryLength(saved.summaryLength)
     } else {
         drawerForm.rawConfig = plugin.config || '{}'
     }

@@ -48,8 +48,19 @@
             </div>
             
             <!-- 加载更多indicator -->
-            <div v-if="hasMoreComments" class="flex justify-center items-center py-6">
-                <div class="w-5 h-5 border-2 border-[var(--border-base)] border-t-[var(--text-secondary)] rounded-full animate-spin"></div>
+            <div v-if="totalPages > 1" class="comment-pagination" aria-label="评论分页">
+                <button type="button" class="pagination-btn" :disabled="currentPage === 1" @click="goPage(currentPage - 1)">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button v-for="page in paginationPages" :key="page" type="button"
+                    :class="['pagination-page', { 'pagination-page-active': currentPage === page }]"
+                    @click="goPage(page)">
+                    {{ page }}
+                </button>
+                <button type="button" class="pagination-btn" :disabled="currentPage === totalPages" @click="goPage(currentPage + 1)">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                <span class="pagination-total">共 {{ sortedComments.length }} 条</span>
             </div>
         </div>
         
@@ -63,7 +74,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, reactive, nextTick } from 'vue'
+import { ref, computed, onMounted, reactive, nextTick, watch } from 'vue'
 import MessageWallCard from '@/components/MessageWallCard.vue'
 import { getMessageWallComments, publishMessageWallComment, getFlowerStatus } from '@/api/frontend/message-wall'
 import { useCommentStore } from '@/stores/comment'
@@ -89,9 +100,8 @@ const newCommentIds = reactive(new Set())
 const currentSort = ref('latest')
 const panelRef = ref(null)
 const commentRefs = ref([])
-const visibleCount = ref(20)
-const loadingMore = ref(false)
-const hasMoreComments = computed(() => visibleCount.value < sortedComments.value.length)
+const pageSize = 15
+const currentPage = ref(1)
 const guestNames = ['路过的风', '山海访客', '星河旅人', '云边来客', '代码旅人', '清晨来信', '晚风同学', '蓝色便签']
 const isQQNumber = (value) => /^\d+$/.test(String(value || '').trim())
 const generateGuestName = () => `${guestNames[Math.floor(Math.random() * guestNames.length)]}${Math.floor(Math.random() * 900 + 100)}`
@@ -131,7 +141,20 @@ const sortedComments = computed(() => {
 })
 
 const visibleComments = computed(() => {
-    return sortedComments.value.slice(0, visibleCount.value)
+    const start = (currentPage.value - 1) * pageSize
+    return sortedComments.value.slice(start, start + pageSize)
+})
+
+const totalPages = computed(() => Math.max(1, Math.ceil(sortedComments.value.length / pageSize)))
+
+const paginationPages = computed(() => {
+    const total = totalPages.value
+    const current = currentPage.value
+    const windowSize = 5
+    let start = Math.max(1, current - 2)
+    let end = Math.min(total, start + windowSize - 1)
+    start = Math.max(1, end - windowSize + 1)
+    return Array.from({ length: end - start + 1 }, (_, index) => start + index)
 })
 
 const setCommentRef = (el, index) => {
@@ -141,7 +164,7 @@ const setCommentRef = (el, index) => {
 }
 
 const loadMoreIfNeeded = () => {
-    if (loadingMore.value || !hasMoreComments.value) return
+    return
 
     // 使用 window 级别的滚动位置来判断是否需要加载更多
     const scrollTop = window.scrollY || document.documentElement.scrollTop
@@ -191,16 +214,21 @@ const emitStats = () => {
 
 onMounted(() => {
     initComments()
-    window.addEventListener('scroll', handleScroll)
 })
 
-onUnmounted(() => {
-    window.removeEventListener('scroll', handleScroll)
+watch(currentSort, () => {
+    currentPage.value = 1
+})
+
+watch(totalPages, (total) => {
+    if (currentPage.value > total) {
+        currentPage.value = total
+    }
 })
 
 const initComments = async () => {
     const savedScrollTop = panelRef.value?.scrollTop ?? 0
-    visibleCount.value = 20
+    currentPage.value = 1
 
     // 尝试读取缓存（首次加载快速展示）
     const cacheKey = `message_wall_comments:${props.routerUrl}`
@@ -257,8 +285,14 @@ const initComments = async () => {
 }
 
 const handleRefresh = async () => {
-    visibleCount.value = 20
+    currentPage.value = 1
     await initComments()
+}
+
+const goPage = async (page) => {
+    currentPage.value = Math.min(Math.max(page, 1), totalPages.value)
+    await nextTick()
+    panelRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 const handleReply = async ({ replyCommentId, parentCommentId, content, replyNickname, images }) => {
@@ -506,6 +540,53 @@ defineExpose({
 
 .comment-divider {
     display: none;
+}
+
+.comment-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 18px 0 4px;
+}
+
+.pagination-btn,
+.pagination-page {
+    min-width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-base);
+    border-radius: 8px;
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 700;
+    transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.pagination-btn:not(:disabled):hover,
+.pagination-page:hover {
+    background: var(--bg-hover);
+    color: var(--text-heading);
+}
+
+.pagination-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.pagination-page-active {
+    background: var(--bg-active);
+    border-color: var(--border-heavy);
+    color: var(--text-heading);
+}
+
+.pagination-total {
+    color: var(--text-muted);
+    font-size: 12px;
 }
 
 @keyframes highlight-pulse {

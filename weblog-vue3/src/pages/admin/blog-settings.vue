@@ -104,6 +104,13 @@
                         <el-text class="mx-1" type="info"  size="small">开启后，评论需要博主后台审核通过后，才会展示出来</el-text>
                     </div>
                 </el-form-item>
+                <el-form-item label="评论图片上限">
+                    <el-input-number v-model="form.commentImageMaxSizeMb" :min="1" :max="20" />
+                    <div class="flex items-center ml-3">
+                        <el-icon class="mr-2" color="#909399"><InfoFilled /></el-icon>
+                        <el-text class="mx-1" type="info" size="small">默认 5MB，最大 20MB。超过上限时会在上传前提示用户压缩图片。</el-text>
+                    </div>
+                </el-form-item>
                 <el-form-item label="博主邮箱">
                     <el-input v-model="form.mail" clearable placeholder="请输入博主邮箱地址" />
                     <div class="flex items-center">
@@ -224,6 +231,7 @@ import { Check, Close } from '@element-plus/icons-vue'
 import { getBlogSettingsDetail, updateBlogSettings } from '@/api/admin/blogsettings'
 import { uploadFile } from '@/api/admin/file'
 import { showMessage } from '@/composables/util'
+import { clearCache } from '@/composables/useCache'
 
 // 是否开启 GitHub
 const isGithubChecked = ref(false)
@@ -252,6 +260,7 @@ const form = reactive({
     isCommentSensiWordOpen: true, // 是否开启评论敏感词过滤
     sensitiveWords: '', // 敏感词列表
     isCommentExamineOpen: false, // 是否开启评论审核
+    commentImageMaxSizeMb: 5, // 评论图片上传大小上限（MB）
     mail: '', // 博主邮箱
     stickerZipMaxCount: 100, // 贴纸包ZIP解压最大张数
     isLinkPreviewOpen: true, // 是否开启链接预览
@@ -353,6 +362,7 @@ function initBlogSettings() {
             form.isCommentSensiWordOpen = e.data.isCommentSensiWordOpen
             form.sensitiveWords = e.data.sensitiveWords || ''
             form.isCommentExamineOpen = e.data.isCommentExamineOpen
+            form.commentImageMaxSizeMb = e.data.commentImageMaxSizeMb || 5
             form.mail = e.data.mail
             form.stickerZipMaxCount = e.data.stickerZipMaxCount || 100
             form.isLinkPreviewOpen = e.data.isLinkPreviewOpen ?? true
@@ -436,6 +446,7 @@ const onSubmit = () => {
             
             // 重新渲染页面中的信息
             dataLoaded.value = false
+            clearCache('blog_settings')
             initBlogSettings()
             showMessage('保存成功')
         }).finally(() => btnLoading.value = false) // 隐藏保存按钮 loading

@@ -8,6 +8,9 @@ namespace Weblog.Core.Service.Implements;
 
 public class BlogSettingsService : IBlogSettingsService
 {
+    private const int DefaultCommentImageMaxSizeMb = 5;
+    private const int MaxCommentImageMaxSizeMb = 20;
+
     private readonly DbContext _dbContext;
 
     public BlogSettingsService(DbContext dbContext)
@@ -33,6 +36,7 @@ public class BlogSettingsService : IBlogSettingsService
                 ZhihuHomepage = "",
                 IsCommentSensiWordOpen = true,
                 IsCommentExamineOpen = false,
+                CommentImageMaxSizeMb = DefaultCommentImageMaxSizeMb,
                 IsSubscribeCardOpen = true,
                 SubscribeTitle = "订阅更新",
                 SubscribeDescription = "订阅后，最新文章将通过邮件发送给你",
@@ -41,6 +45,17 @@ public class BlogSettingsService : IBlogSettingsService
             };
             var id = await _dbContext.Db.Insertable(settings).ExecuteReturnIdentityAsync();
             settings.Id = id;
+        }
+        else
+        {
+            var normalizedCommentImageMaxSizeMb = NormalizeCommentImageMaxSizeMb(settings.CommentImageMaxSizeMb);
+            if (settings.CommentImageMaxSizeMb != normalizedCommentImageMaxSizeMb)
+            {
+                settings.CommentImageMaxSizeMb = normalizedCommentImageMaxSizeMb;
+                await _dbContext.Db.Updateable(settings)
+                    .UpdateColumns(it => new { it.CommentImageMaxSizeMb })
+                    .ExecuteCommandAsync();
+            }
         }
         return settings.Adapt<BlogSettingsDto>();
     }
@@ -65,6 +80,7 @@ public class BlogSettingsService : IBlogSettingsService
                 IsCommentSensiWordOpen = request.IsCommentSensiWordOpen,
                 IsCommentExamineOpen = request.IsCommentExamineOpen,
                 StickerZipMaxCount = request.StickerZipMaxCount,
+                CommentImageMaxSizeMb = NormalizeCommentImageMaxSizeMb(request.CommentImageMaxSizeMb),
                 IsLinkPreviewOpen = request.IsLinkPreviewOpen,
                 LinkPreviewWhitelist = request.LinkPreviewWhitelist,
                 IsEmailNotificationOpen = request.IsEmailNotificationOpen,
@@ -99,6 +115,7 @@ public class BlogSettingsService : IBlogSettingsService
             settings.IsCommentSensiWordOpen = request.IsCommentSensiWordOpen;
             settings.IsCommentExamineOpen = request.IsCommentExamineOpen;
             settings.StickerZipMaxCount = request.StickerZipMaxCount;
+            settings.CommentImageMaxSizeMb = NormalizeCommentImageMaxSizeMb(request.CommentImageMaxSizeMb);
             settings.IsLinkPreviewOpen = request.IsLinkPreviewOpen;
             settings.LinkPreviewWhitelist = request.LinkPreviewWhitelist;
             settings.IsEmailNotificationOpen = request.IsEmailNotificationOpen;
@@ -124,5 +141,15 @@ public class BlogSettingsService : IBlogSettingsService
         // Return a placeholder path - actual upload handled by FileController with MinIO
         var newFileName = $"{Guid.NewGuid()}{Path.GetExtension(fileName)}";
         return $"/uploads/{folder}/{newFileName}";
+    }
+
+    private static int NormalizeCommentImageMaxSizeMb(int value)
+    {
+        if (value <= 0)
+        {
+            return DefaultCommentImageMaxSizeMb;
+        }
+
+        return Math.Min(value, MaxCommentImageMaxSizeMb);
     }
 }

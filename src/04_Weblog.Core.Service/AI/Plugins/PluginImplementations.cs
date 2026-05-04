@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Weblog.Core.Service.AI.Core;
 using Weblog.Core.Service.AI.Providers;
 
@@ -22,7 +23,8 @@ public class ArticleSummaryPlugin : BaseAiPlugin
 1. 摘要长度控制在 {summaryLength} 字之间
 2. 包含文章的核心观点和关键信息
 3. 语言简洁明了，便于快速阅读
-4. 如果文章内容不足以生成摘要，请返回'内容不足，无法生成摘要'";
+4. 直接输出摘要正文，不要输出标题、编号或 Markdown
+5. 如果文章内容不足以生成摘要，请返回'内容不足，无法生成摘要'";
 
     private const string UserPrompt = @"请为以下文章生成摘要：
 
@@ -37,7 +39,7 @@ public class ArticleSummaryPlugin : BaseAiPlugin
 
         // 从 config 注入的参数中读取，支持管理员在插件市场配置
         var maxContentLength = GetIntParam(request, "maxContentLength") ?? 8000;
-        var summaryLength = request.Parameters.GetValueOrDefault("summaryLength")?.ToString() ?? "200-300";
+        var summaryLength = NormalizeSummaryLengthRange(request.Parameters.GetValueOrDefault("summaryLength")?.ToString());
 
         if (string.IsNullOrEmpty(content))
         {
@@ -60,7 +62,7 @@ public class ArticleSummaryPlugin : BaseAiPlugin
                 new() { Role = "user", Content = UserPrompt.Replace("{content}", content) }
             },
             Temperature = 0.7,
-            MaxTokens = 1000
+            MaxTokens = 360
         };
 
         try
@@ -79,7 +81,7 @@ public class ArticleSummaryPlugin : BaseAiPlugin
             return new AiPluginResult
             {
                 Success = true,
-                Data = response.Content,
+                Data = NormalizeSummaryContent(response.Content),
                 Metadata = new Dictionary<string, object>
                 {
                     { "model", response.Model },
@@ -103,6 +105,42 @@ public class ArticleSummaryPlugin : BaseAiPlugin
         return null;
     }
 
+    private static string NormalizeSummaryLengthRange(string? range)
+    {
+        if (string.IsNullOrWhiteSpace(range)) return "30-230";
+        var match = Regex.Match(range, @"(\d+)\s*-\s*(\d+)");
+        if (!match.Success) return "30-230";
+
+        var min = Math.Clamp(int.Parse(match.Groups[1].Value), 30, 230);
+        var max = Math.Clamp(int.Parse(match.Groups[2].Value), 30, 230);
+        if (min > max) (min, max) = (max, min);
+        return $"{min}-{max}";
+    }
+
+    private static string NormalizeSummaryContent(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content)) return string.Empty;
+        var text = content.Trim();
+        text = Regex.Replace(text, @"```[\s\S]*?```", string.Empty);
+        text = Regex.Replace(text, @"`([^`]+)`", "$1");
+        text = Regex.Replace(text, @"!\[[^\]]*\]\([^)]+\)", string.Empty);
+        text = Regex.Replace(text, @"\[([^\]]+)\]\([^)]+\)", "$1");
+        text = Regex.Replace(text, @"^\s{0,3}#{1,6}\s+", string.Empty, RegexOptions.Multiline);
+        text = Regex.Replace(text, @"^\s*[-*+]\s+", string.Empty, RegexOptions.Multiline);
+        text = Regex.Replace(text, @"^\s*\d+\.\s+", string.Empty, RegexOptions.Multiline);
+        text = Regex.Replace(text, @"[*_~>#]", string.Empty);
+        text = Regex.Replace(text, @"<[^>]+>", string.Empty);
+        text = Regex.Replace(text, @"\s+", " ").Trim();
+        if (text.Length <= 230) return text;
+
+        var slice = text[..229].Trim();
+        var punctuationIndex = Math.Max(
+            Math.Max(slice.LastIndexOf('。'), slice.LastIndexOf('！')),
+            Math.Max(slice.LastIndexOf('？'), slice.LastIndexOf('；'))
+        );
+        return punctuationIndex >= 30 ? slice[..(punctuationIndex + 1)] : $"{slice}…";
+    }
+
     public override async Task<AiPluginMetadata> GetMetadataAsync()
     {
         return new AiPluginMetadata
@@ -118,7 +156,7 @@ public class ArticleSummaryPlugin : BaseAiPlugin
             Config = new Dictionary<string, object>
             {
                 { "maxContentLength", 8000 },
-                { "summaryLength", "200-300" }
+                { "summaryLength", "30-230" }
             }
         };
     }

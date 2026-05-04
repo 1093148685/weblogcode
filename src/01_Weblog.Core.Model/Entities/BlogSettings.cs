@@ -90,6 +90,11 @@ public class BlogSettings
     public int StickerZipMaxCount { get; set; } = 100;
 
     /// <summary>
+    /// 评论图片上传大小上限（MB）
+    /// </summary>
+    public int CommentImageMaxSizeMb { get; set; } = 5;
+
+    /// <summary>
     /// 是否开启评论链接预览
     /// </summary>
     public bool IsLinkPreviewOpen { get; set; } = true;

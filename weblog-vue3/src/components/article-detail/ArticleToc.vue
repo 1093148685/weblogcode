@@ -1,52 +1,59 @@
 <template>
-  <aside class="article-toc overflow-hidden border-r border-[#e5e7eb] bg-[#f8fafc] px-5 py-5">
-    <div class="toc-tabs">
-      <button
-        type="button"
-        :class="['toc-tab', activeTab === 'articles' ? 'toc-tab-active' : '']"
-        @click="activeTab = 'articles'"
-      >
-        文章
-      </button>
-      <button
-        type="button"
-        :class="['toc-tab', activeTab === 'outline' ? 'toc-tab-active' : '']"
-        @click="activeTab = 'outline'"
-      >
-        大纲
-      </button>
-    </div>
+  <div>
+    <div class="toc-placeholder"></div>
+    <aside class="article-toc article-toc--fixed border-r border-[#e5e7eb] bg-[#f8fafc] px-5 py-5">
+      <div v-if="showTabs" class="toc-tabs">
+        <button
+          type="button"
+          :class="['toc-tab', activeTab === 'articles' ? 'toc-tab-active' : '']"
+          @click="activeTab = 'articles'"
+        >
+          {{ treeTabLabel }}
+        </button>
+        <button
+          type="button"
+          :class="['toc-tab', activeTab === 'outline' ? 'toc-tab-active' : '']"
+          @click="activeTab = 'outline'"
+        >
+          大纲
+        </button>
+      </div>
+      <div v-else class="toc-static-head">
+        <div class="toc-static-title">{{ treeTabLabel }}</div>
+        <p v-if="staticSubtitle" class="toc-static-subtitle">{{ staticSubtitle }}</p>
+      </div>
 
-    <nav v-if="activeTab === 'articles'" class="article-toc__scroll">
-      <TreeNode
-        v-for="node in articleTree"
-        :key="node.id"
-        :node="node"
-        :active-id="currentArticleId"
-        :expanded-ids="articleExpandedIds"
-        :depth="0"
-        mode="articles"
-        @toggle="toggleArticleNode"
-        @article="$emit('article', $event)"
-      />
-    </nav>
+      <nav v-if="activeTab === 'articles'" class="article-toc__scroll">
+        <TreeNode
+          v-for="node in articleTree"
+          :key="node.id"
+          :node="node"
+          :active-id="currentArticleId"
+          :expanded-ids="articleExpandedIds"
+          :depth="0"
+          mode="articles"
+          @toggle="toggleArticleNode"
+          @article="$emit('article', $event)"
+        />
+      </nav>
 
-    <nav v-else class="article-toc__scroll">
-      <TreeNode
-        :node="outlineTree"
-        :active-id="activeId"
-        :expanded-ids="outlineExpandedIds"
-        :depth="0"
-        mode="outline"
-        @toggle="toggleOutlineNode"
-        @navigate="$emit('navigate', $event)"
-      />
-    </nav>
-  </aside>
+      <nav v-else class="article-toc__scroll">
+        <TreeNode
+          :node="outlineTree"
+          :active-id="activeId"
+          :expanded-ids="outlineExpandedIds"
+          :depth="0"
+          mode="outline"
+          @toggle="toggleOutlineNode"
+          @navigate="$emit('navigate', $event)"
+        />
+      </nav>
+    </aside>
+  </div>
 </template>
 
 <script setup>
-import { computed, defineComponent, h, ref, watch } from 'vue'
+import { computed, defineComponent, h, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const props = defineProps({
   title: { type: String, default: '文章目录' },
@@ -54,14 +61,19 @@ const props = defineProps({
   activeId: { type: String, default: '' },
   autoExpand: { type: Boolean, default: false },
   articleTree: { type: Array, default: () => [] },
-  currentArticleId: { type: [String, Number], default: '' }
+  currentArticleId: { type: [String, Number], default: '' },
+  treeTabLabel: { type: String, default: '文章' },
+  staticSubtitle: { type: String, default: '' },
+  defaultTab: { type: String, default: 'outline' },
+  defaultExpandedArticleIds: { type: Array, default: () => ['category-root', 'tag-root'] },
+  showTabs: { type: Boolean, default: true }
 })
 
 defineEmits(['navigate', 'article'])
 
-const activeTab = ref('outline')
+const activeTab = ref(props.defaultTab === 'articles' ? 'articles' : 'outline')
 const outlineExpandedIds = ref(new Set())
-const articleExpandedIds = ref(new Set(['category-root', 'tag-root']))
+const articleExpandedIds = ref(new Set(props.defaultExpandedArticleIds))
 
 const outlineTree = computed(() => {
   const root = {
@@ -131,6 +143,21 @@ watch(
   { deep: true, immediate: true }
 )
 
+watch(
+  () => props.defaultExpandedArticleIds,
+  (ids) => {
+    articleExpandedIds.value = new Set([...articleExpandedIds.value, ...(ids || [])])
+  },
+  { deep: true, immediate: true }
+)
+
+watch(
+  () => props.defaultTab,
+  (tab) => {
+    activeTab.value = tab === 'articles' ? 'articles' : 'outline'
+  }
+)
+
 const TreeNode = defineComponent({
   name: 'TreeNode',
   props: {
@@ -169,11 +196,12 @@ const TreeNode = defineComponent({
 
     const iconText = computed(() => {
       if (hasChildren.value) return isExpanded.value ? '⌄' : '›'
-      if (isArticle.value) return '•'
+      if (isArticle.value) return '·'
       return ''
     })
 
-    const toggle = () => {
+    const toggle = (event) => {
+      event.stopPropagation()
       if (hasChildren.value) emit('toggle', nodeProps.node.id)
     }
 
@@ -224,14 +252,64 @@ const TreeNode = defineComponent({
     ])
   }
 })
+
+const updateFixedPosition = () => {
+  const aside = document.querySelector('.article-toc')
+  if (!aside) return
+  const rect = aside.getBoundingClientRect()
+  aside.style.left = rect.left + 'px'
+}
+
+onMounted(() => {
+  updateFixedPosition()
+  window.addEventListener('resize', updateFixedPosition, { passive: true })
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateFixedPosition)
+})
 </script>
 
 <style scoped>
+.toc-placeholder {
+  width: 280px;
+  flex-shrink: 0;
+}
+
+.article-toc--fixed {
+  position: fixed;
+  top: 72px;
+  width: 280px;
+  z-index: 40;
+  height: calc(100vh - 72px);
+  overflow-y: auto;
+  border-color: #eee4d7;
+  background: #fcfaf9;
+}
+
+@media (max-width: 1500px) {
+  .article-toc--fixed {
+    width: 260px;
+  }
+  .toc-placeholder {
+    width: 260px;
+  }
+}
+
+@media (max-width: 1280px) {
+  .article-toc--fixed {
+    display: none;
+  }
+  .toc-placeholder {
+    display: none;
+  }
+}
+
 .toc-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  margin-bottom: 16px;
-  color: #64748b;
+  margin-bottom: 18px;
+  color: #7a6a5d;
   font-size: 14px;
   font-weight: 600;
   text-align: center;
@@ -241,22 +319,47 @@ const TreeNode = defineComponent({
   position: relative;
   height: 36px;
   color: inherit;
+  transition: color 0.16s ease;
+}
+
+.toc-tab:hover {
+  color: #8f6428;
 }
 
 .toc-tab-active {
-  color: #0f172a;
-  font-weight: 900;
+  color: #201b17;
+  font-weight: 800;
 }
 
 .toc-tab-active::after {
   position: absolute;
-  right: 20%;
+  right: 24%;
   bottom: 0;
-  left: 20%;
+  left: 24%;
   height: 3px;
   border-radius: 999px;
-  background: #64748b;
+  background: #c8a36d;
   content: "";
+}
+
+.toc-static-head {
+  margin-bottom: 16px;
+  border-bottom: 1px solid #efe3d2;
+  padding-bottom: 14px;
+}
+
+.toc-static-title {
+  color: #201b17;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.toc-static-subtitle {
+  margin-top: 5px;
+  color: #8a7d70;
+  font-size: 12px;
+  line-height: 1.55;
 }
 
 .article-toc__scroll {
@@ -264,7 +367,11 @@ const TreeNode = defineComponent({
   overflow-y: auto;
   padding: 2px 8px 16px 0;
   scrollbar-width: thin;
-  scrollbar-color: #d1d5db transparent;
+  scrollbar-color: #d8c4a8 transparent;
+}
+
+.toc-static-head + .article-toc__scroll {
+  max-height: calc(100vh - 88px - 24px - 58px);
 }
 
 .article-toc__scroll::-webkit-scrollbar {
@@ -277,78 +384,77 @@ const TreeNode = defineComponent({
 
 .article-toc__scroll::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: #d1d5db;
+  background: #d8c4a8;
 }
 
 :deep(.toc-row) {
+  position: relative;
   display: flex;
   align-items: flex-start;
-  gap: 6px;
+  gap: 8px;
   margin: 3px 0;
   border-left: 3px solid transparent;
   border-radius: 8px;
-  padding-top: 5px;
+  padding-top: 6px;
   padding-right: 8px;
-  padding-bottom: 5px;
-  color: #475569;
-  font-size: 13px;
-  line-height: 1.6;
-  transition: background-color 0.16s ease, color 0.16s ease;
+  padding-bottom: 6px;
+  color: #4a4037;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.65;
+  transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
 }
 
 :deep(.toc-row:hover) {
-  background: rgba(100, 116, 139, 0.1);
-  color: #334155;
+  background: #f7f0e6;
+  color: #201b17;
 }
 
 :deep(.toc-depth-0) {
   margin-top: 8px;
-  color: #0f172a;
-  font-size: 13.5px;
-  font-weight: 800;
+  color: #2a2a2a;
+  font-size: 14px;
+  font-weight: 700;
 }
 
-:deep(.toc-depth-1) {
-  color: #334155;
-  font-weight: 600;
-}
-
-:deep(.toc-depth-2) {
-  color: #64748b;
+:deep(.toc-depth-1),
+:deep(.toc-depth-2),
+:deep(.toc-depth-3),
+:deep(.toc-depth-4),
+:deep(.toc-kind-article) {
+  color: #5f554b;
+  font-size: 14px;
+  font-weight: 400;
 }
 
 :deep(.toc-depth-3),
-:deep(.toc-depth-4) {
-  color: #94a3b8;
-  font-size: 12.5px;
-}
-
-:deep(.toc-kind-article) {
-  color: #64748b;
-  font-weight: 500;
+:deep(.toc-depth-4),
+:deep(.toc-depth-5),
+:deep(.toc-depth-6) {
+  color: #8a7d70;
 }
 
 :deep(.toc-row-active) {
-  border-left-color: #64748b;
-  background: rgba(100, 116, 139, 0.12);
-  color: #334155;
-  font-weight: 800;
+  border-left-color: #c8a36d;
+  background: #efe3d2;
+  color: #8f6428;
+  font-weight: 700;
 }
 
 :deep(.toc-chevron) {
   display: inline-grid;
   width: 18px;
-  height: 21px;
+  height: 24px;
   flex: 0 0 18px;
   place-items: center;
   color: currentColor;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1;
 }
 
 :deep(.toc-chevron-leaf) {
-  font-size: 14px;
-  opacity: 0.7;
+  font-size: 15px;
+  opacity: 0.6;
 }
 
 :deep(.toc-title) {
@@ -356,7 +462,7 @@ const TreeNode = defineComponent({
   flex: 1;
   overflow: hidden;
   color: inherit;
-  line-height: 1.6;
+  line-height: 1.65;
   overflow-wrap: anywhere;
   text-align: left;
   white-space: normal;
@@ -367,9 +473,9 @@ const TreeNode = defineComponent({
   height: 20px;
   flex: 0 0 auto;
   border-radius: 999px;
-  background: #f1f5f9;
+  background: #f7f0e6;
   padding: 0 7px;
-  color: #64748b;
+  color: #8a7d70;
   font-size: 12px;
   font-weight: 800;
   line-height: 20px;
@@ -377,71 +483,86 @@ const TreeNode = defineComponent({
 }
 
 :deep(.toc-row-active .toc-count) {
-  background: #e2e8f0;
-  color: #334155;
+  background: #f8e8ca;
+  color: #8f6428;
 }
 
 :global(html.dark) .article-toc {
-  border-color: #444c56;
-  background: #22272e;
+  border-color: #2a313a;
+  background: #151a20;
 }
 
 :global(html.dark) .toc-tabs {
-  color: #c9d1d9;
+  color: #afa79c;
+}
+
+:global(html.dark) .toc-tab:hover {
+  color: #efd39a;
 }
 
 :global(html.dark) .toc-tab-active {
-  color: #ffffff;
+  color: #f2eadf;
 }
 
 :global(html.dark) .toc-tab-active::after {
-  background: #58a6ff;
+  background: #d6b574;
+}
+
+:global(html.dark) .toc-static-head {
+  border-color: #3a332a;
+}
+
+:global(html.dark) .toc-static-title {
+  color: #f2eadf;
+}
+
+:global(html.dark) .toc-static-subtitle {
+  color: #afa79c;
 }
 
 :global(html.dark) .article-toc :deep(.toc-row) {
-  color: #c9d1d9;
+  color: #cfc7bb;
 }
 
 :global(html.dark) .article-toc :deep(.toc-row:hover) {
-  background: rgba(88, 166, 255, 0.1);
-  color: #f0f6fc;
+  background: rgba(214, 181, 116, 0.1);
+  color: #f2eadf;
 }
 
 :global(html.dark) .article-toc :deep(.toc-depth-0) {
-  color: #f0f6fc;
+  color: #e8e2d8;
 }
 
-:global(html.dark) .article-toc :deep(.toc-depth-1) {
-  color: #d1d5db;
-}
-
+:global(html.dark) .article-toc :deep(.toc-depth-1),
 :global(html.dark) .article-toc :deep(.toc-depth-2),
 :global(html.dark) .article-toc :deep(.toc-kind-article) {
-  color: #c9d1d9;
+  color: #cfc7bb;
 }
 
 :global(html.dark) .article-toc :deep(.toc-depth-3),
-:global(html.dark) .article-toc :deep(.toc-depth-4) {
-  color: #9ca3af;
+:global(html.dark) .article-toc :deep(.toc-depth-4),
+:global(html.dark) .article-toc :deep(.toc-depth-5),
+:global(html.dark) .article-toc :deep(.toc-depth-6) {
+  color: #afa79c;
 }
 
 :global(html.dark) .article-toc :deep(.toc-row-active) {
-  border-left-color: #58a6ff;
-  background: rgba(88, 166, 255, 0.14);
-  color: #58a6ff;
+  border-left-color: #d6b574;
+  background: rgba(214, 181, 116, 0.14);
+  color: #e3c680;
 }
 
 :global(html.dark) .article-toc :deep(.toc-count) {
-  background: rgba(88, 166, 255, 0.14);
-  color: #58a6ff;
+  background: rgba(214, 181, 116, 0.1);
+  color: #afa79c;
 }
 
 :global(html.dark) .article-toc :deep(.toc-row-active .toc-count) {
-  background: rgba(88, 166, 255, 0.22);
-  color: #79c0ff;
+  background: rgba(214, 181, 116, 0.2);
+  color: #e3c680;
 }
 
 :global(html.dark) .article-toc__scroll::-webkit-scrollbar-thumb {
-  background: #444c56;
+  background: #514636;
 }
 </style>

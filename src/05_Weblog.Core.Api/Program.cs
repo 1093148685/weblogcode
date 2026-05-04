@@ -19,7 +19,8 @@ using Weblog.Core.Service.AI.Routing;
 var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? "Server=1Panel-minio-cRdZ;Port=3306;Database=netweblog;User=root;Password=mysql_7kbeab;";
+    ?? throw new InvalidOperationException(
+        $"Missing ConnectionStrings:DefaultConnection for {builder.Environment.EnvironmentName} environment.");
 
 builder.Services.AddScoped<ISqlSugarClient>(s =>
 {

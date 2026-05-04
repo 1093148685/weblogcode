@@ -37,7 +37,7 @@ public class ArticleController : ControllerBase
     [RequireRole("admin")]
     public async Task<Result<ArticleDto>> Publish([FromBody] CreateArticleRequest request)
     {
-        request.Status = 1; // 已发布
+        request.Status = 1;
         var result = await _articleService.CreateAsync(request);
         return Result<ArticleDto>.Ok(result);
     }

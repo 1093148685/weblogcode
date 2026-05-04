@@ -5,6 +5,7 @@ using Weblog.Core.Repository;
 using Weblog.Core.Service.Interfaces;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Weblog.Core.Service.Implements;
 
@@ -17,6 +18,41 @@ public class AiSummaryService : IAiSummaryService
     {
         _dbContext = dbContext;
         _aiModelService = aiModelService;
+    }
+
+    private const int SummaryMinLength = 30;
+    private const int SummaryMaxLength = 230;
+
+    private static string NormalizeSummaryContent(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content)) return string.Empty;
+
+        var text = content.Trim();
+        text = Regex.Replace(text, @"```[\s\S]*?```", string.Empty);
+        text = Regex.Replace(text, @"`([^`]+)`", "$1");
+        text = Regex.Replace(text, @"!\[[^\]]*\]\([^)]+\)", string.Empty);
+        text = Regex.Replace(text, @"\[([^\]]+)\]\([^)]+\)", "$1");
+        text = Regex.Replace(text, @"^\s{0,3}#{1,6}\s+", string.Empty, RegexOptions.Multiline);
+        text = Regex.Replace(text, @"^\s*[-*+]\s+", string.Empty, RegexOptions.Multiline);
+        text = Regex.Replace(text, @"^\s*\d+\.\s+", string.Empty, RegexOptions.Multiline);
+        text = Regex.Replace(text, @"[*_~>#]", string.Empty);
+        text = Regex.Replace(text, @"<[^>]+>", string.Empty);
+        text = Regex.Replace(text, @"\s+", " ").Trim();
+
+        if (text.Length <= SummaryMaxLength) return text;
+
+        var slice = text[..(SummaryMaxLength - 1)].Trim();
+        var punctuationIndex = Math.Max(
+            Math.Max(slice.LastIndexOf('。'), slice.LastIndexOf('！')),
+            Math.Max(slice.LastIndexOf('？'), slice.LastIndexOf('；'))
+        );
+
+        if (punctuationIndex >= SummaryMinLength)
+        {
+            return slice[..(punctuationIndex + 1)];
+        }
+
+        return $"{slice}…";
     }
 
     public async Task<AiSummaryDto?> GetByArticleIdAsync(long articleId)
@@ -34,7 +70,7 @@ public class AiSummaryService : IAiSummaryService
         {
             Id = summary.Id,
             ArticleId = summary.ArticleId,
-            Content = summary.Content,
+            Content = NormalizeSummaryContent(summary.Content),
             IsEnabled = summary.IsEnabled,
             CreateTime = summary.CreateTime,
             UpdateTime = summary.UpdateTime
@@ -50,7 +86,7 @@ public class AiSummaryService : IAiSummaryService
 
         if (existing != null)
         {
-            existing.Content = request.Content;
+            existing.Content = NormalizeSummaryContent(request.Content);
             existing.IsEnabled = request.IsEnabled;
             existing.UpdateTime = DateTime.Now;
             await _dbContext.Db.Updateable(existing).ExecuteCommandAsync();
@@ -58,7 +94,7 @@ public class AiSummaryService : IAiSummaryService
             {
                 Id = existing.Id,
                 ArticleId = existing.ArticleId,
-                Content = existing.Content,
+                Content = NormalizeSummaryContent(existing.Content),
                 IsEnabled = existing.IsEnabled,
                 CreateTime = existing.CreateTime,
                 UpdateTime = existing.UpdateTime
@@ -68,7 +104,7 @@ public class AiSummaryService : IAiSummaryService
         var summary = new AiSummary
         {
             ArticleId = request.ArticleId,
-            Content = request.Content,
+            Content = NormalizeSummaryContent(request.Content),
             IsEnabled = request.IsEnabled,
             CreateTime = DateTime.Now,
             UpdateTime = DateTime.Now
@@ -81,7 +117,7 @@ public class AiSummaryService : IAiSummaryService
         {
             Id = summary.Id,
             ArticleId = summary.ArticleId,
-            Content = summary.Content,
+            Content = NormalizeSummaryContent(summary.Content),
             IsEnabled = summary.IsEnabled,
             CreateTime = summary.CreateTime,
             UpdateTime = summary.UpdateTime
@@ -99,7 +135,7 @@ public class AiSummaryService : IAiSummaryService
             throw new Exception("AI摘要不存在");
         }
 
-        summary.Content = request.Content;
+        summary.Content = NormalizeSummaryContent(request.Content);
         summary.IsEnabled = request.IsEnabled;
         summary.UpdateTime = DateTime.Now;
 
@@ -109,7 +145,7 @@ public class AiSummaryService : IAiSummaryService
         {
             Id = summary.Id,
             ArticleId = summary.ArticleId,
-            Content = summary.Content,
+            Content = NormalizeSummaryContent(summary.Content),
             IsEnabled = summary.IsEnabled,
             CreateTime = summary.CreateTime,
             UpdateTime = summary.UpdateTime
@@ -173,6 +209,8 @@ public class AiSummaryService : IAiSummaryService
                           $"文章内容丰富，结构清晰，适合想要了解该主题的读者。";
             }
 
+            summary = NormalizeSummaryContent(summary);
+
             // 保存或更新摘要
             var existing = await _dbContext.Db.Queryable<AiSummary>()
                 .Where(it => it.ArticleId == articleId)
@@ -217,11 +255,12 @@ public class AiSummaryService : IAiSummaryService
             // 截取内容前8000字符，以便生成更全面的摘要
             var truncatedContent = content.Length > 8000 ? content.Substring(0, 8000) : content;
             
-            var prompt = $@"请为以下文章生成一个详细的摘要（200-300字），要求：
+            var prompt = $@"请为以下文章生成一个简洁的摘要（30-230字），要求：
 1. 概括文章的核心主题和主要内容
 2. 提及文章的主要观点或技术要点
 3. 让读者一眼就能了解这篇文章讲什么
 4. 语言简洁明了，重点突出
+5. 直接输出摘要正文，不要输出标题、编号或 Markdown
 
 标题：{title}
 
@@ -241,7 +280,7 @@ public class AiSummaryService : IAiSummaryService
                         {
                             new { role = "user", content = prompt }
                         },
-                        max_tokens = 500
+                        max_tokens = 360
                     });
                     endpoint = $"{model.ApiUrl.TrimEnd('/')}/chat/completions";
                     httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {model.ApiKey}");
@@ -255,7 +294,7 @@ public class AiSummaryService : IAiSummaryService
                         {
                             new { role = "user", content = prompt }
                         },
-                        max_tokens = 500
+                        max_tokens = 360
                     });
                     endpoint = $"{model.ApiUrl.TrimEnd('/')}/messages";
                     httpClient.DefaultRequestHeaders.Add("x-api-key", model.ApiKey);
@@ -269,7 +308,7 @@ public class AiSummaryService : IAiSummaryService
                         {
                             new { role = "user", content = prompt }
                         },
-                        max_tokens = 500
+                        max_tokens = 360
                     });
                     endpoint = $"{model.ApiUrl.TrimEnd('/')}/chat/completions?api-version=2024-02-15-preview";
                     httpClient.DefaultRequestHeaders.Add("api-key", model.ApiKey);
@@ -284,7 +323,7 @@ public class AiSummaryService : IAiSummaryService
                         {
                             new { role = "user", content = prompt }
                         },
-                        max_tokens = 500
+                        max_tokens = 360
                     });
                     endpoint = $"{model.ApiUrl.TrimEnd('/')}/chat/completions";
                     httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {model.ApiKey}");
@@ -319,19 +358,19 @@ public class AiSummaryService : IAiSummaryService
                 if (!string.IsNullOrEmpty(result))
                 {
                     Console.WriteLine($"AI 生成的摘要: {result}");
-                    return result;
+                    return NormalizeSummaryContent(result);
                 }
             }
             
             // 如果API调用失败，返回默认摘要
             Console.WriteLine($"AI API 调用失败，使用默认摘要");
-            return $"这是一篇关于{title}的文章。文章内容丰富，包含详细的技术讲解和实践案例。";
+            return NormalizeSummaryContent($"这是一篇关于{title}的文章。文章内容丰富，包含详细的技术讲解和实践案例。");
         }
         catch (Exception ex)
         {
             // 如果出错，返回默认摘要
             Console.WriteLine($"AI API 异常: {ex.Message}");
-            return $"这是一篇关于{title}的文章。文章内容丰富，包含详细的技术讲解和实践案例。";
+            return NormalizeSummaryContent($"这是一篇关于{title}的文章。文章内容丰富，包含详细的技术讲解和实践案例。");
         }
     }
 
@@ -348,7 +387,7 @@ public class AiSummaryService : IAiSummaryService
 
             var truncatedContent = content.Length > 8000 ? content.Substring(0, 8000) : content;
             
-            var prompt = $@"请为以下文章生成一个详细的摘要（200-300字），要求：
+            var prompt = $@"请为以下文章生成一个简洁的摘要（30-230字），要求：
 1. 概括文章的核心主题和主要内容
 2. 提及文章的主要观点或技术要点
 3. 让读者一眼就能了解这篇文章讲什么
@@ -373,7 +412,7 @@ public class AiSummaryService : IAiSummaryService
                         {
                             new { role = "user", content = prompt }
                         },
-                        max_tokens = 500,
+                        max_tokens = 360,
                         stream = true
                     });
                     endpoint = $"{model.ApiUrl.TrimEnd('/')}/chat/completions";
@@ -388,7 +427,7 @@ public class AiSummaryService : IAiSummaryService
                         {
                             new { role = "user", content = prompt }
                         },
-                        max_tokens = 500,
+                        max_tokens = 360,
                         stream = true
                     });
                     endpoint = $"{model.ApiUrl.TrimEnd('/')}/messages";
@@ -404,7 +443,7 @@ public class AiSummaryService : IAiSummaryService
                         {
                             new { role = "user", content = prompt }
                         },
-                        max_tokens = 500,
+                        max_tokens = 360,
                         stream = true
                     });
                     endpoint = $"{model.ApiUrl.TrimEnd('/')}/chat/completions";
@@ -480,8 +519,8 @@ public class AiSummaryService : IAiSummaryService
                         }
                         
                         // 一次性发送所有内容，前端负责打字机效果
-                        _lastSummary = fullContent;
-                        await onChunk(fullContent);
+                        _lastSummary = NormalizeSummaryContent(fullContent);
+                        await onChunk(_lastSummary);
                     }
                     catch
                     {
@@ -506,6 +545,8 @@ public class AiSummaryService : IAiSummaryService
         {
             return;
         }
+
+        _lastSummary = NormalizeSummaryContent(_lastSummary);
 
         var existing = await _dbContext.Db.Queryable<AiSummary>()
             .Where(it => it.ArticleId == articleId)

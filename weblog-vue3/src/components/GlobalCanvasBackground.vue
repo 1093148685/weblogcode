@@ -24,18 +24,20 @@ const initCanvas = () => {
         console.error('Canvas element not found')
         return
     }
-    
+
     ctx = canvas.getContext('2d')
     if (!ctx) {
         console.error('Failed to get 2D context')
         return
     }
-    
+
     width = window.innerWidth
     height = window.innerHeight
     canvas.width = width
     canvas.height = height
-    
+    canvas.style.width = width + 'px'
+    canvas.style.height = height + 'px'
+
     createParticles()
 }
 
@@ -140,6 +142,8 @@ const handleResize = () => {
     if (canvasRef.value) {
         canvasRef.value.width = width
         canvasRef.value.height = height
+        canvasRef.value.style.width = width + 'px'
+        canvasRef.value.style.height = height + 'px'
         createParticles()
     }
 }
@@ -180,8 +184,6 @@ onBeforeUnmount(() => {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100vw;
-    height: 100vh;
     z-index: 0;
     pointer-events: none;
     background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);

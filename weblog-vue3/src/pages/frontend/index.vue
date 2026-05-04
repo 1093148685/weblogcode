@@ -559,7 +559,7 @@ const articles = ref([])
 // 当前页码
 const current = ref(1)
 // 每页显示的文章数
-const size = ref(10)
+const size = ref(6)
 // 总文章数
 const total = ref(0)
 // 总共多少页
@@ -595,7 +595,7 @@ function getArticles(currentNo) {
         if (res.success) {
             articles.value = res.data.list || []
             current.value = res.data.pageNum || 1
-            size.value = res.data.pageSize || 10
+            size.value = res.data.pageSize || 6
             total.value = res.data.total || 0
             pages.value = Math.ceil(total.value / size.value)
             articlesLoaded.value = true

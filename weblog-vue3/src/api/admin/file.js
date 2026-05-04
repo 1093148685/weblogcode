@@ -5,6 +5,7 @@ export function uploadFile(form) {
     return axios.post("/admin/file/upload", form, {
         headers: {
             'Content-Type': 'multipart/form-data'
-        }
+        },
+        timeout: 60000
     })
 }

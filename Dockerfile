@@ -27,6 +27,7 @@ RUN cp Weblog.Core.Api.dll BlueIsland.Api.dll \
     && cp Weblog.Core.Api.deps.json BlueIsland.Api.deps.json \
     && cp Weblog.Core.Api.runtimeconfig.json BlueIsland.Api.runtimeconfig.json
 
-ENV ASPNETCORE_URLS=http://+:5000
+ENV ASPNETCORE_ENVIRONMENT=Production \
+    ASPNETCORE_URLS=http://+:5000
 EXPOSE 5000
 ENTRYPOINT ["dotnet", "Weblog.Core.Api.dll"]

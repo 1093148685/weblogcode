@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Weblog.Core.Api.Services;
 using Weblog.Core.Common.Result;
+using Weblog.Core.Service.Interfaces;
 
 namespace Weblog.Core.Api.Controllers.Portal;
 
@@ -8,62 +9,91 @@ namespace Weblog.Core.Api.Controllers.Portal;
 [Route("api/comment/file")]
 public class FilePortalController : ControllerBase
 {
-    private const long MaxImageSize = 5 * 1024 * 1024;
-    private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
+    private const int DefaultImageMaxSizeMb = 5;
+    private const int HardImageMaxSizeMb = 20;
+    private const long HardImageMaxSizeBytes = (long)HardImageMaxSizeMb * 1024 * 1024;
+
+    private static readonly HashSet<string> AllowedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"
     };
 
-    private readonly MinIOService _minIOService;
+    private readonly IBlogSettingsService _blogSettingsService;
     private readonly ILogger<FilePortalController> _logger;
+    private readonly MinIOService _minIOService;
 
-    public FilePortalController(MinIOService minIOService, ILogger<FilePortalController> logger)
+    public FilePortalController(
+        IBlogSettingsService blogSettingsService,
+        ILogger<FilePortalController> logger,
+        MinIOService minIOService)
     {
-        _minIOService = minIOService;
+        _blogSettingsService = blogSettingsService;
         _logger = logger;
+        _minIOService = minIOService;
     }
 
     [HttpPost("upload")]
-    [RequestSizeLimit(MaxImageSize + 1024 * 1024)]
+    [RequestSizeLimit(HardImageMaxSizeBytes + 1024 * 1024)]
     public async Task<Result<string>> Upload([FromForm] FileUploadRequest request)
     {
         if (request.File == null || request.File.Length == 0)
         {
-            return Result<string>.Fail("请选择文件");
+            return Result<string>.Fail("璇烽€夋嫨鏂囦欢");
         }
 
-        if (request.File.Length > MaxImageSize)
+        var maxSizeMb = await GetImageMaxSizeMbAsync();
+        var maxSizeBytes = (long)maxSizeMb * 1024 * 1024;
+
+        if (request.File.Length > maxSizeBytes)
         {
-            return Result<string>.Fail("图片大小不能超过 5MB");
+            return Result<string>.Fail($"鍥剧墖涓嶈兘瓒呰繃 {maxSizeMb}MB锛岃鍘嬬缉鍚庡啀涓婁紶");
         }
 
         var extension = Path.GetExtension(request.File.FileName);
-        if (string.IsNullOrWhiteSpace(extension) || !AllowedExtensions.Contains(extension))
+        if (string.IsNullOrWhiteSpace(extension) || !AllowedImageExtensions.Contains(extension))
         {
-            return Result<string>.Fail("只允许上传图片文件");
+            return Result<string>.Fail("鍙厑璁镐笂浼犲浘鐗囨枃浠?");
         }
 
-        var contentType = request.File.ContentType ?? string.Empty;
-        if (!contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrWhiteSpace(request.File.ContentType) &&
+            !request.File.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
         {
-            return Result<string>.Fail("文件类型不是有效图片");
+            return Result<string>.Fail("鍙敮鎸佷笂浼犲浘鐗囨枃浠?");
         }
 
         try
         {
-            await using var ms = new MemoryStream();
+            using var ms = new MemoryStream();
             await request.File.CopyToAsync(ms);
-            var url = await _minIOService.UploadFileAsync("comments", request.File.FileName, ms.ToArray());
+            ms.Position = 0;
+
+            var url = await _minIOService.UploadFileAsync("comments", request.File.FileName, ms);
             return Result<string>.Ok(url);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Comment image upload failed. FileName={FileName}, Length={Length}, ContentType={ContentType}",
-                request.File.FileName,
-                request.File.Length,
-                request.File.ContentType);
+            _logger.LogError(ex, "璇勮鍥剧墖涓婁紶澶辫触: {FileName}, Size={Size}", request.File.FileName, request.File.Length);
+            return Result<string>.Fail($"涓婁紶澶辫触: {ex.Message}");
+        }
+    }
 
-            return Result<string>.Fail("图片上传失败，请稍后再试");
+    private async Task<int> GetImageMaxSizeMbAsync()
+    {
+        try
+        {
+            var settings = await _blogSettingsService.GetAsync();
+            var configuredSize = settings?.CommentImageMaxSizeMb ?? DefaultImageMaxSizeMb;
+            if (configuredSize <= 0)
+            {
+                return DefaultImageMaxSizeMb;
+            }
+
+            return Math.Clamp(configuredSize, 1, HardImageMaxSizeMb);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "璇诲彇鍥剧墖涓婁紶澶у皬璁剧疆澶辫触锛屼娇鐢ㄩ粯璁ら檺鍒?");
+            return DefaultImageMaxSizeMb;
         }
     }
 }

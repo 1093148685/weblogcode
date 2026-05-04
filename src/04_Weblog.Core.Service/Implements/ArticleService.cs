@@ -13,10 +13,12 @@ public class ArticleService : IArticleService
     private const int DraftStatus = 0;
 
     private readonly DbContext _dbContext;
+    private readonly ISubscribeService _subscribeService;
 
-    public ArticleService(DbContext dbContext)
+    public ArticleService(DbContext dbContext, ISubscribeService subscribeService)
     {
         _dbContext = dbContext;
+        _subscribeService = subscribeService;
     }
 
     public async Task<ArticleDto> CreateAsync(CreateArticleRequest request)
@@ -47,7 +49,9 @@ public class ArticleService : IArticleService
             await SaveTagsAsync(id, GetRequestTagIds(request.TagIds, request.Tags));
 
             _dbContext.Db.Ado.CommitTran();
-            return await GetByIdAsync(id);
+            var result = await GetByIdAsync(id);
+            await NotifyIfPublishedAsync(result);
+            return result;
         }
         catch
         {
@@ -62,12 +66,13 @@ public class ArticleService : IArticleService
 
         var article = await GetEditableArticleAsync(request.Id);
         var now = DateTime.Now;
+        var oldStatus = article.Status;
 
         article.Title = request.Title.Trim();
         article.Summary = request.Summary;
         article.Cover = request.Cover;
 
-        // Weight 表示置顶权重。编辑文章时前端可能不传该值，所以只有非 0 才覆盖。
+        // Weight 表示置顶权重。编辑文章时前端可能不传该值，所以只在非 0 时覆盖。
         if (request.Weight != 0)
         {
             article.Weight = request.Weight;
@@ -86,7 +91,12 @@ public class ArticleService : IArticleService
             await ReplaceTagsAsync(article.Id, GetRequestTagIds(request.TagIds, request.Tags));
 
             _dbContext.Db.Ado.CommitTran();
-            return await GetByIdAsync(article.Id);
+            var result = await GetByIdAsync(article.Id);
+            if (oldStatus != PublishedStatus && result.Status == PublishedStatus)
+            {
+                await NotifyIfPublishedAsync(result);
+            }
+            return result;
         }
         catch
         {
@@ -211,9 +221,23 @@ public class ArticleService : IArticleService
             return false;
         }
 
+        var oldStatus = article.Status;
         article.Status = NormalizeStatus(status);
         article.UpdateTime = DateTime.Now;
-        return await _dbContext.Db.Updateable(article).ExecuteCommandAsync() > 0;
+        var updated = await _dbContext.Db.Updateable(article).ExecuteCommandAsync() > 0;
+        if (updated && oldStatus != PublishedStatus && article.Status == PublishedStatus)
+        {
+            await NotifyIfPublishedAsync(await GetByIdAsync(id));
+        }
+
+        return updated;
+    }
+
+    private Task NotifyIfPublishedAsync(ArticleDto article)
+    {
+        return article.Status == PublishedStatus
+            ? _subscribeService.NotifyArticlePublishedAsync(article)
+            : Task.CompletedTask;
     }
 
     private async Task<Article> GetEditableArticleAsync(long id)

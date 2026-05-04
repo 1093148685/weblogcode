@@ -180,10 +180,71 @@ html.dark {
 
 html {
   font-size: 16px;
+  width: 100%;
+  min-width: 100%;
+  overflow-x: hidden;
   overflow-y: scroll;
+  scrollbar-gutter: stable;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
+  background-color: var(--bg-base);
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  min-height: 100%;
+  background-color: var(--bg-base);
+}
+
+body {
+  min-width: 100%;
+  overflow-x: hidden;
+}
+
+#app {
+  min-width: 100%;
+  min-height: 100vh;
+  overflow-x: clip;
+}
+
+html.dark,
+html.dark body,
+html.dark #app {
+  background-color: var(--bg-base);
+}
+
+/*
+  Some scoped dark-mode component selectors can be compiled into broad
+  html.dark rules. Keep the document root physically stable when toggling
+  themes so the page never shifts or exposes a left/top gutter.
+*/
+html,
+html.dark,
+html.dark.dark {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  background: var(--bg-base) !important;
+  background-color: var(--bg-base) !important;
+  overflow-x: hidden !important;
+  overflow-y: scroll !important;
+  scrollbar-gutter: stable !important;
+}
+
+html.dark body,
+html.dark.dark body,
+html.dark #app,
+html.dark.dark #app {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  background: var(--bg-base) !important;
+  background-color: var(--bg-base) !important;
 }
 
 body {

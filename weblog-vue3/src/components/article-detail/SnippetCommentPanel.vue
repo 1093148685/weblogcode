@@ -238,6 +238,8 @@ import { useCommentStore } from '@/stores/comment'
 import ParsedContent from '@/components/ParsedContent.vue'
 import { showMessage } from '@/composables/util'
 import { useEmoji } from '@/composables/useEmoji'
+import { useCommentUploadLimit } from '@/composables/useCommentUploadLimit'
+import { safeUploadFileName } from '@/utils/uploadFileName'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -248,6 +250,13 @@ const props = defineProps({
 const emit = defineEmits(['close', 'submit', 'ask-ai'])
 const commentStore = useCommentStore()
 const { simpleEmojiCategories, loadBilibiliEmoji } = useEmoji()
+const {
+  commentImageMaxSizeBytes,
+  commentImageMaxSizeText,
+  loadCommentUploadLimit,
+  readUploadErrorMessage,
+  uploadTimeoutMs
+} = useCommentUploadLimit()
 
 const activeTab = ref('hot')
 const localLikes = ref({})
@@ -413,6 +422,7 @@ const closeEmojiPicker = (event) => {
 
 onMounted(() => {
   loadBilibiliEmoji()
+  loadCommentUploadLimit()
   document.addEventListener('click', closeEmojiPicker)
 })
 
@@ -471,8 +481,8 @@ const handleImageChange = async (event) => {
       showMessage('最多只能上传3张图片', 'warning')
       break
     }
-    if (file.size > 5 * 1024 * 1024) {
-      showMessage('图片大小不能超过 5MB', 'warning')
+    if (file.size > commentImageMaxSizeBytes.value) {
+      showMessage(`图片大小不能超过 ${commentImageMaxSizeText.value}，请压缩后再上传`, 'warning')
       continue
     }
     if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'].includes(file.type)) {
@@ -482,17 +492,17 @@ const handleImageChange = async (event) => {
 
     try {
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('file', file, safeUploadFileName(file))
       const res = await axios.post('/comment/file/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        timeout: uploadTimeoutMs
       })
       if (res.success && res.data) {
         selectedMedia.value.push({ type: 'image', url: res.data })
       } else {
         showMessage(res.message || '图片上传失败', 'error')
       }
-    } catch {
-      showMessage('图片上传失败', 'error')
+    } catch (e) {
+      showMessage(readUploadErrorMessage(e), 'error')
     }
   }
 

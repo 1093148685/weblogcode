@@ -38,9 +38,17 @@ public class LinkPreviewService : ILinkPreviewService
             return null;
         }
 
-        var cached = await _dbContext.LinkPreviewCacheDb
-            .Where(x => x.Url == url)
-            .FirstAsync();
+        LinkPreviewCache? cached = null;
+        try
+        {
+            cached = await _dbContext.LinkPreviewCacheDb
+                .Where(x => x.Url == url)
+                .FirstAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "读取链接预览缓存失败，将直接抓取链接: {Url}", url);
+        }
 
         if (cached != null)
         {
@@ -75,12 +83,11 @@ public class LinkPreviewService : ILinkPreviewService
             var uri = new Uri(url);
             var domain = uri.Host;
 
-            _httpClient.Timeout = TimeSpan.FromSeconds(10);
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-            _httpClient.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
-            _httpClient.DefaultRequestHeaders.Add("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8");
-
-            var response = await _httpClient.GetStringAsync(url);
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            AddBrowserHeaders(request);
+            using var responseMessage = await _httpClient.SendAsync(request);
+            responseMessage.EnsureSuccessStatusCode();
+            var response = await responseMessage.Content.ReadAsStringAsync();
 
             var title = ExtractMetaContent(response, "og:title") 
                         ?? ExtractMetaContent(response, "title")
@@ -114,7 +121,14 @@ public class LinkPreviewService : ILinkPreviewService
                 UpdateTime = DateTime.Now
             };
 
-            await _dbContext.Db.Insertable(cache).ExecuteCommandAsync();
+            try
+            {
+                await _dbContext.Db.Insertable(cache).ExecuteCommandAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "写入链接预览缓存失败，不影响本次预览: {Url}", url);
+            }
 
             _logger.LogInformation("获取链接预览成功并已缓存: {Url}, Title: {Title}", url, title);
 
@@ -255,8 +269,9 @@ public class LinkPreviewService : ILinkPreviewService
         {
             try
             {
-                var request = new HttpRequestMessage(HttpMethod.Head, faviconUrl);
-                var response = await _httpClient.SendAsync(request);
+                using var request = new HttpRequestMessage(HttpMethod.Head, faviconUrl);
+                AddBrowserHeaders(request);
+                using var response = await _httpClient.SendAsync(request);
                 if (response.IsSuccessStatusCode)
                 {
                     return faviconUrl;
@@ -269,5 +284,16 @@ public class LinkPreviewService : ILinkPreviewService
         }
 
         return $"https://{domain}/favicon.ico";
+    }
+
+    private static void AddBrowserHeaders(HttpRequestMessage request)
+    {
+        request.Headers.TryAddWithoutValidation(
+            "User-Agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+        request.Headers.TryAddWithoutValidation(
+            "Accept",
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+        request.Headers.TryAddWithoutValidation("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8");
     }
 }

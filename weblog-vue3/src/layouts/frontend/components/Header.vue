@@ -1,5 +1,6 @@
 <template>
-    <header class="sticky top-0 z-50 bg-[var(--bg-card)]/95 backdrop-blur-md border-b border-[var(--border-base)] shadow-nav transition-all duration-300">
+  <div>
+    <header :class="['top-0 z-50 bg-[var(--bg-card)]/95 backdrop-blur-md border-b border-[var(--border-base)] shadow-nav transition-all duration-300', fixed ? 'fixed-header' : 'sticky']">
         <nav class="max-w-content mx-auto px-6">
             <div class="flex items-center justify-between h-header">
 
@@ -127,7 +128,7 @@
             <Transition name="slide-down">
                 <div v-if="mobileMenuOpen" class="md:hidden border-t border-[var(--border-light)] py-3">
                     <!-- 移动端搜索 -->
-                    <button @click="openSearch; mobileMenuOpen = false"
+                    <button @click="openSearch(); mobileMenuOpen = false"
                         class="w-full flex items-center gap-2 px-4 py-2.5 mb-2 text-sm text-[var(--text-muted)] bg-[var(--bg-hover)] rounded-btn transition-all duration-200">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 20 20">
                             <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -152,6 +153,7 @@
             </Transition>
         </nav>
     </header>
+    <div v-if="fixed" class="header-placeholder"></div>
 
     <!-- 退出登录确认弹窗 -->
     <Transition name="modal-fade">
@@ -319,6 +321,7 @@
             </div>
         </div>
     </Transition>
+  </div>
 </template>
 
 <script setup>
@@ -331,6 +334,10 @@ import { getArticleSearchPageList } from '@/api/frontend/search'
 
 const router = useRouter()
 const route = useRoute()
+
+const props = defineProps({
+  fixed: { type: Boolean, default: false }
+})
 
 // ── Store ────────────────────────────────────────────────────────────
 const blogSettingsStore = useBlogSettingsStore()
@@ -518,6 +525,18 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.fixed-header {
+  position: fixed;
+  left: 0;
+  right: 0;
+  width: 100%;
+}
+
+.header-placeholder {
+  height: 72px;
+  flex-shrink: 0;
+}
+
 /* 网站名称风格文字 */
 .site-name {
     font-size: 1.15rem;

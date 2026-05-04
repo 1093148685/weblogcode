@@ -58,6 +58,7 @@ public class AdminStickerController : ControllerBase
 
     [HttpPost("packs/{id}/upload")]
     [RequireRole("admin")]
+    [RequestSizeLimit(100 * 1024 * 1024)]
     public async Task<Result<List<StickerDto>>> UploadZip(long id, IFormFile file)
     {
         if (file == null || file.Length == 0)

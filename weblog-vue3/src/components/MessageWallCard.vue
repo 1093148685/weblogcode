@@ -259,6 +259,8 @@ import GiphyPicker from './GiphyPicker.vue'
 import { sendFlower, cancelFlower } from '@/api/frontend/message-wall'
 import { showMessage } from '@/composables/util'
 import { useEmoji } from '@/composables/useEmoji'
+import { useCommentUploadLimit } from '@/composables/useCommentUploadLimit'
+import { safeUploadFileName } from '@/utils/uploadFileName'
 import { useCommentStore } from '@/stores/comment'
 import axios from '@/axios'
 
@@ -279,6 +281,13 @@ const props = defineProps({
 const emit = defineEmits(['reply-submitted', 'flower-changed'])
 
 const { emojiCategories, simpleEmojiCategories, loadBilibiliEmoji, renderEmoticonContent, renderEmoticonAndMarkdown, renderKey } = useEmoji()
+const {
+    commentImageMaxSizeBytes,
+    commentImageMaxSizeText,
+    loadCommentUploadLimit,
+    readUploadErrorMessage,
+    uploadTimeoutMs
+} = useCommentUploadLimit()
 
 const MAX_CONTENT_LENGTH = 500
 const MAX_LINK_PREVIEWS = 2
@@ -430,8 +439,8 @@ const handleReplyImageChange = async (event) => {
             break
         }
         
-        if (file.size > 5 * 1024 * 1024) {
-            showMessage('图片大小不能超过 5MB', 'warning')
+        if (file.size > commentImageMaxSizeBytes.value) {
+            showMessage(`图片大小不能超过 ${commentImageMaxSizeText.value}，请压缩后再上传`, 'warning')
             continue
         }
         
@@ -443,12 +452,10 @@ const handleReplyImageChange = async (event) => {
         
         try {
             const formData = new FormData()
-            formData.append('file', file)
+            formData.append('file', file, safeUploadFileName(file))
             
             const res = await axios.post('/comment/file/upload', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
+                timeout: uploadTimeoutMs
             })
             
             if (res.success && res.data) {
@@ -457,7 +464,7 @@ const handleReplyImageChange = async (event) => {
                 showMessage(res.message || '图片上传失败', 'error')
             }
         } catch (e) {
-            showMessage('图片上传失败', 'error')
+            showMessage(readUploadErrorMessage(e), 'error')
         }
     }
     
@@ -556,6 +563,7 @@ const displayContent = computed(() => {
 
 onMounted(() => {
     loadBilibiliEmoji()
+    loadCommentUploadLimit()
     initLinkPreviews()
 })
 

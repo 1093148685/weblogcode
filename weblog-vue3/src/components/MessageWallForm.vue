@@ -272,6 +272,8 @@ import { publishMessageWallComment } from '@/api/frontend/message-wall'
 import { getUserInfoByQQ } from '@/api/frontend/comment'
 import { showMessage } from '@/composables/util'
 import { useEmoji } from '@/composables/useEmoji'
+import { useCommentUploadLimit } from '@/composables/useCommentUploadLimit'
+import { safeUploadFileName } from '@/utils/uploadFileName'
 import axios from '@/axios'
 import { VueDraggable } from 'vue-draggable-plus'
 import CommentAdminLogin from './CommentAdminLogin.vue'
@@ -363,6 +365,13 @@ const getExpirationDate = () => {
 const contentLength = computed(() => commentForm.content.length)
 
 const { simpleEmojiCategories, loadBilibiliEmoji } = useEmoji()
+const {
+    commentImageMaxSizeBytes,
+    commentImageMaxSizeText,
+    loadCommentUploadLimit,
+    readUploadErrorMessage,
+    uploadTimeoutMs
+} = useCommentUploadLimit()
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const guestNames = ['路过的风', '山海访客', '星河旅人', '云边来客', '代码旅人', '清晨来信', '晚风同学', '蓝色便签']
@@ -387,6 +396,7 @@ const closeEmojiPicker = (e) => {
 onMounted(() => {
     document.addEventListener('click', closeEmojiPicker)
     loadBilibiliEmoji()
+    loadCommentUploadLimit()
     identityCollapsed.value = collapsible.value && hasIdentityInfo.value
 })
 
@@ -563,8 +573,8 @@ const handleImageChange = async (event) => {
             break
         }
         
-        if (file.size > 5 * 1024 * 1024) {
-            showMessage('图片大小不能超过 5MB', 'warning')
+        if (file.size > commentImageMaxSizeBytes.value) {
+            showMessage(`图片大小不能超过 ${commentImageMaxSizeText.value}，请压缩后再上传`, 'warning')
             continue
         }
         
@@ -576,12 +586,10 @@ const handleImageChange = async (event) => {
         
         try {
             const formData = new FormData()
-            formData.append('file', file)
+            formData.append('file', file, safeUploadFileName(file))
             
             const res = await axios.post('/comment/file/upload', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
+                timeout: uploadTimeoutMs
             })
             
             if (res.success && res.data) {
@@ -590,7 +598,7 @@ const handleImageChange = async (event) => {
                 showMessage(res.message || '图片上传失败', 'error')
             }
         } catch (e) {
-            showMessage('图片上传失败', 'error')
+            showMessage(readUploadErrorMessage(e), 'error')
         }
     }
     

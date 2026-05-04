@@ -47,6 +47,45 @@ const showMarkdown = ref(false)
 const isTyping = ref(false)
 let typingTimer = null
 
+const SUMMARY_MIN_LENGTH = 30
+const SUMMARY_MAX_LENGTH = 230
+
+const stripSummaryMarkdown = (text = '') => {
+  return String(text)
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/!\[[^\]]*]\([^)]+\)/g, '')
+    .replace(/\[([^\]]+)]\([^)]+\)/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/^\s*[-*+]\s+/gm, '')
+    .replace(/^\s*\d+\.\s+/gm, '')
+    .replace(/[*_~>#]/g, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+const normalizeSummaryText = (text = '') => {
+  const plain = stripSummaryMarkdown(text)
+  if (!plain) return ''
+  if (plain.length <= SUMMARY_MAX_LENGTH) return plain
+
+  const sliced = plain.slice(0, SUMMARY_MAX_LENGTH - 1)
+  const punctuationIndex = Math.max(
+    sliced.lastIndexOf('。'),
+    sliced.lastIndexOf('！'),
+    sliced.lastIndexOf('？'),
+    sliced.lastIndexOf(';'),
+    sliced.lastIndexOf('；')
+  )
+
+  if (punctuationIndex >= SUMMARY_MIN_LENGTH) {
+    return sliced.slice(0, punctuationIndex + 1)
+  }
+
+  return `${sliced.trim()}…`
+}
+
 const renderedContent = computed(() => {
   const content = displayContent.value || ''
   return content ? marked(content) : ''
@@ -63,8 +102,9 @@ function resetState() {
 function typeContent(text, animated = true) {
   return new Promise(resolve => {
     clearInterval(typingTimer)
+    const normalizedText = normalizeSummaryText(text)
     if (!animated || !text) {
-      displayContent.value = text || ''
+      displayContent.value = normalizedText
       isTyping.value = false
       resolve()
       return
@@ -75,10 +115,10 @@ function typeContent(text, animated = true) {
     isTyping.value = true
     let index = 0
     const step = () => {
-      const chunkSize = text.length > 240 ? 4 : 2
-      index = Math.min(text.length, index + chunkSize)
-      displayContent.value = text.slice(0, index)
-      if (index >= text.length) {
+      const chunkSize = normalizedText.length > 160 ? 4 : 2
+      index = Math.min(normalizedText.length, index + chunkSize)
+      displayContent.value = normalizedText.slice(0, index)
+      if (index >= normalizedText.length) {
         clearInterval(typingTimer)
         isTyping.value = false
         resolve()
@@ -162,16 +202,18 @@ defineExpose({
   position: relative;
   overflow: hidden;
   margin-bottom: 28px;
-  padding: 16px 18px;
-  border: 1px solid rgba(59, 130, 246, 0.18);
+  padding: 18px 20px;
+  border: 1px solid #e8ded0;
   border-radius: 16px;
-  background: linear-gradient(135deg, rgba(248, 250, 252, 0.98), rgba(239, 246, 255, 0.88));
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  background: linear-gradient(135deg, rgba(255, 253, 249, 0.98), rgba(247, 240, 230, 0.78));
+  box-shadow: 0 12px 34px rgba(73, 52, 24, 0.06);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease;
 }
 
 .dark .ai-summary-card {
-  border-color: #444c56;
-  background: #2d333b;
+  border-color: #3a332a;
+  background: linear-gradient(135deg, #1b2027, #22252b);
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.2);
 }
 
 .ai-summary-card.loading {
@@ -187,35 +229,42 @@ defineExpose({
 
 .ai-summary-card__icon {
   display: flex;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   align-items: center;
   justify-content: center;
+  border: 1px solid rgba(200, 163, 109, 0.32);
   border-radius: 12px;
-  color: #2563eb;
-  background: rgba(59, 130, 246, 0.12);
+  color: #8f6428;
+  background: rgba(247, 240, 230, 0.92);
 }
 
 .ai-summary-card__title {
-  color: #0f172a;
+  color: #201b17;
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 900;
+}
+
+.ai-summary-card__desc {
+  margin-top: 2px;
+  color: #6b6258;
+  font-size: 12px;
+}
+
+.dark .ai-summary-card__icon {
+  border-color: rgba(214, 181, 116, 0.28);
+  color: #d6b574;
+  background: rgba(214, 181, 116, 0.12);
 }
 
 .dark .ai-summary-card__title {
-  color: #f0f6fc;
+  color: #f2eadf;
 }
 
 .dark .ai-summary-card__desc,
 .dark .summary-empty,
 .dark .markdown-body {
-  color: #768390;
-}
-
-.ai-summary-card__desc {
-  margin-top: 2px;
-  color: #64748b;
-  font-size: 12px;
+  color: #afa79c;
 }
 
 .summary-skeleton {
@@ -227,13 +276,13 @@ defineExpose({
 .loading-shimmer {
   height: 12px;
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(147, 197, 253, 0.24) 25%, rgba(255, 255, 255, 0.72) 50%, rgba(147, 197, 253, 0.24) 75%);
+  background: linear-gradient(90deg, rgba(200, 163, 109, 0.18) 25%, rgba(255, 253, 249, 0.82) 50%, rgba(200, 163, 109, 0.18) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
 
 .markdown-body {
-  color: #334155;
+  color: #2a2a2a;
   font-size: 14px;
   line-height: 1.8;
 }
@@ -243,7 +292,7 @@ defineExpose({
 }
 
 .summary-empty {
-  color: #64748b;
+  color: #6b6258;
   font-size: 14px;
 }
 
@@ -255,13 +304,13 @@ defineExpose({
   margin-left: 2px;
   vertical-align: -2px;
   border-radius: 2px;
-  background: #2563eb;
+  background: #c8a36d;
   animation: caretBlink 1s steps(2, start) infinite;
 }
 
 @keyframes summaryPulse {
-  0%, 100% { border-color: rgba(59, 130, 246, 0.18); }
-  50% { border-color: rgba(14, 165, 233, 0.48); }
+  0%, 100% { border-color: rgba(200, 163, 109, 0.24); }
+  50% { border-color: rgba(200, 163, 109, 0.58); }
 }
 
 @keyframes shimmer {

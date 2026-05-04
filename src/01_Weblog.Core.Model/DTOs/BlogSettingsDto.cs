@@ -17,6 +17,7 @@ public class BlogSettingsDto
     public string SensitiveWords { get; set; } = string.Empty;
     public bool IsCommentExamineOpen { get; set; }
     public int StickerZipMaxCount { get; set; } = 100;
+    public int CommentImageMaxSizeMb { get; set; } = 5;
     public bool IsLinkPreviewOpen { get; set; } = true;
     public string LinkPreviewWhitelist { get; set; } = string.Empty;
     public bool IsEmailNotificationOpen { get; set; } = false;
@@ -50,6 +51,7 @@ public class UpdateBlogSettingsRequest
     public string SensitiveWords { get; set; } = string.Empty;
     public bool IsCommentExamineOpen { get; set; }
     public int StickerZipMaxCount { get; set; } = 100;
+    public int CommentImageMaxSizeMb { get; set; } = 5;
     public bool IsLinkPreviewOpen { get; set; } = true;
     public string LinkPreviewWhitelist { get; set; } = string.Empty;
     public bool IsEmailNotificationOpen { get; set; } = false;

@@ -17,9 +17,13 @@ public class StickerService : IStickerService
     private readonly IBlogSettingsService _blogSettingsService;
     private readonly ILogger<StickerService> _logger;
     private static readonly string[] SupportedExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".webm", ".mp4" };
-    private const long MaxFileSize = 10 * 1024 * 1024; // 10MB
+    private const long MaxFileSize = 10 * 1024 * 1024;
 
-    public StickerService(DbContext dbContext, MinIOService minIOService, IBlogSettingsService blogSettingsService, ILogger<StickerService> logger)
+    public StickerService(
+        DbContext dbContext,
+        MinIOService minIOService,
+        IBlogSettingsService blogSettingsService,
+        ILogger<StickerService> logger)
     {
         _dbContext = dbContext;
         _minIOService = minIOService;
@@ -47,6 +51,7 @@ public class StickerService : IStickerService
             dto.Categories = await GetCategoriesByPackIdAsync(pack.Id);
             result.Add(dto);
         }
+
         return result;
     }
 
@@ -63,13 +68,17 @@ public class StickerService : IStickerService
             dto.Categories = await GetCategoriesByPackIdAsync(pack.Id);
             result.Add(dto);
         }
+
         return result;
     }
 
     public async Task<StickerPackDto?> GetPackByIdAsync(long id)
     {
         var pack = await _dbContext.StickerPackDb.Where(x => x.Id == id).FirstAsync();
-        if (pack == null) return null;
+        if (pack == null)
+        {
+            return null;
+        }
 
         var dto = pack.Adapt<StickerPackDto>();
         dto.Categories = await GetCategoriesByPackIdAsync(id);
@@ -82,8 +91,8 @@ public class StickerService : IStickerService
             .Where(x => x.PackId == packId)
             .OrderBy(x => x.Category)
             .ToListAsync();
-        
-        _logger.LogInformation("获取贴纸分类, PackId={PackId}, 贴纸数量={Count}", packId, stickers.Count);
+
+        _logger.LogInformation("Get sticker categories, PackId={PackId}, Count={Count}", packId, stickers.Count);
 
         return stickers
             .GroupBy(x => x.Category ?? "默认")
@@ -133,98 +142,96 @@ public class StickerService : IStickerService
         {
             await _dbContext.Db.Deleteable<Sticker>().Where(x => x.PackId == id).ExecuteCommandAsync();
         }
+
         return await _dbContext.Db.Deleteable<StickerPack>().Where(x => x.Id == id).ExecuteCommandAsync() > 0;
     }
 
     public async Task<List<StickerDto>> UploadStickersFromZipAsync(long packId, Stream zipStream, string fileName)
     {
-        _logger.LogInformation("开始上传贴纸包: PackId={PackId}, FileName={FileName}", packId, fileName);
-        
+        _logger.LogInformation("Start sticker pack upload. PackId={PackId}, FileName={FileName}", packId, fileName);
+
         var pack = await _dbContext.StickerPackDb.Where(x => x.Id == packId).FirstAsync();
         if (pack == null)
+        {
             throw new Exception("贴纸包不存在");
+        }
 
         var maxCount = await GetMaxStickersPerPackAsync();
-        
         var uploadedStickers = new List<StickerDto>();
 
         using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
-        _logger.LogInformation("ZIP文件条目数: {EntryCount}", archive.Entries.Count);
-        
+        _logger.LogInformation("ZIP entry count: {EntryCount}", archive.Entries.Count);
+
         var imageEntries = archive.Entries
             .Where(e => !string.IsNullOrEmpty(e.Name) && SupportedExtensions.Contains(Path.GetExtension(e.Name).ToLower()))
             .ToList();
-        
-        _logger.LogInformation("符合条件的图片数量: {ImageCount}", imageEntries.Count);
 
-        // 第一遍：计算哈希，检查重复，确定需要上传的新文件
+        _logger.LogInformation("Image entry count: {ImageCount}", imageEntries.Count);
+
         var filesToUpload = new List<(ZipArchiveEntry Entry, string Category, string Hash)>();
-        
+
         foreach (var entry in imageEntries)
         {
             try
             {
                 var category = GetCategoryFromPath(entry.FullName);
-                using var stream = entry.Open();
+                using var entryStream = entry.Open();
                 using var ms = new MemoryStream();
-                await stream.CopyToAsync(ms);
-                var fileData = ms.ToArray();
-                
-                if (fileData.Length > MaxFileSize)
+                await entryStream.CopyToAsync(ms);
+
+                var fileLength = ms.Length;
+                if (fileLength > MaxFileSize)
                 {
-                    _logger.LogWarning("贴纸文件过大: {EntryName}, 大小: {Size}, 限制: {MaxSize}", entry.Name, fileData.Length, MaxFileSize);
+                    _logger.LogWarning("Sticker file too large: {EntryName}, Size={Size}, Limit={Limit}", entry.Name, fileLength, MaxFileSize);
                     continue;
                 }
-                
-                var hash = ComputeSha256Hash(fileData);
-                
-                // 检查是否已存在相同哈希的贴纸
+
+                var hash = ComputeSha256Hash(ms.GetBuffer().AsSpan(0, (int)fileLength));
+
                 var existingSticker = await _dbContext.StickerDb
                     .Where(x => x.PackId == packId && x.ContentHash == hash)
                     .FirstAsync();
-                
+
                 if (existingSticker != null)
                 {
-                    _logger.LogInformation("贴纸已存在，跳过: {EntryName}, Hash: {Hash}, ExistingId: {Id}", entry.Name, hash, existingSticker.Id);
+                    _logger.LogInformation("Sticker already exists, skipping: {EntryName}, Hash={Hash}, ExistingId={Id}", entry.Name, hash, existingSticker.Id);
                     uploadedStickers.Add(existingSticker.Adapt<StickerDto>());
                     continue;
                 }
-                
+
                 filesToUpload.Add((entry, category, hash));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "处理贴纸失败 {Name}", entry.Name);
+                _logger.LogError(ex, "Failed to process sticker {Name}", entry.Name);
             }
         }
-        
-        // 检查上传后是否超过限制
+
         var currentCount = await _dbContext.StickerDb.Where(x => x.PackId == packId).CountAsync();
         var newStickersCount = filesToUpload.Count;
-        
+
         if (currentCount + newStickersCount > maxCount)
         {
             throw new Exception($"上传后贴纸数量将超过限制({maxCount}张，当前{currentCount}张，新增{newStickersCount}张)");
         }
-        
-        // 第二遍：上传新文件
+
         foreach (var (entry, category, hash) in filesToUpload)
         {
             try
             {
-                using var stream = entry.Open();
+                using var entryStream = entry.Open();
                 using var ms = new MemoryStream();
-                await stream.CopyToAsync(ms);
-                var fileData = ms.ToArray();
-                
-                _logger.LogInformation("准备上传贴纸: {EntryName}, 大小: {Size}, 分类: {Category}, Hash: {Hash}", entry.Name, fileData.Length, category, hash);
+                await entryStream.CopyToAsync(ms);
+                ms.Position = 0;
+
+                _logger.LogInformation("Preparing sticker upload: {EntryName}, Size={Size}, Category={Category}, Hash={Hash}", entry.Name, ms.Length, category, hash);
 
                 var fileNameOnMinio = $"{packId}/{Guid.NewGuid()}{Path.GetExtension(entry.Name)}";
-                var imageUrl = await UploadToMinIOAsync(fileData, fileNameOnMinio);
-                
-                _logger.LogInformation("贴纸上传统功: {EntryName}, URL: {Url}", entry.Name, imageUrl);
+                var imageUrl = await UploadToMinIOAsync(ms, fileNameOnMinio);
 
-                var isAnimated = Path.GetExtension(entry.Name).ToLower() == ".gif" || Path.GetExtension(entry.Name).ToLower() == ".webm" || Path.GetExtension(entry.Name).ToLower() == ".mp4";
+                _logger.LogInformation("Sticker upload completed: {EntryName}, Url={Url}", entry.Name, imageUrl);
+
+                var isAnimated = Path.GetExtension(entry.Name).ToLower() is ".gif" or ".webm" or ".mp4";
 
                 var sticker = new Sticker
                 {
@@ -238,27 +245,29 @@ public class StickerService : IStickerService
 
                 var id = await _dbContext.Db.Insertable(sticker).ExecuteReturnIdentityAsync();
                 sticker.Id = id;
-                
-                _logger.LogInformation("贴纸已保存到数据库: Id={Id}, PackId={PackId}, Hash: {Hash}", id, packId, hash);
+
+                _logger.LogInformation("Sticker saved. Id={Id}, PackId={PackId}, Hash={Hash}", id, packId, hash);
 
                 uploadedStickers.Add(sticker.Adapt<StickerDto>());
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "上传贴纸失败 {Name}", entry.Name);
+                _logger.LogError(ex, "Failed to upload sticker {Name}", entry.Name);
             }
         }
-        
-        _logger.LogInformation("贴纸上传统计: 共{ImageCount}张, 新增{NewCount}张, 跳过重复{SkipCount}张", 
-            imageEntries.Count, uploadedStickers.Count, imageEntries.Count - uploadedStickers.Count);
+
+        _logger.LogInformation(
+            "Sticker upload summary: Total={Total}, Uploaded={Uploaded}, Skipped={Skipped}",
+            imageEntries.Count,
+            uploadedStickers.Count,
+            imageEntries.Count - uploadedStickers.Count);
 
         return uploadedStickers;
     }
-    
-    private static string ComputeSha256Hash(byte[] data)
+
+    private static string ComputeSha256Hash(ReadOnlySpan<byte> data)
     {
-        using var sha256 = SHA256.Create();
-        var hashBytes = sha256.ComputeHash(data);
+        var hashBytes = SHA256.HashData(data);
         return Convert.ToHexString(hashBytes).ToLowerInvariant();
     }
 
@@ -269,25 +278,14 @@ public class StickerService : IStickerService
         {
             return parts[0];
         }
+
         return "默认";
     }
 
-    private async Task<string> UploadToMinIOAsync(byte[] fileData, string objectName)
+    private async Task<string> UploadToMinIOAsync(Stream fileStream, string objectName)
     {
-        var extension = Path.GetExtension(objectName);
-        var contentType = extension.ToLower() switch
-        {
-            ".jpg" or ".jpeg" => "image/jpeg",
-            ".png" => "image/png",
-            ".gif" => "image/gif",
-            ".webp" => "image/webp",
-            ".webm" => "video/webm",
-            ".mp4" => "video/mp4",
-            _ => "application/octet-stream"
-        };
-
         var fileName = objectName.Replace("stickers/", "");
-        return await _minIOService.UploadFileAsync("stickers", fileName, fileData);
+        return await _minIOService.UploadFileAsync("stickers", fileName, fileStream);
     }
 
     public async Task<bool> DeleteStickerAsync(long stickerId)
