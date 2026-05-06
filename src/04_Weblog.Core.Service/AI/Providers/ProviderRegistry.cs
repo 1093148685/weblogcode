@@ -34,6 +34,26 @@ public class ProviderRegistry
         return null;
     }
 
+    public IAiProvider GetForConfig(AiProviderConfig config)
+    {
+        var advanced = AiProviderConfigParser.Parse(config.Config);
+        var protocol = string.IsNullOrWhiteSpace(config.Protocol) ? advanced.Protocol : config.Protocol;
+        var registered = Get(config.Name);
+        var hasExplicitProtocol = !string.IsNullOrWhiteSpace(config.Config)
+            && config.Config.Contains("\"protocol\"", StringComparison.OrdinalIgnoreCase);
+
+        if (!hasExplicitProtocol && registered != null)
+            return registered;
+
+        if (protocol.Equals("openai-compatible", StringComparison.OrdinalIgnoreCase)
+            || protocol.Equals("openai", StringComparison.OrdinalIgnoreCase))
+        {
+            return new OpenAiCompatibleProvider(config);
+        }
+
+        return registered ?? new OpenAiCompatibleProvider(config);
+    }
+
     public IEnumerable<AiProviderMetadata> GetAllMetadata()
     {
         var result = new List<AiProviderMetadata>();

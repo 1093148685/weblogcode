@@ -20,14 +20,14 @@ public class AiProvider
     [SugarColumn(Length = 500)]
     public string ApiUrl { get; set; } = string.Empty;
 
-    [SugarColumn(Length = 500)]
+    [SugarColumn(Length = -1, ColumnDataType = "longtext")]
     public string EncryptedApiKey { get; set; } = string.Empty;
 
     public bool IsEnabled { get; set; } = true;
 
     public int Priority { get; set; } = 100;
 
-    [SugarColumn(Length = 2000, IsNullable = true)]
+    [SugarColumn(Length = -1, ColumnDataType = "longtext", IsNullable = true)]
     public string? Config { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.Now;

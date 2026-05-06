@@ -375,7 +375,7 @@ const cleanContent = computed(() => {
   --article-font-serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", serif;
   --article-font-mono: "JetBrains Mono", "Fira Code", "SFMono-Regular", Consolas, monospace;
   width: 100%;
-  max-width: 980px;
+  max-width: 860px;
   margin: 0 auto;
   color: #2a2a2a;
   font-family: var(--article-font-sans);

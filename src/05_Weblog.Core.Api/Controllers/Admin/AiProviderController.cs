@@ -98,11 +98,11 @@ public class AiProviderController : ControllerBase
     }
 
     [HttpPost("{id:long}/test")]
-    public async Task<Result<bool>> TestConnection(long id)
+    public async Task<Result<bool>> TestConnection(long id, [FromBody] TestAiProviderRequest? request = null)
     {
         try
         {
-            var success = await _providerService.TestConnectionAsync(id);
+            var success = await _providerService.TestConnectionAsync(id, request);
             return Result<bool>.Ok(success);
         }
         catch (Exception ex)
@@ -198,6 +198,21 @@ public class AiProviderController : ControllerBase
 
     // ──────── Provider 健康检查 ────────
 
+    [HttpPost("{id:long}/fetch-models")]
+    public async Task<Result<List<AiModelOptionDto>>> FetchProviderModels(long id, [FromBody] FetchModelsRequest? request = null)
+    {
+        try
+        {
+            var models = await _providerService.FetchProviderModelsAsync(id, request);
+            return Result<List<AiModelOptionDto>>.Ok(models);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch provider models");
+            return Result<List<AiModelOptionDto>>.Fail($"获取模型列表失败: {ex.Message}");
+        }
+    }
+
     [HttpGet("health")]
     public async Task<Result<List<ProviderHealthDto>>> GetHealth(CancellationToken ct)
     {
@@ -206,8 +221,7 @@ public class AiProviderController : ControllerBase
 
         await Parallel.ForEachAsync(configs, new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = ct }, async (cfg, token) =>
         {
-            var provider = _registry.Get(cfg.Name);
-            if (provider == null) return;
+            var provider = _registry.GetForConfig(cfg);
 
             var sw = System.Diagnostics.Stopwatch.StartNew();
             string status = "unknown"; string? error = null;

@@ -562,6 +562,10 @@ const currentModelName = computed(() => {
     return model ? `${model.name} (${model.provider})` : settings.model
 })
 
+const selectedModelProvider = computed(() => {
+    return availableModels.value.find(m => m.id === settings.model)?.provider || ''
+})
+
 // ──────── 快捷操作 ────────
 const quickActions = [
     { label: '仪表盘', prompt: '显示博客仪表盘数据', icon: DataAnalysis },
@@ -673,6 +677,7 @@ const send = async () => {
                 message: text,
                 history,
                 model: settings.model,
+                provider: selectedModelProvider.value,
                 sessionId: sessionId.value,
                 settings: {
                     temperature: settings.temperature,

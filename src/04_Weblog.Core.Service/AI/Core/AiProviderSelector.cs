@@ -1,6 +1,7 @@
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Weblog.Core.Model.Entities;
 using Weblog.Core.Service.AI.Core;
 using Weblog.Core.Service.AI.Providers;
 
@@ -30,29 +31,24 @@ public class AiProviderSelector
         {
             _keyPools.Clear();
             _providerConfigs.Clear();
-            _providerConfigs.AddRange(providers);
+            _providerConfigs.AddRange(providers.Select(provider =>
+            {
+                var advanced = AiProviderConfigParser.Parse(provider.Config);
+                provider.Protocol = advanced.Protocol;
+                provider.Prefix = advanced.Prefix;
+                return provider;
+            }));
             
-            foreach (var provider in providers.Where(p => p.IsEnabled))
+            foreach (var provider in _providerConfigs.Where(p => p.IsEnabled))
             {
                 if (!_keyPools.ContainsKey(provider.Name.ToLower()))
                 {
                     _keyPools[provider.Name.ToLower()] = new List<ApiKeyState>();
                 }
                 
-                string? decryptedKey = null;
-                
-                // First try DPAPI decryption
-                try
-                {
-                    decryptedKey = _encryption.Decrypt(provider.EncryptedApiKey);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "DPAPI decryption failed for {Name}", provider.Name);
-                }
-                
-                // If decryption failed, empty, or returned same as input, use legacy key
-                if (string.IsNullOrWhiteSpace(decryptedKey) || decryptedKey == provider.EncryptedApiKey)
+                var decryptedKeys = GetDecryptedKeys(provider);
+
+                if (decryptedKeys.Count == 0)
                 {
                     _logger.LogWarning("Using legacy key for provider {Name}", provider.Name);
                     
@@ -61,14 +57,14 @@ public class AiProviderSelector
                         using var scope = _serviceProvider.CreateScope();
                         var dbContext = scope.ServiceProvider.GetRequiredService<Weblog.Core.Repository.DbContext>();
 
-                        var legacyModel = dbContext.Db.Queryable<Weblog.Core.Model.Entities.AiModel>()
+                        var legacyModel = dbContext.Db.Queryable<AiModel>()
                             .Where(m => m.IsEnabled == true)
                             .ToList()
-                            .FirstOrDefault();
+                            .FirstOrDefault(m => IsLegacyModelForProvider(m, provider));
 
                         if (legacyModel != null && !string.IsNullOrEmpty(legacyModel.ApiKey))
                         {
-                            decryptedKey = legacyModel.ApiKey;
+                            decryptedKeys.Add(legacyModel.ApiKey);
                             _logger.LogInformation("Got legacy key for {Name}, length={Len}", provider.Name, legacyModel.ApiKey.Length);
                         }
                     }
@@ -78,14 +74,15 @@ public class AiProviderSelector
                     }
                 }
                 
-                if (string.IsNullOrWhiteSpace(decryptedKey))
+                if (decryptedKeys.Count == 0)
                 {
                     _logger.LogWarning("Provider {Name} has no valid key, SKIPPING", provider.Name);
                     continue;
                 }
-                
-                var keys = decryptedKey.Split(',', StringSplitOptions.RemoveEmptyEntries);
-                foreach (var key in keys)
+
+                provider.ApiKey = decryptedKeys.FirstOrDefault();
+
+                foreach (var key in decryptedKeys)
                 {
                     // Skip test/fake keys
                     if (key.Trim().ToLower().StartsWith("sk-test") || key.Trim().Length < 20)
@@ -103,7 +100,7 @@ public class AiProviderSelector
                     });
                 }
                 
-                _logger.LogInformation("Provider {Name} initialized with {Count} keys", provider.Name, keys.Length);
+                _logger.LogInformation("Provider {Name} initialized with {Count} keys", provider.Name, decryptedKeys.Count);
             }
         }
     }
@@ -116,10 +113,10 @@ public class AiProviderSelector
 
         _logger.LogInformation("SelectAsync: Found {Count} enabled providers", providers.Count);
         
-        if (preferredProvider != null && providers.Any(p => p.Name.Equals(preferredProvider, StringComparison.OrdinalIgnoreCase)))
+        if (preferredProvider != null && providers.Any(p => MatchesProvider(p, preferredProvider)))
         {
-            providers = providers.Where(p => p.Name.Equals(preferredProvider, StringComparison.OrdinalIgnoreCase))
-                .Concat(providers.Where(p => !p.Name.Equals(preferredProvider, StringComparison.OrdinalIgnoreCase)))
+            providers = providers.Where(p => MatchesProvider(p, preferredProvider))
+                .Concat(providers.Where(p => !MatchesProvider(p, preferredProvider)))
                 .ToList();
         }
 
@@ -127,12 +124,7 @@ public class AiProviderSelector
         {
             _logger.LogInformation("Checking provider {Name}...", config.Name);
             
-            var provider = _registry.Get(config.Name);
-            if (provider == null) 
-            {
-                _logger.LogWarning("Provider {Name} not found in registry", config.Name);
-                continue;
-            }
+            var provider = _registry.GetForConfig(config);
 
             var key = SelectKey(config.Name);
             if (key == null) 
@@ -170,10 +162,16 @@ public class AiProviderSelector
             .OrderBy(p => p.Priority)
             .ToList();
 
+        if (preferredProvider != null && providers.Any(p => MatchesProvider(p, preferredProvider)))
+        {
+            providers = providers.Where(p => MatchesProvider(p, preferredProvider))
+                .Concat(providers.Where(p => !MatchesProvider(p, preferredProvider)))
+                .ToList();
+        }
+
         foreach (var config in providers)
         {
-            var provider = _registry.Get(config.Name);
-            if (provider == null) continue;
+            var provider = _registry.GetForConfig(config);
 
             var key = SelectKey(config.Name);
             if (key == null) continue;
@@ -212,6 +210,81 @@ public class AiProviderSelector
                 .Where(p => p.IsEnabled && (type == AiProviderType.Chat || p.Type == type))
                 .ToList();
         }
+    }
+
+    private List<string> GetDecryptedKeys(AiProviderConfig provider)
+    {
+        var result = new List<string>();
+        var advanced = AiProviderConfigParser.Parse(provider.Config);
+
+        foreach (var keyEntry in advanced.Keys.Where(k => k.IsEnabled && !string.IsNullOrWhiteSpace(k.Value)))
+        {
+            var decrypted = DecryptKeyValue(provider.Name, keyEntry.Value);
+            if (!string.IsNullOrWhiteSpace(decrypted))
+                result.Add(decrypted);
+        }
+
+        if (result.Count > 0)
+            return result.Distinct(StringComparer.Ordinal).ToList();
+
+        var legacyKey = DecryptKeyValue(provider.Name, provider.EncryptedApiKey);
+        if (!string.IsNullOrWhiteSpace(legacyKey))
+        {
+            result.AddRange(legacyKey.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        }
+
+        return result.Where(k => !string.IsNullOrWhiteSpace(k)).Distinct(StringComparer.Ordinal).ToList();
+    }
+
+    private string DecryptKeyValue(string providerName, string encryptedValue)
+    {
+        if (string.IsNullOrWhiteSpace(encryptedValue))
+            return "";
+
+        try
+        {
+            var decrypted = _encryption.Decrypt(encryptedValue);
+            return string.IsNullOrWhiteSpace(decrypted) ? encryptedValue : decrypted;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to decrypt key for provider {Name}", providerName);
+            return encryptedValue;
+        }
+    }
+
+    private static bool MatchesProvider(AiProviderConfig config, string providerHint)
+    {
+        if (string.IsNullOrWhiteSpace(providerHint))
+            return false;
+
+        return config.Name.Equals(providerHint, StringComparison.OrdinalIgnoreCase)
+            || (!string.IsNullOrWhiteSpace(config.Prefix) && config.Prefix.Equals(providerHint, StringComparison.OrdinalIgnoreCase))
+            || config.DisplayName.Equals(providerHint, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static bool IsLegacyModelForProvider(AiModel model, AiProviderConfig provider)
+    {
+        var providerIds = new[]
+            {
+                provider.Name,
+                provider.Prefix,
+                provider.DisplayName
+            }
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => id.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (providerIds.Count == 0)
+            return false;
+
+        var legacyType = model.Type?.Trim();
+        if (!string.IsNullOrWhiteSpace(legacyType) && providerIds.Contains(legacyType))
+            return true;
+
+        var modelRoute = AiProviderConfigParser.ParseModelRoute(model.Model);
+        return !string.IsNullOrWhiteSpace(modelRoute.ProviderHint)
+            && providerIds.Contains(modelRoute.ProviderHint);
     }
 
     private string? SelectKey(string providerName)
@@ -300,7 +373,7 @@ public class AiProviderSelector
         lock (_lock)
         {
             var config = _providerConfigs.FirstOrDefault(p =>
-                p.Name.Equals(providerName, StringComparison.OrdinalIgnoreCase));
+                MatchesProvider(p, providerName));
             return string.IsNullOrWhiteSpace(config?.ApiUrl) ? null : config!.ApiUrl.TrimEnd('/');
         }
     }

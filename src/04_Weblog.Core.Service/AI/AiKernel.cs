@@ -70,17 +70,23 @@ public class AiKernel : IAiKernel
         };
 
         var providers = await dbContext.AiProviderDb.ToListAsync();
-        var configs = providers.Select(p => new AiProviderConfig
+        var configs = providers.Select(p =>
         {
-            Id = p.Id,
-            Name = p.Name,
-            DisplayName = p.DisplayName,
-            Type = Enum.TryParse<AiProviderType>(p.Type, true, out var type) ? type : AiProviderType.Chat,
-            ApiUrl = p.ApiUrl,
-            EncryptedApiKey = p.EncryptedApiKey,
-            IsEnabled = p.IsEnabled,
-            Priority = p.Priority,
-            Config = p.Config
+            var advanced = AiProviderConfigParser.Parse(p.Config);
+            return new AiProviderConfig
+            {
+                Id = p.Id,
+                Name = p.Name,
+                DisplayName = p.DisplayName,
+                Type = Enum.TryParse<AiProviderType>(p.Type, true, out var type) ? type : AiProviderType.Chat,
+                Protocol = advanced.Protocol,
+                Prefix = advanced.Prefix,
+                ApiUrl = p.ApiUrl,
+                EncryptedApiKey = p.EncryptedApiKey,
+                IsEnabled = p.IsEnabled,
+                Priority = p.Priority,
+                Config = p.Config
+            };
         }).ToList();
 
         _selector.InitializeKeyPools(configs);

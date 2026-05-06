@@ -1,9 +1,9 @@
 <template>
     <div class="markdown-container">
         <!-- 思考过程折叠面板 -->
-        <div v-if="thinkContent" class="think-panel mb-3">
+        <div v-if="thinkContent" class="think-panel">
             <div
-                class="think-header flex items-center gap-2 cursor-pointer text-sm text-[var(--text-muted)] hover:text-[var(--text-body)] transition-colors py-1.5 select-none"
+                class="think-header cursor-pointer text-sm text-[var(--text-muted)] hover:text-[var(--text-body)] transition-colors"
                 @click="isThinkExpanded = !isThinkExpanded"
             >
                 <svg
@@ -23,7 +23,7 @@
                 </span>
             </div>
 
-            <div v-show="isThinkExpanded" class="think-content pl-6 pr-4 py-2 text-sm text-[var(--text-muted)] border-l-2 border-[var(--border-base)] ml-1.5 mt-1 bg-[var(--bg-hover)] rounded-r-lg">
+            <div v-show="isThinkExpanded" class="think-content text-sm text-[var(--text-muted)]">
                 <div v-html="renderedThinkContent" class="think-markdown"></div>
             </div>
         </div>
@@ -175,13 +175,30 @@ watch(() => props.content, (newVal) => {
 </script>
 
 <style scoped>
+.think-panel {
+    margin-bottom: 12px;
+}
+
 .think-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2rem;
+    padding: 0 0.85rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-base);
+    background: var(--bg-hover);
     user-select: none;
 }
 
 .think-content {
-    font-size: 0.85em;
-    line-height: 1.6;
+    margin-top: 0.75rem;
+    padding: 0.85rem 1rem 0.9rem 1rem;
+    border-left: 2px solid rgba(59, 130, 246, 0.24);
+    border-radius: 0 14px 14px 0;
+    background: color-mix(in srgb, var(--bg-hover) 88%, transparent);
+    font-size: 0.88em;
+    line-height: 1.72;
 }
 
 .think-markdown :deep(p) {
@@ -205,12 +222,13 @@ watch(() => props.content, (newVal) => {
 
 .markdown-container {
     width: 100%;
-    line-height: 24px;
-    color: #404040;
+    color: var(--text-body);
+    font-size: 15px;
+    line-height: 1.85;
 }
 
 .dark .markdown-container {
-    color: #e5e7eb;
+    color: var(--text-body);
 }
 
 :deep(.markdown-container > p:first-child),
@@ -219,40 +237,37 @@ watch(() => props.content, (newVal) => {
 }
 
 :deep(h1), :deep(h2), :deep(h3), :deep(h4), :deep(h5), :deep(h6) {
-    font-weight: 600;
-    margin: calc(1.143 * 16px) 0 calc(1.143 * 12px) 0;
+    color: var(--text-heading);
+    font-weight: 700;
+    margin: 1.35em 0 0.55em;
+    letter-spacing: 0;
 }
 
 :deep(h1) {
-    font-size: 1.5em;
-    margin-top: 1.2em;
-    margin-bottom: 0.7em;
-    line-height: 1.5;
+    font-size: 1.45rem;
+    line-height: 1.4;
 }
 
 :deep(h2) {
-    font-size: 1.3em;
-    margin-top: 1.1em;
-    margin-bottom: 0.6em;
-    line-height: 1.5;
+    font-size: 1.2rem;
+    line-height: 1.45;
 }
 
 :deep(h3) {
-    font-size: calc(1.143 * 16px);
+    font-size: 1.05rem;
     line-height: 1.5;
 }
 
 :deep(p) {
-    line-height: 1.7;
-    margin: calc(1.143 * 12px) 0;
-    font-size: calc(1.143 * 14px);
+    margin: 0.78em 0;
+    line-height: 1.85;
+    font-size: 1rem;
 }
 
 :deep(ul), :deep(ol) {
     list-style: disc;
-    margin-top: 0.6em;
-    margin-bottom: 0.9em;
-    padding-left: 2em;
+    margin: 0.9em 0;
+    padding-left: 1.45rem;
 }
 
 :deep(ol) {
@@ -260,8 +275,8 @@ watch(() => props.content, (newVal) => {
 }
 
 :deep(li) {
-    margin-bottom: 0.5em;
-    line-height: 1.7;
+    margin-bottom: 0.45em;
+    line-height: 1.8;
 }
 
 :deep(ol li::marker) {
@@ -284,24 +299,27 @@ watch(() => props.content, (newVal) => {
 }
 
 :deep(.code-block-wrapper) {
-    margin: 1em 0;
+    margin: 1.2em 0;
+    border: 1px solid var(--border-base);
     border-radius: 14px;
     overflow: hidden;
-    background-color: #f6f8fa;
+    background: color-mix(in srgb, var(--bg-hover) 92%, transparent);
 }
 
 :deep(.code-header) {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: #f5f5f5;
-    padding: 8px 12px;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border-base);
+    background: color-mix(in srgb, var(--bg-card) 78%, transparent);
 }
 
 :deep(.code-language-label) {
-    color: rgb(82 82 82);
-    margin-left: 8px;
+    color: var(--text-muted);
+    margin-left: 4px;
     font-size: 12px;
+    font-weight: 700;
     line-height: 18px;
 }
 
@@ -314,10 +332,11 @@ watch(() => props.content, (newVal) => {
     display: flex;
     align-items: center;
     gap: 4px;
-    background: transparent;
+    border: 1px solid transparent;
     border-radius: 12px;
     padding: 0 8px;
-    color: #586069;
+    background: transparent;
+    color: var(--text-secondary);
     font-size: 12px;
     height: 28px;
     cursor: pointer;
@@ -329,7 +348,8 @@ watch(() => props.content, (newVal) => {
 }
 
 :deep(.copy-code-btn:hover) {
-    background-color: rgb(0 0 0 / 4%);
+    border-color: var(--border-base);
+    background: color-mix(in srgb, var(--bg-hover) 86%, white);
 }
 
 :deep(.copy-icon) {
@@ -342,9 +362,10 @@ watch(() => props.content, (newVal) => {
 }
 
 :deep(pre) {
-    background-color: #fafafa;
-    padding: 1em;
-    border-radius: 5px;
+    margin: 0;
+    padding: 14px 16px 16px;
+    border-radius: 0;
+    background: transparent;
     overflow-x: auto;
     max-width: 100%;
     white-space: pre;
@@ -352,60 +373,70 @@ watch(() => props.content, (newVal) => {
 }
 
 :deep(:not(pre) > code) {
-    font-size: .875em;
+    font-size: 0.875em;
     font-weight: 600;
-    background-color: #ececec;
-    border-radius: 4px;
-    padding: .15rem .3rem;
-    margin: 0 .2rem;
+    color: var(--text-heading);
+    background: color-mix(in srgb, var(--bg-hover) 82%, transparent);
+    border-radius: 6px;
+    padding: 0.15rem 0.38rem;
+    margin: 0;
 }
 
 :deep(pre > code) {
-    font-size: .875em;
+    font-size: 0.875em;
     background-color: transparent;
     padding: 0;
     border-radius: 0;
     font-weight: normal;
-    color: #333;
+    color: inherit;
     display: block;
     width: 100%;
 }
 
 :deep(a) {
-    color: #4d6bfe;
+    color: var(--color-primary);
     text-decoration: none;
+    transition: color 0.18s ease, text-decoration-color 0.18s ease;
 }
 
 :deep(a:hover) {
     text-decoration: underline;
+    text-decoration-color: currentColor;
 }
 
 :deep(blockquote) {
-    border-left: 4px solid #e5e5e5;
-    padding-left: 1em;
-    margin: 1em 0;
-    color: #666;
+    margin: 1.1em 0;
+    padding: 0.8rem 1rem;
+    border-left: 3px solid rgba(59, 130, 246, 0.38);
+    border-radius: 0 12px 12px 0;
+    background: color-mix(in srgb, var(--bg-hover) 90%, transparent);
+    color: var(--text-secondary);
 }
 
 :deep(table) {
     border-collapse: collapse;
     width: 100%;
-    margin: 1em 0;
-    font-size: 0.95em;
+    margin: 1.1em 0;
+    font-size: 0.94em;
+    overflow: hidden;
+    border-radius: 12px;
+    border-style: hidden;
+    box-shadow: 0 0 0 1px var(--border-base);
 }
 
 :deep(th), :deep(td) {
-    border: 1px solid #e5e5e5;
-    padding: 0.6em;
+    border: 1px solid var(--border-base);
+    padding: 0.72em 0.8em;
     text-align: left;
 }
 
 :deep(th) {
-    background-color: #f5f5f5;
+    color: var(--text-heading);
+    background: color-mix(in srgb, var(--bg-hover) 84%, transparent);
 }
 
 :deep(hr) {
-    background-color: rgb(229 229 229);
+    background-color: var(--border-base);
     margin: 1.5em 0;
     height: 1px;
     border: none;

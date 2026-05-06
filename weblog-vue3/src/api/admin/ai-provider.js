@@ -28,8 +28,20 @@ export function testAiProvider(id) {
     return axios.post(`/admin/ai/provider/${id}/test`)
 }
 
+export function testAiProviderWithOptions(id, data = {}) {
+    return axios.post(`/admin/ai/provider/${id}/test`, data)
+}
+
 export function fetchModels(apiUrl, apiKey) {
     return axios.post('/admin/ai/provider/fetch-models', { apiUrl, apiKey })
+}
+
+export function fetchModelsWithConfig(data) {
+    return axios.post('/admin/ai/provider/fetch-models', data)
+}
+
+export function fetchProviderModels(id, data = {}) {
+    return axios.post(`/admin/ai/provider/${id}/fetch-models`, data)
 }
 
 export function migrateAiProviders() {

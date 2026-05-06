@@ -4,6 +4,8 @@ using SqlSugar;
 using Weblog.Core.Api.Filters;
 using Weblog.Core.Common.Result;
 using Weblog.Core.Model.DTOs;
+using Weblog.Core.Model.Entities;
+using Weblog.Core.Service.AI.Core;
 using Weblog.Core.Service.Interfaces;
 
 namespace Weblog.Core.Api.Controllers.Admin;
@@ -26,6 +28,7 @@ public class AiModelController : ControllerBase
     public async Task<Result<List<AiModelDto>>> GetAll()
     {
         var result = await _aiModelService.GetAllAsync();
+        result.AddRange(GetProviderBackedModels(includeDisabled: true));
         return Result<List<AiModelDto>>.Ok(result);
     }
 
@@ -33,6 +36,7 @@ public class AiModelController : ControllerBase
     public async Task<Result<List<AiModelDto>>> GetEnabledList()
     {
         var result = await _aiModelService.GetAllEnabledAsync();
+        result.AddRange(GetProviderBackedModels(includeDisabled: false));
         return Result<List<AiModelDto>>.Ok(result);
     }
 
@@ -231,6 +235,55 @@ public class AiModelController : ControllerBase
             catch { /* skip individual failures */ }
         }
         return Result<bool>.Ok(true);
+    }
+
+    private List<AiModelDto> GetProviderBackedModels(bool includeDisabled)
+    {
+        try
+        {
+            var providers = _db.Queryable<AiProvider>()
+                .OrderBy(p => p.Priority)
+                .ToList();
+
+            var result = new List<AiModelDto>();
+            foreach (var provider in providers)
+            {
+                if (!includeDisabled && !provider.IsEnabled)
+                    continue;
+
+                var config = AiProviderConfigParser.Parse(provider.Config);
+                foreach (var model in config.Models)
+                {
+                    if (string.IsNullOrWhiteSpace(model.Id))
+                        continue;
+                    if (!includeDisabled && !model.IsEnabled)
+                        continue;
+
+                    result.Add(new AiModelDto
+                    {
+                        Id = 0,
+                        Name = string.IsNullOrWhiteSpace(model.Alias)
+                            ? (string.IsNullOrWhiteSpace(model.Name) ? model.Id : model.Name)
+                            : model.Alias!,
+                        Type = provider.Name,
+                        ApiKey = config.Keys.Any(k => k.IsEnabled) ? "configured" : "",
+                        ApiUrl = provider.ApiUrl,
+                        Model = AiProviderConfigParser.BuildModelRoute(config.Prefix, model.Id),
+                        IsDefault = model.IsDefault,
+                        IsEnabled = provider.IsEnabled && model.IsEnabled,
+                        Remark = "Provider config",
+                        CreateTime = provider.CreatedAt,
+                        UpdateTime = provider.UpdatedAt
+                    });
+                }
+            }
+
+            return result;
+        }
+        catch
+        {
+            return new List<AiModelDto>();
+        }
     }
 }
 

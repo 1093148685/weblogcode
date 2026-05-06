@@ -49,14 +49,25 @@ public class AiChatController : ControllerBase
             
             foreach (var provider in enabledProviders)
             {
-                var providerModels = GetModelsForProvider(provider.Name);
-                models.AddRange(providerModels);
+                var config = AiProviderConfigParser.Parse(provider.Config);
+                var configuredModels = AiProviderConfigParser.GetConfiguredModels(provider.Name, provider.DisplayName, config)
+                    .Select(m => new AiModelInfo { Id = m.Id, Name = m.Name, Provider = provider.Name })
+                    .ToList();
+
+                models.AddRange(configuredModels.Count > 0
+                    ? configuredModels
+                    : GetModelsForProvider(provider.Name));
             }
             
             if (models.Count == 0)
             {
                 models = GetDefaultModels();
             }
+
+            models = models
+                .GroupBy(m => $"{m.Provider}|{m.Id}", StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.First())
+                .ToList();
         }
         catch
         {
@@ -187,6 +198,14 @@ public class AiChatController : ControllerBase
 
         var fullResponse = new StringBuilder();
         var model = request.Model ?? "deepseek-chat";
+        var modelRoute = AiProviderConfigParser.ParseModelRoute(model);
+        var explicitProvider = request.Provider?.Trim();
+        var providerHint = string.IsNullOrWhiteSpace(explicitProvider) ? modelRoute.ProviderHint : explicitProvider;
+        var downstreamModel = string.IsNullOrWhiteSpace(explicitProvider)
+            ? (string.IsNullOrWhiteSpace(modelRoute.ModelId) ? model : modelRoute.ModelId)
+            : ResolveDownstreamModel(model, explicitProvider);
+        _logger.LogInformation("Portal AI chat route: model={Model}, providerHint={ProviderHint}, downstreamModel={DownstreamModel}",
+            model, providerHint, downstreamModel);
         var requestedMode = string.IsNullOrWhiteSpace(request.Mode)
             ? (request.KbId.HasValue && request.KbId.Value > 0 ? "rag" : "normal")
             : request.Mode.Trim().ToLowerInvariant();
@@ -270,7 +289,7 @@ public class AiChatController : ControllerBase
                     var oldMessages = messages.Where(m => m.Role != "system").Take(messages.Count - 10).ToList();
                     var summaryRequest = new AiChatRequest
                     {
-                        Model    = model,
+                        Model    = downstreamModel,
                         Messages = new List<AiChatMessage>
                         {
                             new() { Role = "system", Content = "你是一个对话摘要助手，请将以下对话历史压缩为简洁的摘要，保留关键信息。" },
@@ -279,7 +298,7 @@ public class AiChatController : ControllerBase
                         Temperature = 0.3,
                         MaxTokens   = 500
                     };
-                    var selectResult2 = await _aiKernel.SelectProviderAsync(GetProviderFromModel(model));
+                    var selectResult2 = await _aiKernel.SelectProviderAsync(providerHint);
                     if (selectResult2.provider != null && selectResult2.apiKey != null)
                     {
                         var summaryResp = await selectResult2.provider.ChatAsync(summaryRequest, selectResult2.apiKey, ct);
@@ -550,14 +569,14 @@ public class AiChatController : ControllerBase
 
             var aiRequest = new AiChatRequest
             {
-                Model = model,
+                Model = downstreamModel,
                 Messages = messages,
                 Temperature = temperature,
                 MaxTokens = maxTokens
             };
 
             var selectResult = await _aiKernel.SelectProviderAsync(
-                preferredProvider: GetProviderFromModel(model),
+                preferredProvider: providerHint,
                 type: AiProviderType.Chat
             );
             IAiProvider? provider = selectResult.provider;
@@ -598,7 +617,7 @@ public class AiChatController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Chat stream error");
-            await SendError(ex.Message);
+            await SendError(AiChatErrorSanitizer.ToUserMessage(ex));
         }
     }
 
@@ -655,7 +674,7 @@ public class AiChatController : ControllerBase
 
     private async Task SendError(string message)
     {
-        var data = JsonSerializer.Serialize(new { error = message });
+        var data = JsonSerializer.Serialize(new { error = AiChatErrorSanitizer.ToUserMessage(message) });
         await Response.WriteAsync($"data: {data}\n\n");
         await Response.Body.FlushAsync();
     }
@@ -919,17 +938,52 @@ public class AiChatController : ControllerBase
 
     private static string? GetProviderFromModel(string model)
     {
-        var m = model.ToLower();
+        return AiProviderConfigParser.ParseModelRoute(model).ProviderHint;
+    }
 
-        if (m.StartsWith("deepseek")) return "deepseek";
-        if (m.StartsWith("gpt-") || m.StartsWith("o1") || m.StartsWith("o3")) return "openai";
-        if (m.StartsWith("claude")) return "claude";
-        if (m.StartsWith("gemini")) return "gemini";
-        if (m.StartsWith("glm")) return "zhipu";
-        if (m.StartsWith("ernie") || m == "qianfan") return "qianfan";
-        if (m.StartsWith("minimax")) return "minimax";
+    private string ResolveDownstreamModel(string model, string providerHint)
+    {
+        try
+        {
+            var providers = _db.Queryable<AiProvider>().Where(p => p.IsEnabled).ToList();
+            var provider = providers.FirstOrDefault(p => MatchesProvider(p, providerHint));
+            if (provider == null)
+                return model;
 
-        return null;
+            var advanced = AiProviderConfigParser.Parse(provider.Config);
+            var config = new AiProviderConfig
+            {
+                Id = provider.Id,
+                Name = provider.Name,
+                DisplayName = provider.DisplayName,
+                Type = Enum.TryParse<AiProviderType>(provider.Type, true, out var type) ? type : AiProviderType.Chat,
+                Protocol = advanced.Protocol,
+                Prefix = advanced.Prefix,
+                ApiUrl = provider.ApiUrl,
+                EncryptedApiKey = provider.EncryptedApiKey,
+                IsEnabled = provider.IsEnabled,
+                Priority = provider.Priority,
+                Config = provider.Config
+            };
+
+            return AiProviderConfigParser.ResolveModelForProvider(config, model);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to resolve downstream model for provider {ProviderHint}", providerHint);
+            return model;
+        }
+    }
+
+    private static bool MatchesProvider(AiProvider provider, string providerHint)
+    {
+        if (string.IsNullOrWhiteSpace(providerHint))
+            return false;
+
+        var config = AiProviderConfigParser.Parse(provider.Config);
+        return provider.Name.Equals(providerHint, StringComparison.OrdinalIgnoreCase)
+            || provider.DisplayName.Equals(providerHint, StringComparison.OrdinalIgnoreCase)
+            || (!string.IsNullOrWhiteSpace(config.Prefix) && config.Prefix.Equals(providerHint, StringComparison.OrdinalIgnoreCase));
     }
 
     private static float GetFloatValue(Dictionary<string, object> config, string key, float defaultValue)
@@ -1014,6 +1068,7 @@ public class PortalChatRequest
     public string? SessionId { get; set; }
     public string? ClientId { get; set; }
     public string? Model { get; set; }
+    public string? Provider { get; set; }
     /// <summary>对话模式：normal 普通聊天；rag 知识库问答；web 联网搜索。为空时兼容旧逻辑：有 KbId 则 rag，否则 normal。</summary>
     public string? Mode { get; set; }
     /// <summary>是否启用联网搜索。推荐前端传 mode=web；该字段用于兼容后续开关式入口。</summary>

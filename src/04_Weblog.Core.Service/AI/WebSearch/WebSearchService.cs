@@ -40,12 +40,14 @@ public class WebSearchService : IWebSearchService
     private readonly HttpClient _httpClient;
     private readonly ILogger<WebSearchService> _logger;
     private readonly IConfiguration _configuration;
+    private readonly IMcpSearchService _mcpSearchService;
 
-    public WebSearchService(HttpClient httpClient, ILogger<WebSearchService> logger, IConfiguration configuration)
+    public WebSearchService(HttpClient httpClient, ILogger<WebSearchService> logger, IConfiguration configuration, IMcpSearchService mcpSearchService)
     {
         _httpClient = httpClient;
         _logger = logger;
         _configuration = configuration;
+        _mcpSearchService = mcpSearchService;
         _httpClient.Timeout = TimeSpan.FromSeconds(10);
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 WeblogCoreAiSearch/2.0");
     }
@@ -123,6 +125,13 @@ public class WebSearchService : IWebSearchService
 
     private async Task<List<WebSearchResult>> SearchConfiguredProviderAsync(string query, int topK, WebSearchOptions options, CancellationToken ct)
     {
+        var preferMcp = GetConfigBool("Mcp:Search:PreferMcp", true);
+        if (preferMcp)
+        {
+            var mcpResults = await SearchMcpAsync(query, topK, ct);
+            if (mcpResults.Count > 0) return mcpResults;
+        }
+
         var tavilyApiKey = !string.IsNullOrWhiteSpace(options.TavilyApiKey)
             ? options.TavilyApiKey
             : _configuration["WebSearch:TavilyApiKey"];
@@ -146,7 +155,26 @@ public class WebSearchService : IWebSearchService
             if (searxngResults.Count > 0) return searxngResults;
         }
 
+        if (!preferMcp)
+        {
+            var mcpResults = await SearchMcpAsync(query, topK, ct);
+            if (mcpResults.Count > 0) return mcpResults;
+        }
+
         return new List<WebSearchResult>();
+    }
+
+    private async Task<List<WebSearchResult>> SearchMcpAsync(string query, int topK, CancellationToken ct)
+    {
+        try
+        {
+            return await _mcpSearchService.SearchAsync(query, topK, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "MCP search failed");
+            return new List<WebSearchResult>();
+        }
     }
 
     private async Task<List<WebSearchResult>> SearchTavilyAsync(string query, int topK, string apiKey, CancellationToken ct)
@@ -740,6 +768,11 @@ public class WebSearchService : IWebSearchService
     {
         return Uri.TryCreate(url, UriKind.Absolute, out var uri)
             && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+    }
+
+    private bool GetConfigBool(string key, bool defaultValue)
+    {
+        return bool.TryParse(_configuration[key], out var value) ? value : defaultValue;
     }
 
     private static string NormalizeDuckDuckGoUrl(string url)

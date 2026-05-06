@@ -2,252 +2,60 @@
     <div class="flex h-full chat-panel overflow-hidden">
         <!-- 侧边栏 -->
         <transition name="slide">
-            <div
+            <ChatSidebar
                 v-if="showSidebar"
-                class="chat-sidebar w-[300px] flex-shrink-0 flex flex-col h-full"
-            >
-                <!-- 侧边栏头部：Logo + 操作按钮 -->
-                <div class="chat-assistant-card flex items-center justify-between">
-                    <div class="flex items-center gap-2.5">
-                        <div class="assistant-avatar w-12 h-12 flex items-center justify-center">
-                            <span class="text-white text-sm font-bold">J</span>
-                        </div>
-                        <div class="min-w-0">
-                            <div class="flex items-center gap-2">
-                                <span class="text-lg font-bold text-[var(--text-heading)]">小J 助手</span>
-                                <span class="pro-badge">Pro</span>
-                            </div>
-                            <span class="block text-xs text-[var(--text-muted)]">你的专属 AI 助手</span>
-                        </div>
-                    </div>
-                    <button @click="showSidebar = false"
-                        class="p-2 rounded-full hover:bg-white/80 transition-colors text-indigo-500">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24">
-                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                        </svg>
-                    </button>
-                </div>
-
-                <!-- 新对话按钮 -->
-                <div class="px-5 mb-5">
-                    <button @click="createNewChat"
-                        class="sidebar-item sidebar-item-new w-full justify-center">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24">
-                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m-7-7h14"/>
-                        </svg>
-                        <span>新对话</span>
-                    </button>
-                </div>
-
-                <!-- 模型选择 -->
-                <div class="px-5 mb-3">
-                    <div class="text-xs text-[var(--text-muted)] mb-2 px-1 font-semibold">AI 能力</div>
-                    <button @click="showSettings = true"
-                        class="sidebar-item w-full">
-                        <div class="w-8 h-8 bg-violet-100 dark:bg-violet-900/30 rounded-full flex items-center justify-center flex-shrink-0">
-                            <svg class="w-4 h-4 text-violet-500" fill="none" viewBox="0 0 24 24">
-                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"/>
-                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
-                            </svg>
-                        </div>
-                        <div class="flex-1 min-w-0 text-left">
-                            <span class="text-sm text-[var(--text-body)]">模型设置</span>
-                            <span class="block text-xs text-[var(--text-muted)] truncate">{{ currentModelName }}</span>
-                        </div>
-                    </button>
-                </div>
-
-                <!-- AI 对话模式 -->
-                <div class="px-5 mb-4">
-                    <div class="text-xs text-[var(--text-muted)] mb-2 px-1 font-semibold">AI 模式</div>
-                    <div class="chat-mode-switch">
-                        <button
-                            type="button"
-                            class="chat-mode-option"
-                            :class="{ 'chat-mode-option-active': selectedChatMode === 'auto' }"
-                            @click="setChatMode('auto')"
-                        >
-                            智能选择
-                        </button>
-                        <button
-                            type="button"
-                            class="chat-mode-option"
-                            :class="{ 'chat-mode-option-active': selectedChatMode === 'normal' }"
-                            @click="setChatMode('normal')"
-                        >
-                            普通聊天
-                        </button>
-                        <button
-                            type="button"
-                            class="chat-mode-option"
-                            :class="{ 'chat-mode-option-active': selectedChatMode === 'rag' }"
-                            @click="setChatMode('rag')"
-                        >
-                            知识库问答
-                        </button>
-                        <button
-                            type="button"
-                            class="chat-mode-option"
-                            :class="{ 'chat-mode-option-active': selectedChatMode === 'web' }"
-                            @click="setChatMode('web')"
-                        >
-                            联网搜索
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 知识库选择（RAG） -->
-                <div class="px-5 mb-5" :class="{ 'opacity-55': selectedChatMode !== 'rag' && selectedChatMode !== 'auto' }">
-                    <div class="flex items-center justify-between text-xs text-[var(--text-muted)] mb-1 px-1">
-                        <span>知识库</span>
-                        <span v-if="selectedChatMode === 'auto' && selectedKbOption" class="text-[var(--color-primary)]">智能可用</span>
-                        <span v-else-if="selectedKb" class="text-[var(--color-primary)]">RAG 已启用</span>
-                    </div>
-                    <select v-model="selectedKbId"
-                        :disabled="selectedChatMode !== 'rag' && selectedChatMode !== 'auto'"
-                        @change="handleKbChange"
-                        class="w-full text-sm rounded-lg px-3 py-2 bg-[var(--bg-card)] border border-[var(--border-light)] text-[var(--text-body)] focus:outline-none focus:ring-2 focus:ring-violet-400">
-                        <option value="">不使用知识库</option>
-                        <option v-for="kb in kbList" :key="kb.id" :value="kb.id">{{ kb.name }}</option>
-                    </select>
-                    <p v-if="selectedKb?.description" class="mt-1.5 px-1 text-xs text-[var(--text-placeholder)] line-clamp-2">
-                        {{ selectedKb.description }}
-                    </p>
-                </div>
-
-                <!-- 最近对话标题 -->
-                <div class="px-5 mb-2 text-xs font-semibold text-[var(--text-muted)]">最近对话</div>
-
-                <!-- 会话列表 -->
-                <div class="flex-1 overflow-y-auto px-5 pb-4 chat-sidebar-scroll">
-                    <div class="space-y-1">
-                        <div
-                            v-for="session in chatSessions"
-                            :key="session.id"
-                            class="group sidebar-item-session"
-                            :class="currentSessionId === session.id
-                                ? 'sidebar-item-session-active'
-                                : 'hover:bg-[var(--bg-hover)]'"
-                            @click="switchSession(session.id)"
-                        >
-                            <div class="flex-1 min-w-0 flex items-center gap-1">
-                                <span v-if="session.pinned" title="已置顶" class="text-amber-400 flex-shrink-0">📌</span>
-                                <span class="block text-sm text-[var(--text-body)] truncate font-medium leading-snug flex-1">{{ session.title }}</span>
-                            </div>
-                            <span class="text-xs text-[var(--text-muted)] mt-0.5 block">{{ session.time }}</span>
-                            <div class="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 -mr-1">
-                                <button
-                                    class="p-1 rounded-lg text-[var(--text-muted)] hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all"
-                                    @click.stop="pinSession(session)"
-                                    :title="session.pinned ? '取消置顶' : '置顶'"
-                                >
-                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
-                                </button>
-                                <button
-                                    class="p-1 rounded-lg text-[var(--text-muted)] hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"
-                                    @click.stop="renameSession(session)"
-                                    title="重命名"
-                                >
-                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15.232 5.232 3.536 3.536m-2.036-5.036a2.5 2.5 0 1 1 3.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                                </button>
-                                <button
-                                    class="p-1 rounded-lg text-[var(--text-muted)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
-                                    @click.stop="deleteSession(session.id)"
-                                    title="删除"
-                                >
-                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div v-if="chatSessions.length === 0" class="text-center py-10">
-                        <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-[var(--bg-hover)] flex items-center justify-center">
-                            <svg class="w-5 h-5 text-[var(--text-placeholder)]" fill="none" viewBox="0 0 24 24">
-                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                    d="M20 13V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7m16 0v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-5m16 0h-2.586a1 1 0 0 0-.707.293l-2.414 2.414a1 1 0 0 1-.707.293h-3.172a1 1 0 0 1-.707-.293l-2.414-2.414A1 1 0 0 0 6.586 13H4"/>
-                            </svg>
-                        </div>
-                        <p class="text-sm text-[var(--text-muted)]">暂无会话记录</p>
-                        <p class="text-xs text-[var(--text-placeholder)] mt-1">点击上方开启新对话</p>
-                    </div>
-                </div>
-
-                <div class="px-5 pb-5 pt-2">
-                    <button
-                        class="clear-all-btn"
-                        type="button"
-                        @click="clearAllSessions"
-                    >
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24">
-                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165"/>
-                        </svg>
-                        清空所有对话
-                    </button>
-                </div>
-            </div>
+                :sections="sidebarSections"
+                :grouped-sessions="groupedSidebarSessions"
+                :current-session-id="currentSessionId"
+                :more-items="statusMoreActions"
+                v-model:search-query="sidebarSearchQuery"
+                @close="showSidebar = false"
+                @new-chat="createNewChat"
+                @open-settings="showSettings = true"
+                @select-session="switchSession"
+                @pin-session="pinSession"
+                @rename-session="renameSession"
+                @delete-session="deleteSession"
+                @share-session="shareCurrentSession"
+                @sidebar-more-action="handleStatusMoreAction"
+            />
         </transition>
+        <button
+            v-if="showSidebar"
+            type="button"
+            class="chat-sidebar-backdrop"
+            aria-label="关闭侧边栏"
+            @click="showSidebar = false"
+        />
 
         <!-- 主内容区 -->
         <div class="chat-main flex-1 flex flex-col min-w-0 relative">
-            <!-- 标题栏 -->
-            <div class="chat-topbar flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <!-- 展开侧边栏按钮（侧边栏隐藏时显示） -->
-                    <button v-if="!showSidebar" @click="showSidebar = true"
-                        class="p-2 rounded-lg hover:bg-[var(--bg-hover)] transition-colors text-[var(--text-muted)]">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24">
-                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
-                        </svg>
-                    </button>
-                    <div class="flex flex-col">
-                        <span class="font-semibold text-[var(--text-heading)] text-base">{{ currentSessionTitle || '新会话' }}</span>
-                        <span v-if="currentSessionTitle && currentSessionTitle !== '新会话'" class="text-xs text-[var(--text-muted)] truncate max-w-[300px]">
-                            小J智能 AI 助手
-                        </span>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                        <el-button
-                            v-if="currentSessionId && displayMessages.length"
-                            size="small"
-                            @click="clearCurrentSession"
-                            title="清空当前上下文"
-                        >
-                            清空
-                        </el-button>
-                        <el-button
-                            v-if="currentSessionId"
-                            size="small"
-                            @click="exportSession(chatSessions.find(s => s.id === currentSessionId))"
-                            title="导出对话"
-                        >
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                            导出
-                        </el-button>
-                </div>
-            </div>
+            <ChatStatusBar
+                :title="currentSessionTitle || '新会话'"
+                :subtitle="currentSessionSubtitle"
+                :chips="topBarState.primary"
+                :sidebar-visible="showSidebar"
+                @toggle-sidebar="showSidebar = !showSidebar"
+            />
 
             <!-- 消息区域 -->
             <div class="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pb-4 chat-messages-scroll relative" ref="chatContainer" @scroll="handleScroll">
-                <div class="max-w-4xl mx-auto pt-6">
+                <div class="chat-content-shell mx-auto w-full pt-6 sm:pt-8">
                     <!-- 欢迎消息 -->
-                    <div v-if="displayMessages.length === 0" class="flex flex-col items-center justify-center min-h-[50vh]">
-                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg mb-6">
-                            <span class="text-white text-2xl font-bold">J</span>
-                        </div>
-                        <h2 class="text-xl font-bold text-[var(--text-heading)] mb-2">你好，有什么可以帮你的？</h2>
-                        <p class="text-sm text-[var(--text-muted)] mb-8 text-center max-w-md">{{ welcomeDescription }}</p>
+                    <div v-if="displayMessages.length === 0" class="chat-empty-state">
+                        <div class="chat-empty-badge">AI 工作台</div>
+                        <h2 class="chat-empty-title">今天想一起做点什么？</h2>
+                        <p class="chat-empty-description">{{ welcomeDescription }}</p>
 
-                        <div class="grid grid-cols-2 gap-3 w-full max-w-lg">
+                        <div class="chat-empty-prompt-grid">
                             <button
                                 v-for="prompt in quickPrompts"
                                 :key="prompt"
                                 @click="usePrompt(prompt)"
                                 class="quick-prompt-card"
                             >
-                                <span class="text-sm text-[var(--text-body)]">{{ prompt }}</span>
-                                <svg class="w-4 h-4 text-[var(--text-placeholder)] mt-1" fill="none" viewBox="0 0 24 24">
+                                <span class="chat-empty-prompt-text">{{ prompt }}</span>
+                                <svg class="chat-empty-prompt-icon" fill="none" viewBox="0 0 24 24">
                                     <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.5 12h15m0 0-6.75-6.75M19.5 12l-6.75 6.75"/>
                                 </svg>
                             </button>
@@ -275,37 +83,35 @@
                             </div>
 
                             <!-- AI 回复 -->
-                            <div v-else class="flex mb-6 gap-3 group">
+                            <div v-else class="chat-message chat-message-assistant group">
                                 <div class="assistant-avatar assistant-avatar-sm flex items-center justify-center flex-shrink-0 mt-1 shadow-sm">
                                     <span class="text-white text-xs font-bold">J</span>
                                 </div>
-                                <div class="min-w-0 flex-1">
-                                    <div class="chat-ai-bubble">
-                                        <div v-if="chat.mode || chat.kbName" class="chat-answer-meta">
-                                            <span class="chat-answer-mode" :class="answerModeClass(chat.mode)">
-                                                {{ answerModeLabel(chat.mode) }}
-                                            </span>
-                                            <span v-if="chat.smartRouteLabel" class="chat-answer-kb">{{ chat.smartRouteLabel }}</span>
-                                            <span v-if="chat.kbName" class="chat-answer-kb">{{ chat.kbName }}</span>
+                                <div class="chat-ai-entry min-w-0 flex-1">
+                                    <div class="chat-ai-head">
+                                        <div class="chat-ai-headline">
+                                            <span class="chat-ai-name">小J 助手</span>
+                                            <span class="chat-ai-time">{{ formatTime(chat.timestamp) }}</span>
                                         </div>
-                                        <p v-if="chat.routeReason" class="chat-route-reason">{{ chat.routeReason }}</p>
+                                    </div>
 
+                                    <div class="chat-ai-bubble">
                                         <!-- 流式加载中 -->
-                                        <div v-if="!chat.content && index === displayMessages.length - 1 && isStreaming" class="flex items-center gap-2 py-1">
+                                        <div v-if="!chat.content && index === displayMessages.length - 1 && isStreaming" class="chat-ai-streaming">
                                             <span class="typing-dot" style="animation-delay:0s"></span>
                                             <span class="typing-dot" style="animation-delay:0.15s"></span>
                                             <span class="typing-dot" style="animation-delay:0.3s"></span>
                                         </div>
                                         <StreamMarkdownRender v-else :content="chat.content" />
 
-                                        <div v-if="chat.ragStatus && (!chat.sources || chat.sources.length === 0)" class="rag-status mt-3">
+                                        <div v-if="shouldShowRagStatus(chat)" class="rag-status mt-3">
                                             <span class="rag-dot"></span>
                                             <span>{{ chat.ragStatus }}</span>
                                         </div>
 
-                                        <div v-if="chat.ragSteps && chat.ragSteps.length" class="rag-step-list mt-3">
+                                        <div v-if="visibleRagSteps(chat).length" class="rag-step-list mt-3">
                                             <div
-                                                v-for="step in chat.ragSteps"
+                                                v-for="step in visibleRagSteps(chat)"
                                                 :key="step.key"
                                                 class="rag-step-item"
                                                 :class="`rag-step-${step.status || 'pending'}`"
@@ -358,44 +164,42 @@
                                                 </div>
                                             </div>
                                         </div>
-
-                                        <div v-if="chat.content && !isStreaming && suggestedFollowUps(chat).length" class="ai-follow-up-list">
-                                            <button
-                                                v-for="item in suggestedFollowUps(chat)"
-                                                :key="item"
-                                                type="button"
-                                                @click="useFollowUp(item, chat)"
-                                            >
-                                                {{ item }}
-                                            </button>
-                                        </div>
-
-                                        <!-- 操作按钮 -->
-                                        <div v-if="chat.content && !isStreaming" class="mt-3 flex items-center justify-end gap-2 border-t border-[var(--border-base)] pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button
-                                                @click="copyMessage(chat.content)"
-                                                class="flex items-center gap-1.5 px-2 py-1 text-xs text-[var(--text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--bg-hover)] rounded-md transition-colors"
-                                                title="复制回复"
-                                            >
-                                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16h8M8 12h8m-7 8h6a2 2 0 0 0 2-2V7.828a2 2 0 0 0-.586-1.414l-2.828-2.828A2 2 0 0 0 12.172 3H9a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
-                                                </svg>
-                                                复制
-                                            </button>
-                                            <button
-                                                v-if="index === displayMessages.length - 1"
-                                                @click="regenerateResponse(index)"
-                                                class="flex items-center gap-1.5 px-2 py-1 text-xs text-[var(--text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--bg-hover)] rounded-md transition-colors"
-                                                title="重新生成"
-                                            >
-                                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                                </svg>
-                                                重试
-                                            </button>
-                                        </div>
                                     </div>
-                                    <p class="text-xs text-[var(--text-muted)] mt-1.5">{{ formatTime(chat.timestamp) }}</p>
+
+                                    <div v-if="chat.content && !isStreaming && suggestedFollowUps(chat).length" class="ai-follow-up-list">
+                                        <button
+                                            v-for="item in suggestedFollowUps(chat)"
+                                            :key="item"
+                                            type="button"
+                                            @click="useFollowUp(item, chat)"
+                                        >
+                                            {{ item }}
+                                        </button>
+                                    </div>
+
+                                    <div v-if="chat.content && !isStreaming" class="chat-ai-actions">
+                                        <button
+                                            @click="copyMessage(chat.content)"
+                                            class="chat-ai-action-btn"
+                                            title="复制回复"
+                                        >
+                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16h8M8 12h8m-7 8h6a2 2 0 0 0 2-2V7.828a2 2 0 0 0-.586-1.414l-2.828-2.828A2 2 0 0 0 12.172 3H9a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+                                            </svg>
+                                            复制
+                                        </button>
+                                        <button
+                                            v-if="index === displayMessages.length - 1"
+                                            @click="regenerateResponse(index)"
+                                            class="chat-ai-action-btn"
+                                            title="重新生成"
+                                        >
+                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                            </svg>
+                                            重试
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </template>
@@ -408,7 +212,7 @@
                 <button
                     v-if="showScrollBtn"
                     @click="scrollToBottom(true)"
-                    class="absolute bottom-28 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-white bg-[var(--color-primary)] rounded-full shadow-lg hover:opacity-90 active:scale-95 transition-all duration-200"
+                    class="chat-scroll-latest-btn absolute bottom-28 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-white bg-[var(--color-primary)] rounded-full shadow-lg hover:opacity-90 active:scale-95 transition-all duration-200"
                     title="回到最新消息"
                 >
                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
@@ -419,19 +223,19 @@
             </Transition>
 
             <!-- 输入区域 -->
-            <div class="chat-composer px-4 sm:px-6 lg:px-8 pb-7 pt-3">
-                <div class="max-w-4xl mx-auto">
+            <div class="chat-composer px-4 sm:px-6 lg:px-8 pb-5 pt-2.5">
+                <div class="chat-content-shell chat-composer-content mx-auto w-full">
                     <!-- 使用次数提示 -->
                     <div
                         v-if="usageInfo && !usageInfo.isAdmin && !usageInfo.IsAdmin"
-                        class="mb-2 text-xs text-center"
+                        class="chat-usage-hint mb-3 text-xs text-center"
                         :class="(usageInfo.remaining === 0 || usageInfo.Remaining === 0) ? 'text-red-500' : 'text-[var(--text-muted)]'"
                     >
                         {{ usageInfo.message || usageInfo.Message }}
                     </div>
 
                     <!-- 引用文章提示 -->
-                    <div v-if="quotedArticle" class="mb-2 p-2.5 bg-[var(--bg-hover)] rounded-2xl border border-[var(--border-base)]">
+                    <div v-if="quotedArticle" class="mb-3 p-2.5 bg-[var(--bg-hover)] rounded-2xl border border-[var(--border-base)]">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <div class="w-7 h-7 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0">
@@ -447,57 +251,113 @@
                         </div>
                     </div>
 
-                    <!-- 输入框 -->
-                    <div class="chat-input-wrapper">
+                    <div class="chat-composer-shell">
+                        <div class="chat-composer-toolbar">
+                            <button
+                                type="button"
+                                class="chat-composer-tool chat-composer-tool-primary"
+                                @click="showSettings = true"
+                            >
+                                <span class="chat-composer-tool-label">模型</span>
+                                <span class="truncate">{{ currentModelName }}</span>
+                            </button>
+
+                            <div class="chat-mode-pill-group">
+                                <button
+                                    v-for="mode in modeOptions"
+                                    :key="mode.key"
+                                    type="button"
+                                    class="chat-mode-pill"
+                                    :class="{ 'chat-mode-pill-active': selectedChatMode === mode.key }"
+                                    @click="setChatMode(mode.key)"
+                                >
+                                    {{ mode.label }}
+                                </button>
+                            </div>
+
+                            <label
+                                v-if="kbList.length"
+                                class="chat-kb-select"
+                                :class="{ 'is-disabled': selectedChatMode !== 'rag' && selectedChatMode !== 'auto' }"
+                            >
+                                <span class="chat-composer-tool-label">知识库</span>
+                                <select
+                                    v-model="selectedKbId"
+                                    :disabled="selectedChatMode !== 'rag' && selectedChatMode !== 'auto'"
+                                    @change="handleKbChange"
+                                >
+                                    <option value="">不使用知识库</option>
+                                    <option v-for="kb in kbList" :key="kb.id" :value="kb.id">{{ kb.name }}</option>
+                                </select>
+                            </label>
+                        </div>
+
+                        <!-- 输入框 -->
+                        <div class="chat-input-wrapper">
                         <textarea
                             ref="textareaRef"
                             v-model="inputText"
                             @input="autoResize"
                             @keydown.enter.exact.prevent="sendMessage"
                             @keydown.shift.enter.exact="handleShiftEnter"
-                            placeholder="输入消息，Enter 发送，Shift+Enter 换行..."
-                            class="w-full px-5 py-3.5 pr-32 bg-transparent border-none outline-none resize-none text-sm text-[var(--text-body)] placeholder-[var(--text-placeholder)] leading-relaxed"
-                            rows="2"
+                            placeholder="询问任何问题..."
+                            class="chat-input-textarea"
+                            rows="1"
                             maxlength="2000"
                         ></textarea>
+                        </div>
 
-                        <div class="absolute right-3 bottom-3 flex items-center gap-1.5">
-                            <button @click="showArticleDialog = true"
-                                class="p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-body)] hover:bg-[var(--bg-hover)] transition-colors"
-                                title="引用文章">
+                        <div class="chat-composer-footer">
+                            <div class="chat-composer-meta">
+                                <button
+                                    @click="showArticleDialog = true"
+                                    class="chat-composer-icon-btn"
+                                    title="引用文章"
+                                >
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24">
                                     <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
                                         d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
                                 </svg>
-                            </button>
-                            <span class="text-xs text-[var(--text-placeholder)] tabular-nums">{{ inputText.length }}/2000</span>
-                            <span v-if="selectedKb" class="hidden sm:inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full rag-chip" title="将优先检索知识库后回答">
-                                RAG
-                            </span>
-                            <span v-if="inputTokenCount > 0" class="text-xs px-1.5 py-0.5 rounded-full" :class="inputTokenCount > 3000 ? 'bg-red-100 text-red-500' : 'bg-slate-100 text-slate-500'" title="预估 Token 消耗">
-                                ≈{{ inputTokenCount }}
-                            </span>
-                            <button
-                                v-if="!isStreaming"
-                                :disabled="!inputText.trim()"
-                                @click="sendMessage"
-                                class="chat-send-btn"
-                                :class="inputText.trim() ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'bg-[var(--bg-hover)] text-[var(--text-placeholder)] cursor-not-allowed'"
-                            >
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24">
-                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"/>
-                                </svg>
-                            </button>
-                            <button
-                                v-else
-                                @click="stopStreaming"
-                                class="chat-send-btn bg-red-500 text-white shadow-sm"
-                                title="停止生成"
-                            >
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                    <rect x="6" y="6" width="12" height="12" rx="2"/>
-                                </svg>
-                            </button>
+                                </button>
+                                <span v-if="selectedKbOption" class="chat-composer-state-pill" title="将优先检索知识库后回答">
+                                    知识库 {{ selectedKbOption.name }}
+                                </span>
+                                <span v-if="selectedChatMode === 'web'" class="chat-composer-state-pill">联网检索</span>
+                                <span v-if="isStreaming" class="chat-composer-state-pill">正在生成</span>
+                            </div>
+
+                            <div class="chat-composer-actions">
+                                <span class="chat-composer-counter">{{ inputText.length }}/2000</span>
+                                <span
+                                    v-if="inputTokenCount > 0"
+                                    class="chat-composer-token-pill"
+                                    :class="{ 'chat-composer-token-pill-danger': inputTokenCount > 3000 }"
+                                    title="预估 Token 消耗"
+                                >
+                                    ≈{{ inputTokenCount }}
+                                </span>
+                                <button
+                                    v-if="!isStreaming"
+                                    :disabled="!inputText.trim()"
+                                    @click="sendMessage"
+                                    class="chat-send-btn"
+                                    :class="inputText.trim() ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'bg-[var(--bg-hover)] text-[var(--text-placeholder)] cursor-not-allowed'"
+                                >
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"/>
+                                    </svg>
+                                </button>
+                                <button
+                                    v-else
+                                    @click="stopStreaming"
+                                    class="chat-send-btn bg-red-500 text-white shadow-sm"
+                                    title="停止生成"
+                                >
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                        <rect x="6" y="6" width="12" height="12" rx="2"/>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -541,16 +401,20 @@
 <script setup>
 import { ref, computed, nextTick, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import {
-    Setting, Promotion, Document, Close, Search, Plus,
-    DArrowLeft, DArrowRight, VideoPause, Delete
-} from '@element-plus/icons-vue'
+import { Document, Search } from '@element-plus/icons-vue'
 import axios from '@/axios'
 import { getToken } from '@/composables/cookie'
 import { getArticleDetail } from '@/api/frontend/article'
 import { saveSession, getUserSessions, deleteUserSession, getUsageInfo, getPublicKbList } from '@/api/frontend/chat'
+import ChatSidebar from './ChatSidebar.vue'
+import ChatStatusBar from './ChatStatusBar.vue'
 import StreamMarkdownRender from './StreamMarkdownRender.vue'
 import ModelSettings from './ModelSettings.vue'
+import {
+    buildSidebarSections,
+    buildTopBarState,
+    groupSessionsForSidebar
+} from './chatWorkbenchViewModel.js'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 defineOptions({ name: 'ChatPanel' })
@@ -580,6 +444,7 @@ const showSettings = ref(false)
 const showSidebar = ref(true)
 const showArticleDialog = ref(false)
 const articleSearch = ref('')
+const sidebarSearchQuery = ref('')
 const quotedArticle = ref(null)
 const allArticles = ref([])
 const usageInfo = ref(null)
@@ -591,6 +456,7 @@ let abortController = null
 // 流式传输时的临时状态
 const streamingSessionId = ref(null)
 const streamingMessages = ref(null)
+const streamingStoppedByUser = ref(false)
 
 // ──────── 当前选中的模型 ────────
 const selectedModelId = ref('deepseek-chat')
@@ -599,6 +465,13 @@ const selectedModelId = ref('deepseek-chat')
 const kbList = ref([])
 const selectedKbId = ref('')
 const selectedChatMode = ref('auto')
+const sidebarSections = buildSidebarSections()
+const modeOptions = [
+    { key: 'auto', label: '智能' },
+    { key: 'normal', label: '普通' },
+    { key: 'rag', label: '知识库' },
+    { key: 'web', label: '联网' }
+]
 
 onMounted(async () => {
     try {
@@ -625,9 +498,12 @@ const modelOptions = ref([
     { id: 'ernie-3.5-8k', name: 'ERNIE 3.5', provider: 'qianfan' }
 ])
 
+const selectedModelOption = computed(() => modelOptions.value.find(o => o.id === selectedModelId.value) || null)
+
+const getModelProvider = (modelId) => modelOptions.value.find(o => o.id === modelId)?.provider || ''
+
 const currentModelName = computed(() => {
-    const m = modelOptions.value.find(o => o.id === selectedModelId.value)
-    return m?.name || selectedModelId.value
+    return selectedModelOption.value?.name || selectedModelId.value
 })
 
 const selectedKbOption = computed(() => {
@@ -694,6 +570,32 @@ const welcomeDescription = computed(() => {
     }
     return '普通聊天模式不会检索知识库，适合闲聊、写作、代码解释和通用问题。'
 })
+
+const filteredSidebarSessions = computed(() => {
+    const keyword = sidebarSearchQuery.value.trim().toLowerCase()
+    if (!keyword) return chatSessions.value
+
+    return chatSessions.value.filter(session => {
+        const title = String(session.title || '').toLowerCase()
+        const time = String(session.time || '').toLowerCase()
+        return title.includes(keyword) || time.includes(keyword)
+    })
+})
+
+const groupedSidebarSessions = computed(() => groupSessionsForSidebar(filteredSidebarSessions.value))
+const currentSessionSubtitle = computed(() => currentSessionId.value ? '围绕当前会话继续工作' : '从一条新对话开始')
+const topBarState = computed(() => buildTopBarState({
+    modelName: currentModelName.value,
+    chatMode: selectedChatMode.value,
+    selectedKbName: selectedKbOption.value?.name,
+    webEnabled: selectedChatMode.value === 'web'
+}))
+const statusMoreActions = computed(() => [
+    { key: 'export', label: '导出对话', disabled: !currentSessionId.value },
+    { key: 'clear-current', label: '清空当前会话', disabled: !currentSessionId.value || !displayMessages.value.length },
+    { key: 'settings', label: '模型设置' },
+    { key: 'clear-all', label: '清空全部会话', disabled: !chatSessions.value.length }
+])
 
 // ──────── 计算属性 ────────
 const currentSessionTitle = computed(() => {
@@ -831,6 +733,21 @@ const handleRouteArticleIntent = async () => {
     router.replace({ path: route.path, query: nextQuery })
 }
 
+const routeArticleIntentKey = computed(() => {
+    if (!route.query.articleId) return ''
+    return [
+        route.query.articleId,
+        route.query.prompt || '',
+        route.query.autoSend || ''
+    ].join('|')
+})
+
+watch(routeArticleIntentKey, async (key, previousKey) => {
+    if (!key || key === previousKey) return
+    routeIntentHandled.value = false
+    await handleRouteArticleIntent()
+})
+
 const loadUsageInfo = async () => {
     try {
         const res = await getUsageInfo(clientId)
@@ -847,14 +764,19 @@ const loadSessionsFromDb = async () => {
     try {
         const res = await getUserSessions(clientId)
         if (res.success && res.data) {
-            chatSessions.value = res.data.map(s => ({
-                id: s.sessionId,
-                title: s.title || '新会话',
-                pinned: false,
-                time: formatDbTime(s.updatedAt),
-                messages: safeParseMessages(s.messages),
-                model: s.model
-            }))
+            chatSessions.value = res.data.map(s => {
+                const rawUpdatedAt = s.updatedAt || s.createdAt || null
+                return {
+                    id: s.sessionId,
+                    title: s.title || '新会话',
+                    pinned: false,
+                    time: formatDbTime(rawUpdatedAt),
+                    createdAt: s.createdAt || rawUpdatedAt,
+                    updatedAt: rawUpdatedAt,
+                    messages: safeParseMessages(s.messages),
+                    model: s.model
+                }
+            })
             if (chatSessions.value.length > 0 && !currentSessionId.value) {
                 currentSessionId.value = chatSessions.value[0].id
             }
@@ -881,10 +803,19 @@ const formatDbTime = (timeStr) => {
     if (!timeStr) return ''
     try {
         const d = new Date(timeStr)
+        if (Number.isNaN(d.getTime())) return timeStr
         return d.toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
     } catch {
         return timeStr
     }
+}
+
+const stampSessionTime = (session, date = new Date()) => {
+    if (!session) return
+    const isoTime = date.toISOString()
+    if (!session.createdAt) session.createdAt = isoTime
+    session.updatedAt = isoTime
+    session.time = formatDbTime(isoTime)
 }
 
 const saveSessionToDb = async (sessionId, messages, model) => {
@@ -906,7 +837,7 @@ const saveSessionToDb = async (sessionId, messages, model) => {
                 smartRouteLabel: m.smartRouteLabel || null
             }))),
             model: model || selectedModelId.value,
-            provider: ''
+            provider: getModelProvider(model || selectedModelId.value)
         })
     } catch (e) {
         console.error('保存会话失败:', e)
@@ -916,11 +847,15 @@ const saveSessionToDb = async (sessionId, messages, model) => {
 const createNewChat = () => {
     if (isStreaming.value) return
     const newId = 'session_' + Date.now()
+    const now = new Date()
+    const nowIso = now.toISOString()
     const newSession = {
         id: newId,
         title: '新会话',
         pinned: false,
-        time: new Date().toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        time: formatDbTime(nowIso),
+        createdAt: nowIso,
+        updatedAt: nowIso,
         messages: [],
         model: selectedModelId.value
     }
@@ -944,9 +879,7 @@ const clearCurrentSession = async () => {
         await ElMessageBox.confirm('确定清空当前会话上下文吗？', '提示', { type: 'warning' })
         session.messages = []
         session.title = '新会话'
-        session.time = new Date().toLocaleString('zh-CN', {
-            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-        })
+        stampSessionTime(session)
         await saveSessionToDb(session.id, session.messages, session.model)
         ElMessage.success('已清空当前上下文')
         scrollToBottom(true)
@@ -1039,6 +972,50 @@ const exportSession = (session) => {
     ElMessage.success('已导出为 Markdown')
 }
 
+const shareCurrentSession = async () => {
+    if (!currentSessionId.value) {
+        ElMessage.info('请先选择一个会话')
+        return
+    }
+
+    try {
+        const href = router.resolve({
+            path: route.path,
+            query: {
+                ...route.query,
+                session: currentSessionId.value
+            }
+        }).href
+
+        await navigator.clipboard.writeText(`${window.location.origin}${href}`)
+        ElMessage.success('会话链接已复制')
+    } catch (error) {
+        console.error('Share session failed:', error)
+        ElMessage.error('分享链接复制失败')
+    }
+}
+
+const handleStatusMoreAction = (action) => {
+    if (action === 'export') {
+        exportSession(chatSessions.value.find(session => session.id === currentSessionId.value))
+        return
+    }
+
+    if (action === 'clear-current') {
+        clearCurrentSession()
+        return
+    }
+
+    if (action === 'settings') {
+        showSettings.value = true
+        return
+    }
+
+    if (action === 'clear-all') {
+        clearAllSessions()
+    }
+}
+
 // ── Token 消耗预估 ─────────────────────────────────────
 const estimateTokens = (text) => Math.max(1, Math.round(text.length * 0.4))
 
@@ -1058,9 +1035,7 @@ const updateSessionLocally = (sessionId, messages) => {
             const content = firstUser.content.split('\n\n').pop() || firstUser.content
             session.title = content.slice(0, 25) + (content.length > 25 ? '...' : '')
         }
-        session.time = new Date().toLocaleString('zh-CN', {
-            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-        })
+        stampSessionTime(session)
     }
 }
 
@@ -1096,19 +1071,38 @@ const normalizeSource = (source = {}, index = 0) => ({
 
 const normalizeSources = (sources = []) => sources.map(normalizeSource)
 
-const answerModeLabel = (mode) => {
-    if (mode === 'auto') return '智能选择'
-    if (mode === 'rag') return '知识库问答'
-    if (mode === 'web') return '联网搜索'
-    if (mode === 'article') return '文章辅助'
-    return '普通聊天'
+const routeOnlyStatusKeywords = [
+    '\u666e\u901a\u804a\u5929',
+    '\u666e\u901a\u95ee\u9898',
+    '\u76f4\u63a5\u56de\u7b54',
+    '\u76f4\u63a5\u7528\u666e\u901a\u804a\u5929',
+    '\u4e0d\u4f9d\u8d56\u5b9e\u65f6\u8d44\u6599'
+]
+
+const isRouteOnlyStatus = (chat, message = chat?.ragStatus) => {
+    const text = `${message || ''}`.trim()
+    if (!text) return false
+
+    const routeReason = `${chat?.routeReason || ''}`.trim()
+    if (routeReason && text === routeReason) return true
+
+    return chat?.mode === 'normal' && routeOnlyStatusKeywords.some(keyword => text.includes(keyword))
 }
 
-const answerModeClass = (mode) => {
-    if (mode === 'rag') return 'chat-answer-mode-rag'
-    if (mode === 'web') return 'chat-answer-mode-web'
-    if (mode === 'article' || mode === 'auto') return 'chat-answer-mode-rag'
-    return 'chat-answer-mode-normal'
+const shouldShowRagStatus = (chat) => {
+    if (!chat?.ragStatus || (chat.sources && chat.sources.length > 0)) return false
+    return !isRouteOnlyStatus(chat)
+}
+
+const visibleRagSteps = (chat) => {
+    const routeReason = `${chat?.routeReason || ''}`.trim()
+    return (chat?.ragSteps || []).filter(step => {
+        const message = `${step?.message || ''}`.trim()
+        if (!message) return false
+        if (step?.key === 'route') return false
+        if (routeReason && message === routeReason) return false
+        return !isRouteOnlyStatus(chat, message)
+    })
 }
 
 const toggleSourcePanel = (chat) => {
@@ -1242,7 +1236,7 @@ const handleStreamPayload = async (raw, appendContent) => {
         lastMsg.smartRouteLabel = smartModeLabel(routeMode)
         if (payload.routeKbId) {
             lastMsg.kbId = payload.routeKbId
-            const kb = knowledgeBases.value.find(item => item.id === payload.routeKbId)
+            const kb = kbList.value.find(item => Number(item.id) === Number(payload.routeKbId))
             if (kb) lastMsg.kbName = kb.name
         }
         if (routeMode === 'web') {
@@ -1253,6 +1247,11 @@ const handleStreamPayload = async (raw, appendContent) => {
     if (parsed.type === 'rag_status') {
         const payload = parsed.payload || {}
         applyRoutePayload(payload)
+        if (payload.step === 'route') {
+            lastMsg.ragStatus = ''
+            lastMsg.ragSteps = visibleRagSteps(lastMsg)
+            return
+        }
         lastMsg.ragStatus = payload.message || (lastMsg.mode === 'web' ? '正在联网搜索...' : '正在检索知识库...')
         updateRagStep(lastMsg, payload.step || 'status', lastMsg.ragStatus, payload.status || 'running')
         return
@@ -1373,10 +1372,8 @@ const sendMessage = async (options = {}) => {
         role: 'assistant',
         content: '',
         sources: [],
-        ragStatus: effectiveMode === 'auto' ? '正在智能判断...' : effectiveMode === 'web' ? '准备联网搜索...' : effectiveKb ? '准备检索知识库...' : '',
-        ragSteps: effectiveMode === 'auto'
-            ? [{ key: 'route', message: '正在智能判断...', status: 'running' }]
-            : effectiveMode === 'web'
+        ragStatus: effectiveMode === 'web' ? '准备联网搜索...' : effectiveKb ? '准备检索知识库...' : '',
+        ragSteps: effectiveMode === 'web'
             ? [{ key: 'queued', message: '准备联网搜索...', status: 'running' }]
             : effectiveKb
             ? [{ key: 'queued', message: '准备检索知识库...', status: 'running' }]
@@ -1395,13 +1392,12 @@ const sendMessage = async (options = {}) => {
             ? userContent.split('\n\n')[1] || userContent
             : userContent
         session.title = displayContent.slice(0, 25) + (displayContent.length > 25 ? '...' : '')
-        session.time = new Date().toLocaleString('zh-CN', {
-            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-        })
+        stampSessionTime(session)
     }
 
     streamingSessionId.value = sessionId
     streamingMessages.value = sessionMessages
+    streamingStoppedByUser.value = false
     scrollToBottom(true)
 
     isStreaming.value = true
@@ -1420,6 +1416,7 @@ const sendMessage = async (options = {}) => {
             body: JSON.stringify({
                 messages: outgoingMessages,
                 model: selectedModelId.value,
+                provider: getModelProvider(selectedModelId.value),
                 mode: requestedMode,
                 enableWebSearch: requestedMode === 'web',
                 sessionId: sessionId,
@@ -1473,23 +1470,32 @@ const sendMessage = async (options = {}) => {
         finishRagStatusIfNeeded()
     } catch (error) {
         if (error.name === 'AbortError') {
-            const lastMsg = streamingMessages.value[streamingMessages.value.length - 1]
-            lastMsg.content += (lastMsg.content ? '\n\n' : '') + '[ 已停止生成 ]'
+            const lastMsg = streamingMessages.value?.[streamingMessages.value.length - 1]
+            if (streamingStoppedByUser.value && lastMsg) {
+                lastMsg.content += (lastMsg.content ? '\n\n' : '') + '[ 已停止生成 ]'
+            }
         } else {
             console.error('流式请求出错:', error)
-            streamingMessages.value[streamingMessages.value.length - 1].content = `抱歉，请求出错了，请稍后重试。\n\n${error.message || ''}`.trim()
+            const lastMsg = streamingMessages.value?.[streamingMessages.value.length - 1]
+            if (lastMsg) {
+                lastMsg.content = `抱歉，请求出错了，请稍后重试。\n\n${error.message || ''}`.trim()
+            }
         }
     } finally {
         isStreaming.value = false
         abortController = null
 
         // 将完整会话同步到本地状态 & 保存到数据库
-        const finalMessages = [...(streamingMessages.value || [])]
-        updateSessionLocally(streamingSessionId.value, finalMessages)
-        await saveSessionToDb(streamingSessionId.value, finalMessages, selectedModelId.value)
+        const finalSessionId = streamingSessionId.value
+        const finalMessages = Array.isArray(streamingMessages.value) ? [...streamingMessages.value] : []
+        if (finalSessionId) {
+            updateSessionLocally(finalSessionId, finalMessages)
+            await saveSessionToDb(finalSessionId, finalMessages, selectedModelId.value)
+        }
 
         streamingSessionId.value = null
         streamingMessages.value = null
+        streamingStoppedByUser.value = false
 
         scrollToBottom()
         await loadUsageInfo()
@@ -1501,19 +1507,8 @@ const sendMessage = async (options = {}) => {
 
 const stopStreaming = () => {
     if (abortController) {
+        streamingStoppedByUser.value = true
         abortController.abort()
-        abortController = null
-        isStreaming.value = false
-        const lastMsg = streamingMessages.value[streamingMessages.value.length - 1]
-        lastMsg.content += (lastMsg.content ? '\n\n' : '') + '> [ ⚠️ 已手动停止生成 ]'
-
-        // Save the stopped state
-        const finalMessages = [...(streamingMessages.value || [])]
-        updateSessionLocally(streamingSessionId.value, finalMessages)
-        saveSessionToDb(streamingSessionId.value, finalMessages, selectedModelId.value)
-
-        streamingSessionId.value = null
-        streamingMessages.value = null
     }
 }
 
@@ -1611,7 +1606,7 @@ const scrollToBottom = async (force = false) => {
 const autoResize = () => {
     if (textareaRef.value) {
         textareaRef.value.style.height = 'auto'
-        textareaRef.value.style.height = Math.min(textareaRef.value.scrollHeight, 200) + 'px'
+        textareaRef.value.style.height = Math.min(textareaRef.value.scrollHeight, 132) + 'px'
     }
 }
 
@@ -1718,45 +1713,6 @@ const selectArticle = async (article) => {
     opacity: 0;
 }
 
-/* 侧边栏项目 - 清言风格 */
-.sidebar-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    border-radius: 1rem;
-    transition: all 0.2s ease;
-    cursor: pointer;
-    color: var(--text-body);
-}
-.sidebar-item:hover {
-    background: var(--bg-hover);
-}
-
-.sidebar-item-new {
-    background: var(--bg-hover);
-    font-weight: 500;
-    font-size: 0.875rem;
-}
-.sidebar-item-new:hover {
-    background: var(--bg-active);
-}
-
-/* 会话列表项 */
-.sidebar-item-session {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    padding: 0.625rem 0.875rem;
-    border-radius: 0.875rem;
-    transition: all 0.2s ease;
-    cursor: pointer;
-}
-.sidebar-item-session-active {
-    background: var(--bg-active);
-}
-
 /* 快速提示卡片 */
 .quick-prompt-card {
     display: flex;
@@ -1778,21 +1734,53 @@ const selectArticle = async (article) => {
 }
 
 /* AI 回复气泡 */
+.chat-message {
+    display: flex;
+    gap: 0.9rem;
+    margin-bottom: 1.9rem;
+}
+
+.chat-message-assistant {
+    align-items: flex-start;
+}
+
+.chat-ai-entry {
+    max-width: min(100%, 820px);
+}
+
+.chat-ai-head {
+    margin-bottom: 0.7rem;
+}
+
+.chat-ai-headline {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 0.45rem;
+}
+
+.chat-ai-name {
+    color: var(--text-heading);
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.chat-ai-time {
+    color: var(--text-placeholder);
+    font-size: 0.75rem;
+}
+
 .chat-ai-bubble {
-    padding: 1rem 1.25rem;
-    border-radius: 1rem;
-    border-top-left-radius: 0.25rem;
-    background: var(--bg-card);
-    border: 1px solid var(--border-base);
+    padding: 0;
+    border: 0;
+    background: transparent;
     color: var(--text-body);
-    font-size: 0.875rem;
-    line-height: 1.7;
+    box-shadow: none;
 }
 
 /* 暗色模式 AI 气泡内 Markdown */
 .dark .chat-ai-bubble {
-    background: #1c2732;
-    border-color: #253341;
+    background: transparent;
 }
 
 .dark .chat-ai-bubble :deep(h1),
@@ -1861,108 +1849,11 @@ const selectArticle = async (article) => {
     font-size: 0.75rem;
 }
 
-.chat-mode-switch {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.35rem;
-    padding: 0.25rem;
-    border-radius: 0.85rem;
-    background: var(--bg-hover);
-    border: 1px solid var(--border-base);
-}
-
-@media (min-width: 1280px) {
-    .chat-mode-switch {
-        grid-template-columns: 1fr 1fr;
-    }
-}
-
-.chat-mode-option {
-    min-height: 2.15rem;
-    border: 0;
-    border-radius: 0.65rem;
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 0.8rem;
-    font-weight: 700;
-    transition: all 0.18s ease;
-}
-
-.chat-mode-option:hover {
-    color: var(--text-heading);
-    background: rgba(59, 130, 246, 0.08);
-}
-
-.chat-mode-option-active {
-    color: #fff;
-    background: linear-gradient(135deg, #4f7cff, #20c7df);
-    box-shadow: 0 8px 22px rgba(59, 130, 246, 0.22);
-}
-
-.chat-mode-option-active:hover {
-    color: #fff;
-    background: linear-gradient(135deg, #4f7cff, #20c7df);
-}
-
-.chat-answer-meta {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-    margin-bottom: 0.65rem;
-}
-
-.chat-answer-mode,
-.chat-answer-kb {
+.chat-ai-streaming {
     display: inline-flex;
     align-items: center;
-    min-height: 1.45rem;
-    padding: 0 0.5rem;
-    border-radius: 999px;
-    font-size: 0.7rem;
-    font-weight: 700;
-}
-
-.chat-answer-mode-normal {
-    color: #475569;
-    background: rgba(100, 116, 139, 0.10);
-    border: 1px solid rgba(100, 116, 139, 0.18);
-}
-
-.chat-answer-mode-rag {
-    color: var(--color-primary);
-    background: rgba(59, 130, 246, 0.10);
-    border: 1px solid rgba(59, 130, 246, 0.20);
-}
-
-.chat-answer-mode-web {
-    color: #0f766e;
-    background: rgba(20, 184, 166, 0.12);
-    border: 1px solid rgba(20, 184, 166, 0.24);
-}
-
-.chat-answer-kb {
-    color: #64748b;
-    background: var(--bg-hover);
-    border: 1px solid var(--border-base);
-}
-
-.chat-route-reason {
-    margin: -0.25rem 0 0.75rem;
-    color: var(--text-muted);
-    font-size: 0.76rem;
-    line-height: 1.45;
-}
-
-.dark .chat-answer-mode-normal,
-.dark .chat-answer-kb {
-    color: #94a3b8;
-}
-
-.dark .chat-answer-mode-web {
-    color: #5eead4;
-    background: rgba(20, 184, 166, 0.14);
-    border-color: rgba(45, 212, 191, 0.26);
+    gap: 0.5rem;
+    min-height: 2.25rem;
 }
 
 .rag-fallback-btn {
@@ -2183,8 +2074,6 @@ const selectArticle = async (article) => {
     flex-wrap: wrap;
     gap: 8px;
     margin-top: 14px;
-    padding-top: 12px;
-    border-top: 1px solid var(--border-base);
 }
 
 .ai-follow-up-list button {
@@ -2203,6 +2092,39 @@ const selectArticle = async (article) => {
     border-color: rgba(59, 130, 246, 0.35);
     background: var(--bg-card);
     transform: translateY(-1px);
+}
+
+.chat-ai-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    opacity: 0.9;
+    transition: opacity 0.18s ease;
+}
+
+.group:hover .chat-ai-actions {
+    opacity: 1;
+}
+
+.chat-ai-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 30px;
+    padding: 0 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border-base);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-size: 0.76rem;
+    transition: all 0.18s ease;
+}
+
+.chat-ai-action-btn:hover {
+    color: var(--color-primary);
+    border-color: rgba(59, 130, 246, 0.28);
+    background: color-mix(in srgb, var(--bg-card) 82%, white);
 }
 
 .rag-chip {
@@ -2302,6 +2224,7 @@ const selectArticle = async (article) => {
 .chat-panel {
     --chat-primary: var(--color-primary);
     --chat-primary-2: var(--color-accent);
+    --chat-mobile-composer-height: 190px;
     width: 100%;
     min-height: 0;
     background: var(--bg-base);
@@ -2310,24 +2233,12 @@ const selectArticle = async (article) => {
     box-shadow: none;
 }
 
-.chat-sidebar {
-    padding-top: 20px;
-    background: var(--bg-card);
-    border-right: 1px solid var(--border-base);
-    box-shadow: var(--shadow-sm);
-}
-
 .chat-main {
     background: var(--bg-base);
 }
 
-.chat-assistant-card {
-    margin: 0 20px 18px;
-    padding: 14px;
-    border-radius: 8px;
-    background: var(--bg-card);
-    border: 1px solid var(--border-base);
-    box-shadow: var(--shadow-sm);
+.chat-sidebar-backdrop {
+    display: none;
 }
 
 .assistant-avatar {
@@ -2356,151 +2267,28 @@ const selectArticle = async (article) => {
     box-shadow: var(--shadow-sm);
 }
 
-.pro-badge {
-    display: inline-flex;
-    align-items: center;
-    height: 20px;
-    padding: 0 8px;
-    border-radius: 999px;
-    color: var(--color-primary);
-    font-size: 11px;
-    font-weight: 800;
-    background: var(--bg-hover);
-}
-
-.chat-topbar {
-    min-height: 72px;
-    padding: 16px 28px 10px;
-    border-bottom: 0;
-    background: transparent;
-}
-
-.chat-topbar :deep(.el-button) {
-    min-height: 36px;
-    border-radius: 8px;
-    border-color: var(--border-base);
-    color: var(--text-secondary);
-    background: var(--bg-card);
-    box-shadow: var(--shadow-sm);
-}
-
-.sidebar-item {
-    border-radius: 8px;
-    border: 1px solid var(--border-base);
-    background: var(--bg-card);
-}
-
-.sidebar-item:hover {
-    transform: translateY(-1px);
-    border-color: var(--border-heavy);
-    background: var(--bg-hover);
-    box-shadow: var(--shadow-sm);
-}
-
-.sidebar-item-new {
-    min-height: 46px;
-    color: #fff;
-    border: 0;
-    background: var(--chat-primary);
-    box-shadow: var(--shadow-md);
-}
-
-.sidebar-item-new:hover {
-    color: #fff;
-    background: var(--link-hover);
-}
-
-.chat-mode-switch {
-    display: grid;
-    gap: 10px;
-    padding: 0;
-    border: 0;
-    background: transparent;
-}
-
-.chat-mode-option {
-    min-height: 50px;
-    padding: 0 14px;
-    border-radius: 8px;
-    border: 1px solid var(--border-base);
-    color: var(--text-secondary);
-    text-align: left;
-    background: var(--bg-card);
-}
-
-.chat-mode-option:hover {
-    color: var(--chat-primary);
-    background: var(--bg-hover);
-}
-
-.chat-mode-option-active {
-    color: var(--chat-primary);
-    border-color: var(--border-heavy);
-    background: var(--bg-active);
-    box-shadow: inset 3px 0 0 var(--chat-primary);
-}
-
-.chat-mode-option-active:hover {
-    color: var(--chat-primary);
-    background: var(--bg-active);
-}
-
-.sidebar-item-session {
-    min-height: 40px;
-    padding: 9px 10px;
-    border-radius: 8px;
-    color: var(--text-body);
-}
-
-.sidebar-item-session-active {
-    color: var(--chat-primary);
-    background: var(--bg-active);
-}
-
-.clear-all-btn {
-    width: 100%;
-    min-height: 42px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    border-radius: 8px;
-    border: 1px solid var(--border-base);
-    color: var(--text-secondary);
-    background: var(--bg-card);
-    transition: all 0.18s ease;
-}
-
-.clear-all-btn:hover {
-    color: #ef4444;
-    border-color: rgba(239, 68, 68, 0.28);
-    background: var(--bg-hover);
-}
-
 .chat-messages-scroll {
     padding-bottom: 18px;
 }
 
+.chat-scroll-latest-btn {
+    bottom: 9.5rem;
+}
+
 .chat-ai-bubble {
     max-width: 100%;
-    padding: 20px 22px;
-    border-radius: 8px;
-    border-top-left-radius: 8px;
-    border: 1px solid var(--border-base);
-    background: var(--bg-card);
-    box-shadow: var(--shadow-md);
+    padding: 0;
+    border-radius: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
 }
 
 .user-bubble {
-    border-radius: 8px;
+    border-radius: 18px;
+    border-top-right-radius: 6px;
     background: var(--chat-primary);
-    box-shadow: var(--shadow-md);
-}
-
-.chat-answer-mode,
-.chat-answer-kb {
-    min-height: 24px;
-    border-radius: 999px;
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.14);
 }
 
 .rag-step-list,
@@ -2520,67 +2308,491 @@ const selectArticle = async (article) => {
     background: linear-gradient(180deg, transparent, var(--bg-base) 34%);
 }
 
-.chat-input-wrapper {
-    border-radius: 8px;
+.chat-content-shell {
+    max-width: 1280px;
+}
+
+.chat-composer-content {
+    max-width: 900px;
+}
+
+.chat-empty-state {
+    min-height: min(58vh, 620px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 0.9rem;
+    padding: 2.2rem 0 1.2rem;
+}
+
+.chat-empty-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    padding: 0 0.85rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 16%, var(--border-base));
+    background: color-mix(in srgb, var(--bg-card) 90%, transparent);
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.chat-empty-title {
+    margin: 0;
+    color: var(--text-heading);
+    font-size: clamp(1.85rem, 2.2vw, 2.65rem);
+    line-height: 1.16;
+    font-weight: 800;
+}
+
+.chat-empty-description {
+    max-width: 640px;
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.98rem;
+    line-height: 1.75;
+}
+
+.chat-empty-prompt-grid {
+    width: 100%;
+    max-width: 760px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.95rem;
+    margin-top: 1rem;
+}
+
+.quick-prompt-card {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 104px;
+    padding: 1.05rem 1.15rem;
+    border-radius: 18px;
     border: 1px solid var(--border-base);
-    background: var(--bg-card);
-    box-shadow: var(--shadow-md);
+    background: color-mix(in srgb, var(--bg-card) 94%, transparent);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+    text-align: left;
+}
+
+.chat-empty-prompt-text {
+    color: var(--text-body);
+    font-size: 0.96rem;
+    line-height: 1.6;
+    font-weight: 600;
+}
+
+.chat-empty-prompt-icon {
+    width: 1rem;
+    height: 1rem;
+    margin-top: 0.2rem;
+    color: var(--text-placeholder);
+    flex-shrink: 0;
+}
+
+.chat-composer {
+    border-top: 0;
+    background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.8) 18%, var(--bg-base) 46%);
+}
+
+.chat-composer-shell {
+    border-radius: 20px;
+    border: 1px solid color-mix(in srgb, var(--border-base) 92%, white);
+    background: color-mix(in srgb, var(--bg-card) 97%, transparent);
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.07);
+    padding: 0.7rem 0.8rem;
+}
+
+.chat-composer-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.55rem;
+    padding-bottom: 0.55rem;
+}
+
+.chat-composer-tool,
+.chat-kb-select {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 2.08rem;
+    padding: 0 0.72rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-base);
+    background: var(--bg-base);
+    color: var(--text-body);
+    font-size: 0.84rem;
+}
+
+.chat-composer-tool {
+    transition: all 0.18s ease;
+}
+
+.chat-composer-tool:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 28%, var(--border-base));
+    color: var(--text-heading);
+    background: var(--bg-hover);
+}
+
+.chat-composer-tool-primary {
+    max-width: 260px;
+}
+
+.chat-composer-tool-label {
+    color: var(--text-muted);
+    font-size: 0.73rem;
+    font-weight: 700;
+}
+
+.chat-mode-pill-group {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.chat-mode-pill {
+    min-height: 2.08rem;
+    padding: 0 0.78rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    font-weight: 700;
+    transition: all 0.18s ease;
+}
+
+.chat-mode-pill:hover {
+    color: var(--text-heading);
+    background: var(--bg-hover);
+}
+
+.chat-mode-pill-active {
+    color: var(--text-heading);
+    border-color: color-mix(in srgb, var(--color-primary) 20%, var(--border-base));
+    background: color-mix(in srgb, var(--color-primary) 8%, var(--bg-card));
+    box-shadow: 0 10px 22px rgba(59, 130, 246, 0.12);
+}
+
+.chat-kb-select {
+    min-width: 0;
+}
+
+.chat-kb-select select {
+    min-width: 170px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--text-body);
+    font-size: 0.84rem;
+}
+
+.chat-kb-select.is-disabled {
+    opacity: 0.56;
+}
+
+.chat-input-wrapper {
+    border-radius: 20px;
+    border: 1px solid transparent;
+    background: transparent;
+    box-shadow: none;
 }
 
 .chat-input-wrapper:focus-within {
-    border-color: var(--chat-primary);
-    box-shadow: var(--shadow-md), 0 0 0 3px var(--focus-ring);
+    border-color: transparent;
+    box-shadow: none;
 }
 
-.chat-input-wrapper textarea {
-    min-height: 84px;
-    padding-bottom: 52px;
+.chat-input-textarea {
+    width: 100%;
+    min-height: 58px;
+    max-height: 132px;
+    padding: 0.25rem 0.15rem 0.2rem;
+    border: 0;
+    outline: 0;
+    resize: none;
+    background: transparent;
+    color: var(--text-body);
+    font-size: 0.95rem;
+    line-height: 1.55;
+    overflow-y: auto;
 }
 
-.chat-input-wrapper .absolute.right-3.bottom-3 {
-    left: 14px;
-    right: 14px;
-    justify-content: flex-end;
+.chat-input-textarea::placeholder {
+    color: var(--text-placeholder);
+}
+
+.chat-composer-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 0.25rem;
+}
+
+.chat-composer-meta,
+.chat-composer-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-width: 0;
+}
+
+.chat-composer-icon-btn {
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-muted);
+    transition: all 0.18s ease;
+}
+
+.chat-composer-icon-btn:hover {
+    color: var(--text-heading);
+    border-color: var(--border-base);
+    background: var(--bg-hover);
+}
+
+.chat-composer-state-pill,
+.chat-composer-token-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.8rem;
+    padding: 0 0.65rem;
+    border-radius: 999px;
+    background: var(--bg-hover);
+    color: var(--text-secondary);
+    font-size: 0.76rem;
+    white-space: nowrap;
+}
+
+.chat-composer-token-pill {
+    color: var(--text-muted);
+}
+
+.chat-composer-token-pill-danger {
+    background: rgba(239, 68, 68, 0.12);
+    color: #dc2626;
+}
+
+.chat-composer-counter {
+    color: var(--text-placeholder);
+    font-size: 0.78rem;
+    font-variant-numeric: tabular-nums;
 }
 
 .chat-send-btn {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
 }
 
 .chat-send-btn.bg-\[var\(--color-primary\)\] {
     background: var(--chat-primary) !important;
 }
 
-.quick-prompt-card {
-    border-radius: 8px;
-    background: var(--bg-card);
-    box-shadow: var(--shadow-sm);
-}
-
 @media (max-width: 768px) {
     .chat-panel {
         position: relative;
+        --chat-mobile-composer-height: 178px;
     }
 
-    .chat-sidebar {
+    .chat-messages-scroll {
+        padding-left: 0.9rem;
+        padding-right: 0.9rem;
+        padding-bottom: 0.65rem;
+    }
+
+    .chat-composer {
+        padding: 0.35rem 0.65rem calc(0.55rem + env(safe-area-inset-bottom)) !important;
+    }
+
+    .chat-composer-content {
+        max-width: 100%;
+    }
+
+    .chat-usage-hint {
+        margin-bottom: 0.3rem !important;
+        font-size: 0.68rem;
+        line-height: 1.2;
+    }
+
+    .chat-scroll-latest-btn {
+        bottom: calc(var(--chat-mobile-composer-height) + 0.75rem);
+        padding: 0.42rem 0.72rem;
+        font-size: 0.75rem;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.24);
+    }
+
+    .chat-message {
+        gap: 0.58rem;
+        margin-bottom: 1.35rem;
+    }
+
+    .chat-ai-entry {
+        max-width: calc(100% - 42px);
+    }
+
+    .assistant-avatar-sm {
+        width: 32px;
+        height: 32px;
+    }
+
+    .chat-ai-head {
+        margin-bottom: 0.42rem;
+    }
+
+    .chat-ai-name {
+        font-size: 0.9rem;
+    }
+
+    .chat-ai-time {
+        font-size: 0.7rem;
+    }
+
+    .user-avatar {
+        width: 34px;
+        height: 34px;
+    }
+
+    .user-bubble {
+        padding: 0.65rem 0.85rem;
+        border-radius: 16px;
+        border-top-right-radius: 6px;
+    }
+
+    .chat-sidebar-backdrop {
+        display: block;
         position: absolute;
-        inset: 0 auto 0 0;
-        z-index: 30;
-        width: min(86vw, 300px) !important;
+        inset: 0;
+        z-index: 20;
+        background: rgba(15, 23, 42, 0.28);
+        backdrop-filter: blur(2px);
     }
 
-    .chat-topbar {
-        padding: 12px 16px 8px;
+    .chat-empty-state {
+        min-height: 48vh;
+        align-items: flex-start;
+        text-align: left;
+        padding-top: 1rem;
     }
 
-    .chat-ai-bubble {
-        padding: 16px;
+    .chat-empty-title,
+    .chat-empty-description {
+        max-width: 100%;
     }
 
-    .chat-input-wrapper textarea {
-        padding-right: 18px;
+    .chat-empty-prompt-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .chat-composer-shell {
+        border-radius: 14px;
+        padding: 0.48rem;
+        box-shadow: 0 10px 26px rgba(15, 23, 42, 0.07);
+    }
+
+    .chat-composer-toolbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.36rem;
+    }
+
+    .chat-composer-footer {
+        flex-direction: row;
+        align-items: center;
+        gap: 0.38rem;
+    }
+
+    .chat-composer-tool,
+    .chat-kb-select {
+        min-height: 1.82rem;
+        padding: 0 0.58rem;
+        font-size: 0.76rem;
+    }
+
+    .chat-composer-tool-label {
+        white-space: nowrap;
+    }
+
+    .chat-composer-tool-primary {
+        width: 100%;
+        max-width: none;
+        justify-content: space-between;
+    }
+
+    .chat-kb-select {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        width: 100%;
+    }
+
+    .chat-kb-select select {
+        min-width: 0;
+        width: 100%;
+        font-size: 0.78rem;
+        text-overflow: ellipsis;
+    }
+
+    .chat-mode-pill-group {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.35rem;
+    }
+
+    .chat-mode-pill {
+        min-height: 1.82rem;
+        padding: 0 0.35rem;
+        font-size: 0.74rem;
+        justify-content: center;
+    }
+
+    .chat-input-textarea {
+        min-height: 38px;
+        max-height: 92px;
+        padding-top: 0.18rem;
+        padding-bottom: 0.12rem;
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+
+    .chat-composer-footer {
+        margin-top: 0.12rem;
+    }
+
+    .chat-composer-meta {
+        flex: 1 1 auto;
+        overflow: hidden;
+    }
+
+    .chat-composer-state-pill {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-height: 1.65rem;
+        padding: 0 0.58rem;
+        font-size: 0.72rem;
+    }
+
+    .chat-composer-actions {
+        flex-shrink: 0;
+        justify-content: flex-end;
+    }
+
+    .chat-send-btn {
+        width: 32px;
+        height: 32px;
     }
 }
 </style>

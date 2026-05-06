@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="toc-placeholder"></div>
-    <aside class="article-toc article-toc--fixed border-r border-[#e5e7eb] bg-[#f8fafc] px-5 py-5">
+    <aside class="article-toc article-toc--fixed">
       <div v-if="showTabs" class="toc-tabs">
         <button
           type="button"
@@ -191,7 +191,7 @@ const TreeNode = defineComponent({
     ])
 
     const rowStyle = computed(() => ({
-      paddingLeft: `${nodeProps.depth * 16}px`
+      paddingLeft: `${7 + nodeProps.depth * 13}px`
     }))
 
     const iconText = computed(() => {
@@ -272,27 +272,45 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .toc-placeholder {
-  width: 280px;
+  width: 290px;
   flex-shrink: 0;
 }
 
 .article-toc--fixed {
   position: fixed;
-  top: 72px;
-  width: 280px;
+  top: 96px;
+  width: 290px;
   z-index: 40;
-  height: calc(100vh - 72px);
+  height: calc(100vh - 120px);
+  max-height: calc(100vh - 120px);
+  overflow-x: hidden;
   overflow-y: auto;
-  border-color: #eee4d7;
-  background: #fcfaf9;
+  border-right: 0;
+  border-color: transparent;
+  background: transparent;
+  padding: 12px 10px 14px;
+  color: #243142;
+  font-family: "PingFang SC", "Microsoft YaHei", "HarmonyOS Sans SC", system-ui, sans-serif;
+  scrollbar-color: rgba(17, 24, 39, 0.34) transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.article-toc--fixed::-webkit-scrollbar {
+  width: 6px;
+}
+
+.article-toc--fixed::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.28);
 }
 
 @media (max-width: 1500px) {
   .article-toc--fixed {
-    width: 260px;
+    width: 280px;
   }
   .toc-placeholder {
-    width: 260px;
+    width: 280px;
   }
 }
 
@@ -308,74 +326,72 @@ onBeforeUnmount(() => {
 .toc-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  margin-bottom: 18px;
-  color: #7a6a5d;
-  font-size: 14px;
-  font-weight: 600;
+  gap: 4px;
+  margin-bottom: 14px;
+  color: #667382;
+  font-size: 12.5px;
+  font-weight: 800;
   text-align: center;
 }
 
 .toc-tab {
   position: relative;
-  height: 36px;
+  height: 33px;
+  border-radius: 10px;
   color: inherit;
-  transition: color 0.16s ease;
+  transition: background-color 0.16s ease, color 0.16s ease;
 }
 
 .toc-tab:hover {
-  color: #8f6428;
+  background: rgba(17, 24, 39, 0.06);
+  color: #111827;
 }
 
 .toc-tab-active {
-  color: #201b17;
-  font-weight: 800;
+  background: #f0f1f3;
+  color: #111827;
+  font-weight: 900;
 }
 
 .toc-tab-active::after {
-  position: absolute;
-  right: 24%;
-  bottom: 0;
-  left: 24%;
-  height: 3px;
-  border-radius: 999px;
-  background: #c8a36d;
-  content: "";
+  display: none;
 }
 
 .toc-static-head {
-  margin-bottom: 16px;
-  border-bottom: 1px solid #efe3d2;
-  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 0;
+  padding-bottom: 0;
 }
 
 .toc-static-title {
-  color: #201b17;
-  font-size: 18px;
+  color: #182433;
+  font-size: 16px;
   font-weight: 900;
   letter-spacing: 0;
+  line-height: 1.25;
 }
 
 .toc-static-subtitle {
-  margin-top: 5px;
-  color: #8a7d70;
+  margin-top: 4px;
+  color: #7c8794;
   font-size: 12px;
-  line-height: 1.55;
+  line-height: 1.45;
 }
 
 .article-toc__scroll {
-  max-height: calc(100vh - 88px - 24px - 72px);
+  max-height: calc(100vh - 172px);
   overflow-y: auto;
-  padding: 2px 8px 16px 0;
+  padding: 0 4px 14px 0;
   scrollbar-width: thin;
-  scrollbar-color: #d8c4a8 transparent;
+  scrollbar-color: rgba(17, 24, 39, 0.34) transparent;
 }
 
 .toc-static-head + .article-toc__scroll {
-  max-height: calc(100vh - 88px - 24px - 58px);
+  max-height: calc(100vh - 166px);
 }
 
 .article-toc__scroll::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 .article-toc__scroll::-webkit-scrollbar-track {
@@ -384,37 +400,39 @@ onBeforeUnmount(() => {
 
 .article-toc__scroll::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: #d8c4a8;
+  background: rgba(17, 24, 39, 0.28);
 }
 
 :deep(.toc-row) {
   position: relative;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin: 3px 0;
-  border-left: 3px solid transparent;
-  border-radius: 8px;
-  padding-top: 6px;
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto 8px;
+  align-items: center;
+  gap: 5px;
+  min-height: 33px;
+  margin: 1px 0;
+  border-left: 0;
+  border-radius: 10px;
+  padding-top: 7px;
   padding-right: 8px;
-  padding-bottom: 6px;
-  color: #4a4037;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1.65;
+  padding-bottom: 7px;
+  color: #667382;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.5;
   transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
 }
 
 :deep(.toc-row:hover) {
-  background: #f7f0e6;
-  color: #201b17;
+  background: rgba(17, 24, 39, 0.06);
+  color: #111827;
 }
 
 :deep(.toc-depth-0) {
-  margin-top: 8px;
-  color: #2a2a2a;
-  font-size: 14px;
-  font-weight: 700;
+  min-height: 36px;
+  color: #4f5f6f;
+  font-size: 12.5px;
+  font-weight: 800;
 }
 
 :deep(.toc-depth-1),
@@ -422,90 +440,108 @@ onBeforeUnmount(() => {
 :deep(.toc-depth-3),
 :deep(.toc-depth-4),
 :deep(.toc-kind-article) {
-  color: #5f554b;
-  font-size: 14px;
-  font-weight: 400;
+  color: #667382;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+:deep(.toc-kind-article) {
+  min-height: 38px;
+  line-height: 1.58;
 }
 
 :deep(.toc-depth-3),
 :deep(.toc-depth-4),
 :deep(.toc-depth-5),
 :deep(.toc-depth-6) {
-  color: #8a7d70;
+  color: #87919d;
 }
 
 :deep(.toc-row-active) {
-  border-left-color: #c8a36d;
-  background: #efe3d2;
-  color: #8f6428;
-  font-weight: 700;
+  background: #f0f1f3;
+  color: #111827;
+  font-weight: 900;
+}
+
+:deep(.toc-row-active::after) {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #111827;
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.12);
+  content: "";
 }
 
 :deep(.toc-chevron) {
   display: inline-grid;
-  width: 18px;
-  height: 24px;
-  flex: 0 0 18px;
+  width: 14px;
+  height: 18px;
   place-items: center;
-  color: currentColor;
+  color: #82909f;
   font-size: 14px;
   line-height: 1;
 }
 
+:deep(.toc-row-active .toc-chevron),
+:deep(.toc-row:hover .toc-chevron) {
+  color: #111827;
+}
+
 :deep(.toc-chevron-leaf) {
-  font-size: 15px;
-  opacity: 0.6;
+  font-size: 13px;
+  opacity: 0.45;
 }
 
 :deep(.toc-title) {
   min-width: 0;
-  flex: 1;
   overflow: hidden;
   color: inherit;
-  line-height: 1.65;
+  line-height: 1.58;
   overflow-wrap: anywhere;
   text-align: left;
   white-space: normal;
 }
 
 :deep(.toc-count) {
-  min-width: 22px;
-  height: 20px;
-  flex: 0 0 auto;
+  min-width: 18px;
   border-radius: 999px;
-  background: #f7f0e6;
-  padding: 0 7px;
-  color: #8a7d70;
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 20px;
+  background: rgba(17, 24, 39, 0.08);
+  padding: 4px 6px;
+  color: #111827;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
   text-align: center;
 }
 
 :deep(.toc-row-active .toc-count) {
-  background: #f8e8ca;
-  color: #8f6428;
+  background: rgba(17, 24, 39, 0.08);
+  color: #111827;
 }
 
 :global(html.dark) .article-toc {
-  border-color: #2a313a;
-  background: #151a20;
+  border-color: transparent;
+  background: transparent;
+  color: #e8e2d8;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
 
 :global(html.dark) .toc-tabs {
-  color: #afa79c;
+  color: #a8b3be;
 }
 
 :global(html.dark) .toc-tab:hover {
-  color: #efd39a;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f2eadf;
 }
 
 :global(html.dark) .toc-tab-active {
+  background: rgba(255, 255, 255, 0.1);
   color: #f2eadf;
 }
 
 :global(html.dark) .toc-tab-active::after {
-  background: #d6b574;
+  display: none;
 }
 
 :global(html.dark) .toc-static-head {
@@ -521,22 +557,22 @@ onBeforeUnmount(() => {
 }
 
 :global(html.dark) .article-toc :deep(.toc-row) {
-  color: #cfc7bb;
+  color: #a8b3be;
 }
 
 :global(html.dark) .article-toc :deep(.toc-row:hover) {
-  background: rgba(214, 181, 116, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   color: #f2eadf;
 }
 
 :global(html.dark) .article-toc :deep(.toc-depth-0) {
-  color: #e8e2d8;
+  color: #f2eadf;
 }
 
 :global(html.dark) .article-toc :deep(.toc-depth-1),
 :global(html.dark) .article-toc :deep(.toc-depth-2),
 :global(html.dark) .article-toc :deep(.toc-kind-article) {
-  color: #cfc7bb;
+  color: #a8b3be;
 }
 
 :global(html.dark) .article-toc :deep(.toc-depth-3),
@@ -547,22 +583,32 @@ onBeforeUnmount(() => {
 }
 
 :global(html.dark) .article-toc :deep(.toc-row-active) {
-  border-left-color: #d6b574;
-  background: rgba(214, 181, 116, 0.14);
-  color: #e3c680;
+  background: rgba(255, 255, 255, 0.1);
+  color: #f2eadf;
+}
+
+:global(html.dark) .article-toc :deep(.toc-row-active::after) {
+  background: #f2eadf;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.12);
+}
+
+:global(html.dark) .article-toc :deep(.toc-row-active .toc-chevron),
+:global(html.dark) .article-toc :deep(.toc-row:hover .toc-chevron) {
+  color: #f2eadf;
 }
 
 :global(html.dark) .article-toc :deep(.toc-count) {
-  background: rgba(214, 181, 116, 0.1);
-  color: #afa79c;
+  background: rgba(255, 255, 255, 0.1);
+  color: #f2eadf;
 }
 
 :global(html.dark) .article-toc :deep(.toc-row-active .toc-count) {
-  background: rgba(214, 181, 116, 0.2);
-  color: #e3c680;
+  background: rgba(255, 255, 255, 0.1);
+  color: #f2eadf;
 }
 
+:global(html.dark) .article-toc--fixed::-webkit-scrollbar-thumb,
 :global(html.dark) .article-toc__scroll::-webkit-scrollbar-thumb {
-  background: #514636;
+  background: rgba(255, 255, 255, 0.18);
 }
 </style>

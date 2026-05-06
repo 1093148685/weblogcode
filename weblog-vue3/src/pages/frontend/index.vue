@@ -568,6 +568,7 @@ const pages = ref(0)
 const articlesLoaded = ref(false)
 // 是否正在加载
 const isLoading = ref(false)
+const ARTICLE_LIST_CACHE_VERSION = 'v2'
 
 
 function getArticles(currentNo) {
@@ -575,7 +576,7 @@ function getArticles(currentNo) {
     if (currentNo < 1 || (pages.value > 0 && currentNo > pages.value)) return
 
     // 尝试读取缓存
-    const cacheKey = `articles_page_${currentNo}_${size.value}`
+    const cacheKey = `articles_page_${ARTICLE_LIST_CACHE_VERSION}_${currentNo}_${size.value}`
     const cached = getCache(cacheKey)
     if (cached) {
         articles.value = cached.list
@@ -590,7 +591,7 @@ function getArticles(currentNo) {
 
     isLoading.value = true
     // 调用分页接口渲染数据
-    getArticlePageList({current: currentNo, size: size.value}).then((res) => {
+    getArticlePageList({ pageNum: currentNo, pageSize: size.value }).then((res) => {
         isLoading.value = false
         if (res.success) {
             articles.value = res.data.list || []

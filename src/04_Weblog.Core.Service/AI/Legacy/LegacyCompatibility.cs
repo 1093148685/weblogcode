@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using SqlSugar;
+using Weblog.Core.Model.DTOs;
 using Weblog.Core.Model.Entities;
 using Weblog.Core.Repository;
 using Weblog.Core.Service.AI.Core;
@@ -53,7 +54,19 @@ public class AiMigrationService
                     EncryptedApiKey = _encryption.Encrypt(model.ApiKey ?? ""),
                     IsEnabled = model.IsEnabled,
                     Priority = model.IsDefault ? 1 : 100,
-                    Config = System.Text.Json.JsonSerializer.Serialize(new { model = model.Model, remark = model.Remark })
+                    Config = AiProviderConfigParser.Serialize(new AiProviderAdvancedConfigDto
+                    {
+                        Models = new List<AiProviderModelConfigDto>
+                        {
+                            new()
+                            {
+                                Id = model.Model ?? "",
+                                Name = string.IsNullOrWhiteSpace(model.Name) ? model.Model ?? "" : model.Name,
+                                IsEnabled = model.IsEnabled,
+                                IsDefault = model.IsDefault
+                            }
+                        }
+                    })
                 };
                 providers.Add(provider);
             }
@@ -110,17 +123,23 @@ public class LegacyCompatibilityService
     public async Task InitializeAsync()
     {
         var providers = await _dbContext.AiProviderDb.ToListAsync();
-        var configs = providers.Select(p => new AiProviderConfig
+        var configs = providers.Select(p =>
         {
-            Id = p.Id,
-            Name = p.Name,
-            DisplayName = p.DisplayName,
-            Type = Enum.Parse<AiProviderType>(p.Type, true),
-            ApiUrl = p.ApiUrl,
-            EncryptedApiKey = p.EncryptedApiKey,
-            IsEnabled = p.IsEnabled,
-            Priority = p.Priority,
-            Config = p.Config
+            var advanced = AiProviderConfigParser.Parse(p.Config);
+            return new AiProviderConfig
+            {
+                Id = p.Id,
+                Name = p.Name,
+                DisplayName = p.DisplayName,
+                Type = Enum.Parse<AiProviderType>(p.Type, true),
+                Protocol = advanced.Protocol,
+                Prefix = advanced.Prefix,
+                ApiUrl = p.ApiUrl,
+                EncryptedApiKey = p.EncryptedApiKey,
+                IsEnabled = p.IsEnabled,
+                Priority = p.Priority,
+                Config = p.Config
+            };
         }).ToList();
 
         _selector.InitializeKeyPools(configs);

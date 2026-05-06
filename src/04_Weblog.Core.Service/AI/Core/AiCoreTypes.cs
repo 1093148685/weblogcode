@@ -84,6 +84,8 @@ public class AiProviderConfig
     public string Name { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public AiProviderType Type { get; set; }
+    public string Protocol { get; set; } = "openai-compatible";
+    public string Prefix { get; set; } = string.Empty;
     public string ApiUrl { get; set; } = string.Empty;
     public string EncryptedApiKey { get; set; } = string.Empty;
     public string? ApiKey { get; set; }

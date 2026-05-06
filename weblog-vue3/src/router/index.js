@@ -16,7 +16,6 @@ import AdminCategoryList from '@/pages/admin/category-list.vue'
 import AdminTagList from '@/pages/admin/tag-list.vue'
 import AdminBlogSettings from '@/pages/admin/blog-settings.vue'
 import AdminAnnouncement from '@/pages/admin/announcement.vue'
-import AdminAiModel from '@/pages/admin/ai-model.vue'
 import AdminAiProvider from '@/pages/admin/ai-provider.vue'
 import AdminAiPlugin from '@/pages/admin/ai-plugin.vue'
 import AdminKnowledgeBase from '@/pages/admin/knowledge-base.vue'
@@ -166,8 +165,15 @@ const routes = [
                 }
             },
             {
+                path: "/admin/ai-access",
+                component: AdminAiProvider,
+                meta: {
+                    title: 'AI 接入配置'
+                }
+            },
+            {
                 path: "/admin/ai-model",
-                component: AdminAiModel,
+                redirect: "/admin/ai-access",
                 meta: {
                     title: 'AI模型管理'
                 }

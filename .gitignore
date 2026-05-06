@@ -65,6 +65,12 @@ Desktop.ini
 nul
 
 # ===== Excluded directories (not part of the project) =====
+.claude/
+.codex-build/
+**/.claude/
+docx_work/
+docx_work_2023/
+FeiTwnd-Website-master (1)/
 .worktrees/
 weblog-springboot/
 weblog-vue3-2/

@@ -6,7 +6,7 @@ import { useUserStore } from '@/stores/user'
 // 创建 Axios 实例
 const instance = axios.create({
     baseURL: "/api",
-    timeout: 7000
+    timeout: 30000
 })
 
 

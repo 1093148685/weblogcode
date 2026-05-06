@@ -1,664 +1,793 @@
 <template>
-    <div class="page-shell ai-page">
-
-        <!-- 页头 -->
+    <div class="page-shell ai-access-page">
         <div class="page-hero">
             <div class="page-hero__main">
                 <div class="page-hero__icon">
                     <el-icon :size="20"><Connection /></el-icon>
                 </div>
                 <div>
-                    <h1 class="page-hero__title">AI Provider 管理</h1>
-                    <p class="page-hero__desc">配置大模型服务提供商，支持多 Provider 主备切换</p>
+                    <h1 class="page-hero__title">AI 接入配置</h1>
+                    <p class="page-hero__desc">统一管理提供商、Base URL、模型、请求头和多 API Key</p>
                 </div>
             </div>
             <div class="page-hero__actions">
-                <el-button :icon="RefreshRight" @click="handleMigrate" :loading="migrating" plain>迁移旧数据</el-button>
-                <el-button type="primary" :icon="Plus" :disabled="!isAdmin()" @click="handleAdd">新增 Provider</el-button>
+                <el-button :icon="Refresh" @click="loadData" :loading="loading">刷新</el-button>
+                <el-button type="primary" :icon="Plus" :disabled="!isAdmin()" @click="handleAdd">新增提供商</el-button>
             </div>
         </div>
 
-        <!-- 统计卡片 -->
         <div class="page-stats">
             <div class="mini-stat mini-stat--blue">
-                <div class="mini-stat__num">{{ tableData.length }}</div>
-                <div class="mini-stat__label">全部 Provider</div>
+                <div class="mini-stat__num">{{ providers.length }}</div>
+                <div class="mini-stat__label">提供商</div>
             </div>
             <div class="mini-stat mini-stat--green">
-                <div class="mini-stat__num">{{ tableData.filter(r => r.isEnabled).length }}</div>
+                <div class="mini-stat__num">{{ enabledProviders }}</div>
                 <div class="mini-stat__label">已启用</div>
             </div>
-            <div class="mini-stat mini-stat--violet">
-                <div class="mini-stat__num">{{ tableData.filter(r => r.priority <= 10).length }}</div>
-                <div class="mini-stat__label">高优先级</div>
+            <div class="mini-stat mini-stat--amber">
+                <div class="mini-stat__num">{{ totalModels }}</div>
+                <div class="mini-stat__label">可选模型</div>
+            </div>
+            <div class="mini-stat mini-stat--cyan">
+                <div class="mini-stat__num">{{ totalKeys }}</div>
+                <div class="mini-stat__label">密钥</div>
             </div>
         </div>
 
-        <!-- 健康检查卡片 -->
-        <el-card shadow="never" class="ai-card mb-5">
-            <template #header>
-                <div class="flex justify-between items-center">
-                    <span class="card-title">Provider 健康检查</span>
-                    <el-button size="small" :loading="healthLoading" @click="checkHealth" type="primary" plain>检查连通性</el-button>
+        <div class="access-layout">
+            <aside class="provider-panel">
+                <div class="panel-toolbar">
+                    <el-input v-model="keyword" :prefix-icon="Search" clearable placeholder="搜索提供商" />
                 </div>
-            </template>
-            <div v-if="healthList.length === 0" class="text-center text-gray-400 py-4 text-sm">
-                点击「检查连通性」测试所有已启用 Provider
-            </div>
-            <div v-else class="provider-health-grid">
-                <div v-for="h in healthList" :key="h.name"
-                     class="provider-health-item"
-                     :class="h.status === 'healthy' ? 'is-healthy' : 'is-error'">
-                    <span class="w-2 h-2 rounded-full" :class="h.status === 'healthy' ? 'bg-green-500' : 'bg-red-500'"></span>
-                    <span class="font-medium">{{ h.name }}</span>
-                    <span class="text-xs opacity-70">{{ h.latencyMs }}ms</span>
-                    <span v-if="h.lastChecked" class="text-xs opacity-60">{{ h.lastChecked }}</span>
-                    <el-tooltip v-if="h.error" effect="dark" :content="h.error" placement="top">
-                        <span class="text-xs cursor-help">⚠</span>
-                    </el-tooltip>
-                </div>
-            </div>
-        </el-card>
 
-        <!-- 主卡片 -->
-        <el-card shadow="never" class="ai-card">
-            <template #header>
-                <div class="flex justify-between items-center">
-                    <div class="flex items-center gap-2">
-                        <span class="card-title">Provider 列表</span>
-                        <el-tag size="small" class="ml-1">{{ tableData.length }} 条</el-tag>
-                    </div>
-                    <div class="flex gap-2">
-                        <el-button size="small" @click="loadData" :loading="loading" plain>刷新列表</el-button>
-                    </div>
-                </div>
-            </template>
-
-            <el-table :data="tableData" v-loading="loading" style="width: 100%" empty-text="暂无 Provider，请先新增服务商">
-                <el-table-column prop="displayName" label="名称" min-width="180">
-                    <template #default="{ row }">
-                        <div class="flex items-center gap-2">
-                            <div class="provider-avatar">{{ row.displayName?.charAt(0) }}</div>
-                            <div>
-                                <div class="font-medium provider-name text-sm">{{ row.displayName }}</div>
-                                <el-tag size="small" class="mt-0.5">{{ row.name }}</el-tag>
-                            </div>
-                        </div>
-                    </template>
-                </el-table-column>
-                <el-table-column prop="type" label="类型" width="100">
-                    <template #default="{ row }">
-                        <el-tag :type="row.type === 'chat' ? '' : 'warning'" size="small">{{ row.type }}</el-tag>
-                    </template>
-                </el-table-column>
-                <el-table-column prop="apiUrl" label="API 地址" min-width="200" show-overflow-tooltip>
-                    <template #default="{ row }">
-                        <span class="text-xs text-slate-400 font-mono">{{ row.apiUrl || '使用默认地址' }}</span>
-                    </template>
-                </el-table-column>
-                <el-table-column prop="priority" label="优先级" width="90" align="center">
-                    <template #default="{ row }">
-                        <span :class="row.priority <= 10 ? 'priority-high' : 'priority-normal'">
-                            {{ row.priority }}
+                <div v-loading="loading" class="provider-list">
+                    <button
+                        v-for="item in filteredProviders"
+                        :key="item.id"
+                        type="button"
+                        class="provider-item"
+                        :class="{ 'is-active': selectedProvider?.id === item.id }"
+                        @click="selectProvider(item)"
+                    >
+                        <span class="provider-item__avatar">{{ providerInitial(item) }}</span>
+                        <span class="provider-item__main">
+                            <strong>{{ item.displayName || item.name }}</strong>
+                            <small>{{ item.prefix ? `${item.prefix}/` : item.name }} · {{ item.protocol || 'openai-compatible' }}</small>
                         </span>
-                    </template>
-                </el-table-column>
-                <el-table-column prop="isEnabled" label="状态" width="80" align="center">
-                    <template #default="{ row }">
-                        <el-switch
-                            v-model="row.isEnabled"
-                            @change="(val) => handleToggleEnable(row, val)"
-                            :disabled="!isAdmin() || row._saving"
-                            :loading="row._saving"
-                        />
-                    </template>
-                </el-table-column>
-                <el-table-column label="连通性" width="150">
-                    <template #default="{ row }">
-                        <div class="provider-status-cell">
-                            <el-tag size="small" :type="providerStatusType(row)">
-                                {{ providerStatusLabel(row) }}
-                            </el-tag>
-                            <span v-if="providerStatusText(row)" class="provider-status-text">
-                                {{ providerStatusText(row) }}
-                            </span>
-                        </div>
-                    </template>
-                </el-table-column>
-                <el-table-column prop="updatedAt" label="更新时间" width="160">
-                    <template #default="{ row }">
-                        <span class="text-xs text-slate-400">{{ row.updatedAt }}</span>
-                    </template>
-                </el-table-column>
-                <el-table-column label="操作" width="240" fixed="right">
-                    <template #default="{ row }">
-                        <div class="table-actions">
-                            <el-button type="info" link size="small" @click="handleViewModels(row)">
-                                <el-icon class="mr-0.5"><Cpu /></el-icon>查看模型
-                            </el-button>
-                            <el-button type="success" link size="small" @click="handleTest(row)" :loading="testingId === row.id">
-                                <el-icon class="mr-0.5"><Connection /></el-icon>测试
-                            </el-button>
-                            <el-button type="primary" link size="small" @click="handleEdit(row)">编辑</el-button>
-                            <el-button type="danger" link size="small" :disabled="!isAdmin()" @click="handleDelete(row)">删除</el-button>
-                        </div>
-                    </template>
-                </el-table-column>
-            </el-table>
-        </el-card>
+                        <el-tag size="small" :type="item.isEnabled ? 'success' : 'info'">
+                            {{ item.isEnabled ? '启用' : '停用' }}
+                        </el-tag>
+                    </button>
 
-        <!-- Key Pool 状态卡片 -->
-        <el-card shadow="never" class="ai-card mt-5">
-            <template #header>
-                <div class="flex justify-between items-center">
-                    <span class="card-title">Key Pool 状态</span>
-                    <el-button size="small" @click="loadKeyPool">刷新</el-button>
-                </div>
-            </template>
-            <div v-if="keyPoolList.length === 0" class="text-center text-gray-400 py-4 text-sm">暂无数据</div>
-            <div v-else class="flex flex-col gap-4">
-                <div v-for="pool in keyPoolList" :key="pool.providerName">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="font-medium text-sm">{{ pool.providerName }}</span>
-                        <div class="flex items-center gap-2">
-                            <el-tag size="small" :type="pool.healthyKeys === pool.totalKeys ? 'success' : 'warning'">
-                                {{ pool.healthyKeys }}/{{ pool.totalKeys }} 健康
-                            </el-tag>
-                            <el-button size="small" text @click="resetKeys(pool.providerName)">重置</el-button>
-                        </div>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        <div v-for="k in pool.keys" :key="k.keyPrefix"
-                             class="key-pill"
-                             :class="k.isHealthy ? 'is-healthy' : 'is-error'">
-                            {{ k.keyPrefix }}
-                            <span v-if="!k.isHealthy" class="ml-1 opacity-70">(失败{{ k.failCount }}次)</span>
-                        </div>
+                    <div v-if="!filteredProviders.length" class="empty-panel">
+                        暂无提供商
                     </div>
                 </div>
-            </div>
-        </el-card>
+            </aside>
 
-        <!-- 查看模型弹窗 -->
-        <el-dialog v-model="modelsDialogVisible" :title="`${currentProviderName} 的模型列表`" width="700px">
-            <div v-if="providerModels.length === 0" class="text-center text-gray-400 py-8 text-sm">该提供商下暂无模型</div>
-            <el-table v-else :data="providerModels" size="small" max-height="420">
-                <el-table-column prop="name" label="模型名称" min-width="160">
-                    <template #default="{ row }">
-                        <span class="font-medium text-slate-700 text-sm">{{ row.name }}</span>
-                    </template>
-                </el-table-column>
-                <el-table-column prop="id" label="模型 ID" min-width="200">
-                    <template #default="{ row }">
-                        <span class="text-xs font-mono text-slate-500">{{ row.id }}</span>
-                    </template>
-                </el-table-column>
-            </el-table>
-            <template #footer>
-                <div class="dialog-footer-actions">
-                    <el-button @click="modelsDialogVisible = false">关闭</el-button>
+            <main class="editor-panel">
+                <div class="editor-header">
+                    <div>
+                        <h2>{{ isEditing ? form.displayName || form.name : '新增提供商' }}</h2>
+                        <p>{{ form.name ? `${form.name}${form.configData.prefix ? ` · ${form.configData.prefix}/<model>` : ''}` : '自由命名，不限制厂商列表' }}</p>
+                    </div>
+                    <div class="editor-actions">
+                        <el-button :icon="Connection" :disabled="!isEditing" :loading="testing" @click="handleTest">连通性测试</el-button>
+                        <el-button type="primary" :disabled="!isAdmin()" :loading="submitting" @click="handleSubmit">保存</el-button>
+                    </div>
                 </div>
-            </template>
-        </el-dialog>
 
-        <!-- 新增/编辑对话框 -->
-        <el-dialog v-model="dialogVisible" :title="isEditing ? '编辑 Provider' : '新增 Provider'" width="560px">
-            <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
-                <el-form-item label="Provider" prop="name">
-                    <el-select v-model="form.name" placeholder="选择 Provider 类型" :disabled="isEditing" style="width:100%"
-                        @change="onProviderChange">
-                        <el-option label="OpenAI" value="openai" />
-                        <el-option label="Claude (Anthropic)" value="claude" />
-                        <el-option label="DeepSeek" value="deepseek" />
-                        <el-option label="Azure OpenAI" value="azure" />
-                        <el-option label="Google Gemini" value="gemini" />
-                        <el-option label="智谱 AI (GLM)" value="zhipu" />
-                        <el-option label="百度千帆" value="qianfan" />
-                        <el-option label="MiniMax" value="minimax" />
-                    </el-select>
-                </el-form-item>
-                <el-form-item label="显示名称" prop="displayName">
-                    <el-input v-model="form.displayName" placeholder="如：OpenAI GPT-4" />
-                </el-form-item>
-                <el-form-item label="类型" prop="type">
-                    <el-select v-model="form.type" style="width:100%">
-                        <el-option label="对话 (Chat)" value="chat" />
-                        <el-option label="图片 (Image)" value="image" />
-                        <el-option label="音频 (Audio)" value="audio" />
-                    </el-select>
-                </el-form-item>
-                <el-form-item label="API 地址">
-                    <el-input v-model="form.apiUrl" placeholder="留空使用默认地址" />
-                    <div class="text-xs text-slate-400 mt-1">留空将自动使用官方默认接口地址</div>
-                </el-form-item>
-                <el-form-item label="API Key" prop="apiKey">
-                    <el-input v-model="form.apiKey" type="password" show-password
-                        :placeholder="isEditing ? '不修改请留空' : '请输入 API Key'" />
-                </el-form-item>
-                <el-form-item label="优先级" prop="priority">
-                    <el-input-number v-model="form.priority" :min="1" :max="100" />
-                    <div class="text-xs text-slate-400 mt-1">数值越小优先级越高，用于主备 Provider 切换</div>
-                </el-form-item>
-                <el-form-item label="启用状态">
-                    <el-switch v-model="form.isEnabled" />
-                </el-form-item>
-            </el-form>
-            <template #footer>
-                <div class="dialog-footer-actions">
-                    <el-button @click="dialogVisible = false">取消</el-button>
-                    <el-button type="primary" @click="handleSubmit" :loading="submitting">确定</el-button>
+                <el-form ref="formRef" :model="form" :rules="rules" label-position="top" class="access-form">
+                    <el-tabs v-model="activeTab">
+                        <el-tab-pane label="基础" name="basic">
+                            <div class="form-grid">
+                                <el-form-item label="配置模板">
+                                    <el-select v-model="templateName" clearable filterable placeholder="选择后自动填充，可继续修改" @change="applyTemplate">
+                                        <el-option v-for="tpl in providerTemplates" :key="tpl.name" :label="tpl.label" :value="tpl.name" />
+                                    </el-select>
+                                </el-form-item>
+                                <el-form-item label="提供商名称" prop="name">
+                                    <el-input v-model="form.name" :disabled="isEditing" placeholder="例如 openrouter、team-a、my-proxy" />
+                                </el-form-item>
+                                <el-form-item label="显示名称" prop="displayName">
+                                    <el-input v-model="form.displayName" placeholder="例如 OpenRouter 主账号" />
+                                </el-form-item>
+                                <el-form-item label="协议">
+                                    <el-select v-model="form.configData.protocol">
+                                        <el-option label="OpenAI Compatible" value="openai-compatible" />
+                                        <el-option label="Anthropic" value="anthropic" />
+                                        <el-option label="Gemini" value="gemini" />
+                                        <el-option label="Azure OpenAI" value="azure" />
+                                    </el-select>
+                                </el-form-item>
+                                <el-form-item label="用途类型">
+                                    <el-select v-model="form.type">
+                                        <el-option label="对话 Chat" value="chat" />
+                                        <el-option label="Embedding" value="embedding" />
+                                        <el-option label="图片 Image" value="image" />
+                                        <el-option label="音频 Audio" value="audio" />
+                                    </el-select>
+                                </el-form-item>
+                                <el-form-item label="前缀">
+                                    <el-input v-model="form.configData.prefix" placeholder="例如 team-a，模型可显示为 team-a/gpt-4o" />
+                                </el-form-item>
+                                <el-form-item label="Base URL" prop="apiUrl" class="form-grid__wide">
+                                    <el-input v-model="form.apiUrl" placeholder="例如 https://api.openai.com/v1" />
+                                </el-form-item>
+                                <el-form-item label="优先级">
+                                    <el-input-number v-model="form.priority" :min="1" :max="999" />
+                                </el-form-item>
+                                <el-form-item label="启用">
+                                    <el-switch v-model="form.isEnabled" />
+                                </el-form-item>
+                            </div>
+                        </el-tab-pane>
+
+                        <el-tab-pane label="请求头" name="headers">
+                            <div class="section-head">
+                                <span>自定义 Headers</span>
+                                <el-button :icon="Plus" @click="addHeader">添加请求头</el-button>
+                            </div>
+                            <div class="rows">
+                                <div v-for="(header, index) in form.configData.headers" :key="index" class="config-row config-row--header">
+                                    <el-switch v-model="header.enabled" />
+                                    <el-input v-model="header.name" placeholder="Header 名称，例如 X-Custom-Header" />
+                                    <el-input v-model="header.value" placeholder="Header 值，支持 {apiKey}" />
+                                    <el-button :icon="Delete" circle text type="danger" @click="removeHeader(index)" />
+                                </div>
+                                <div v-if="!form.configData.headers.length" class="empty-panel">没有自定义请求头时会默认使用 Authorization: Bearer Key</div>
+                            </div>
+                        </el-tab-pane>
+
+                        <el-tab-pane label="模型" name="models">
+                            <div class="model-tools">
+                                <el-input v-model="form.configData.modelsPath" placeholder="/models" class="model-tools__path">
+                                    <template #prepend>模型路径</template>
+                                </el-input>
+                                <el-button :icon="Download" :loading="fetchingModels" @click="handleFetchModels">从 Base URL 获取</el-button>
+                                <el-button :icon="Plus" @click="addModel">手动添加</el-button>
+                            </div>
+
+                            <div v-if="fetchedModels.length" class="fetched-box">
+                                <el-select v-model="selectedFetchedModels" multiple filterable collapse-tags collapse-tags-tooltip placeholder="选择要加入配置的模型">
+                                    <el-option v-for="model in fetchedModels" :key="model.id" :label="model.name || model.id" :value="model.id" />
+                                </el-select>
+                                <el-button type="primary" @click="addFetchedModels">加入模型列表</el-button>
+                            </div>
+
+                            <div class="rows">
+                                <div v-for="(model, index) in form.configData.models" :key="index" class="config-row config-row--model">
+                                    <el-switch v-model="model.isEnabled" />
+                                    <el-input v-model="model.id" placeholder="模型 ID，例如 gpt-4o-mini" />
+                                    <el-input v-model="model.name" placeholder="显示名" />
+                                    <el-input v-model="model.alias" placeholder="别名，可选" />
+                                    <el-checkbox v-model="model.isDefault" @change="setDefaultModel(index)">默认</el-checkbox>
+                                    <el-button :icon="Delete" circle text type="danger" @click="removeModel(index)" />
+                                </div>
+                                <div v-if="!form.configData.models.length" class="empty-panel">还没有模型，可以手动添加或从 Base URL 获取</div>
+                            </div>
+                        </el-tab-pane>
+
+                        <el-tab-pane label="密钥" name="keys">
+                            <div class="section-head">
+                                <span>API Keys</span>
+                                <el-button :icon="Plus" @click="addKey">添加密钥</el-button>
+                            </div>
+                            <div class="rows">
+                                <div v-for="(key, index) in form.configData.keys" :key="key.id || index" class="config-row config-row--key">
+                                    <el-switch v-model="key.isEnabled" />
+                                    <el-input
+                                        v-model="key.value"
+                                        type="password"
+                                        show-password
+                                        :placeholder="key.maskedValue || '输入 API Key'"
+                                    />
+                                    <el-input v-model="key.proxyUrl" placeholder="代理 URL，可选，例如 socks5://127.0.0.1:7890" />
+                                    <el-tag size="small" :type="key.status === 'healthy' ? 'success' : 'info'">{{ key.status || 'unknown' }}</el-tag>
+                                    <el-button :icon="Delete" circle text type="danger" @click="removeKey(index)" />
+                                </div>
+                                <div v-if="!form.configData.keys.length" class="empty-panel">至少添加一个密钥后才能测试和调用</div>
+                            </div>
+                        </el-tab-pane>
+                    </el-tabs>
+                </el-form>
+
+                <div class="editor-footer">
+                    <div class="route-preview">
+                        <span>模型选择示例</span>
+                        <strong>{{ modelPreview }}</strong>
+                    </div>
+                    <el-button v-if="isEditing" type="danger" plain :disabled="!isAdmin()" @click="handleDelete">删除提供商</el-button>
                 </div>
-            </template>
-        </el-dialog>
+            </main>
+        </div>
     </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessageBox } from 'element-plus'
-import { Plus, RefreshRight, Connection, Cpu } from '@element-plus/icons-vue'
-import { getAiProviders, createAiProvider, updateAiProvider, deleteAiProvider, testAiProvider, migrateAiProviders } from '@/api/admin/ai-provider'
-import { getProviderHealth, getKeyPoolStatus, resetProviderKeys } from '@/api/admin/agent'
-import { getAvailableModels } from '@/api/frontend/chat'
+import { Connection, Delete, Download, Plus, Refresh, Search } from '@element-plus/icons-vue'
+import {
+    createAiProvider,
+    deleteAiProvider,
+    fetchModelsWithConfig,
+    fetchProviderModels,
+    getAiProviders,
+    testAiProviderWithOptions,
+    updateAiProvider
+} from '@/api/admin/ai-provider'
 import { showMessage, isAdmin } from '@/composables/util'
 
 defineOptions({ name: 'AdminAiProvider' })
 
+const providerTemplates = [
+    { name: 'openai', label: 'OpenAI', displayName: 'OpenAI', apiUrl: 'https://api.openai.com/v1', protocol: 'openai-compatible', modelsPath: '/models', chatPath: '/chat/completions' },
+    { name: 'deepseek', label: 'DeepSeek', displayName: 'DeepSeek', apiUrl: 'https://api.deepseek.com/v1', protocol: 'openai-compatible', modelsPath: '/models', chatPath: '/chat/completions' },
+    { name: 'openrouter', label: 'OpenRouter', displayName: 'OpenRouter', apiUrl: 'https://openrouter.ai/api/v1', protocol: 'openai-compatible', modelsPath: '/models', chatPath: '/chat/completions' },
+    { name: 'siliconflow', label: 'SiliconFlow', displayName: 'SiliconFlow', apiUrl: 'https://api.siliconflow.cn/v1', protocol: 'openai-compatible', modelsPath: '/models', chatPath: '/chat/completions' },
+    { name: 'claude', label: 'Claude', displayName: 'Claude', apiUrl: 'https://api.anthropic.com/v1', protocol: 'anthropic', modelsPath: '/models', chatPath: '/messages' },
+    { name: 'custom', label: '自定义兼容接口', displayName: 'Custom AI Provider', apiUrl: '', protocol: 'openai-compatible', modelsPath: '/models', chatPath: '/chat/completions' }
+]
+
 const loading = ref(false)
 const submitting = ref(false)
-const migrating = ref(false)
-const testingId = ref(null)
-const tableData = ref([])
-const dialogVisible = ref(false)
-const isEditing = ref(false)
+const testing = ref(false)
+const fetchingModels = ref(false)
+const providers = ref([])
+const selectedProvider = ref(null)
+const keyword = ref('')
+const templateName = ref('')
+const activeTab = ref('basic')
 const formRef = ref(null)
+const fetchedModels = ref([])
+const selectedFetchedModels = ref([])
 
-// 健康检查
-const healthList = ref([])
-const healthLoading = ref(false)
-const lastTestMap = ref({})
-const healthMap = computed(() => {
-    const map = {}
-    healthList.value.forEach(item => {
-        map[(item.name || '').toLowerCase()] = item
-    })
-    return map
+const emptyConfig = () => ({
+    protocol: 'openai-compatible',
+    prefix: '',
+    modelsPath: '/models',
+    chatPath: '/chat/completions',
+    headers: [],
+    models: [],
+    keys: []
 })
 
-const getProviderHealthItem = (row) => healthMap.value[(row.name || '').toLowerCase()]
-
-const providerStatusType = (row) => {
-    const latest = lastTestMap.value[row.id]
-    if (latest?.status === 'success') return 'success'
-    if (latest?.status === 'error') return 'danger'
-
-    const health = getProviderHealthItem(row)
-    if (!health) return row.isEnabled ? 'info' : 'info'
-    if (health.status === 'healthy') return 'success'
-    if (health.status === 'unhealthy' || health.status === 'error') return 'danger'
-    return 'warning'
-}
-
-const providerStatusLabel = (row) => {
-    const latest = lastTestMap.value[row.id]
-    if (latest?.status === 'success') return '刚刚可用'
-    if (latest?.status === 'error') return '测试失败'
-
-    const health = getProviderHealthItem(row)
-    if (!row.isEnabled) return '已停用'
-    if (!health) return '未检查'
-    if (health.status === 'healthy') return '健康'
-    if (health.status === 'unhealthy') return '异常'
-    if (health.status === 'error') return '错误'
-    return '未知'
-}
-
-const providerStatusText = (row) => {
-    const latest = lastTestMap.value[row.id]
-    if (latest) return latest.latencyMs ? `${latest.latencyMs}ms` : latest.message
-
-    const health = getProviderHealthItem(row)
-    if (!health) return ''
-    if (health.error) return health.error
-    return health.latencyMs ? `${health.latencyMs}ms` : ''
-}
-
-const checkHealth = async () => {
-    healthLoading.value = true
-    try {
-        const res = await getProviderHealth()
-        if (res.success || res.code === 200) {
-            healthList.value = res.data || []
-            if (healthList.value.length === 0) showMessage('暂无已启用 Provider 可检查', 'warning')
-            else loadKeyPool()
-        } else {
-            showMessage(res.message || '健康检查失败', 'error')
-        }
-    } catch (e) { showMessage(e.message || '健康检查失败', 'error') }
-    finally { healthLoading.value = false }
-}
-
-// Key Pool
-const keyPoolList = ref([])
-const loadKeyPool = async () => {
-    try {
-        const res = await getKeyPoolStatus()
-        if (res.success || res.code === 200) keyPoolList.value = res.data || []
-    } catch {}
-}
-const resetKeys = async (name) => {
-    try {
-        await resetProviderKeys(name)
-        showMessage(`${name} Key 已重置`)
-        loadKeyPool()
-    } catch { showMessage('重置失败', 'error') }
-}
-
-const PROVIDER_DEFAULTS = {
-    openai:   { displayName: 'OpenAI', apiUrl: 'https://api.openai.com/v1' },
-    claude:   { displayName: 'Claude (Anthropic)', apiUrl: 'https://api.anthropic.com' },
-    deepseek: { displayName: 'DeepSeek', apiUrl: 'https://api.deepseek.com/v1' },
-    gemini:   { displayName: 'Google Gemini', apiUrl: '' },
-    zhipu:    { displayName: '智谱 AI', apiUrl: 'https://open.bigmodel.cn/api/paas/v4' },
-    qianfan:  { displayName: '百度千帆', apiUrl: '' },
-    minimax:  { displayName: 'MiniMax', apiUrl: '' },
-}
-
-const form = reactive({
-    id: null, name: '', displayName: '', type: 'chat',
-    apiUrl: '', apiKey: '', priority: 100, isEnabled: true
+const emptyForm = () => ({
+    id: null,
+    name: '',
+    displayName: '',
+    type: 'chat',
+    apiUrl: '',
+    priority: 100,
+    isEnabled: true,
+    configData: emptyConfig()
 })
+
+const form = reactive(emptyForm())
 
 const rules = {
-    name: [{ required: true, message: '请选择 Provider', trigger: 'change' }],
+    name: [{ required: true, message: '请输入提供商名称', trigger: 'blur' }],
     displayName: [{ required: true, message: '请输入显示名称', trigger: 'blur' }],
-    apiKey: [{
-        validator: (_, value, callback) => {
-            if (!isEditing.value && !value) callback(new Error('请输入 API Key'))
-            else callback()
-        },
-        trigger: 'blur'
-    }],
-    priority: [{ required: true, message: '请设置优先级', trigger: 'change' }]
+    apiUrl: [{ required: true, message: '请输入 Base URL', trigger: 'blur' }]
 }
 
-const onProviderChange = (val) => {
-    const def = PROVIDER_DEFAULTS[val]
-    if (def) {
-        form.displayName = def.displayName
-        form.apiUrl = def.apiUrl
-    }
-}
+const isEditing = computed(() => !!form.id)
+const enabledProviders = computed(() => providers.value.filter(item => item.isEnabled).length)
+const totalModels = computed(() => providers.value.reduce((sum, item) => sum + (item.modelCount || item.configData?.models?.filter(m => m.isEnabled).length || 0), 0))
+const totalKeys = computed(() => providers.value.reduce((sum, item) => sum + (item.keyCount || item.configData?.keys?.filter(k => k.isEnabled).length || 0), 0))
+const filteredProviders = computed(() => {
+    const kw = keyword.value.trim().toLowerCase()
+    if (!kw) return providers.value
+    return providers.value.filter(item =>
+        item.name?.toLowerCase().includes(kw) ||
+        item.displayName?.toLowerCase().includes(kw) ||
+        item.prefix?.toLowerCase().includes(kw)
+    )
+})
+const modelPreview = computed(() => {
+    const firstModel = form.configData.models.find(item => item.isEnabled && item.id)
+    const modelId = firstModel?.id || '<model>'
+    return form.configData.prefix ? `${form.configData.prefix}/${modelId}` : modelId
+})
 
 const loadData = async () => {
     loading.value = true
     try {
         const res = await getAiProviders()
-        if (res.success || res.code === 200) tableData.value = res.data || []
+        if (res.success || res.code === 200) {
+            providers.value = (res.data || []).map(normalizeProvider)
+            if (!selectedProvider.value && providers.value.length) selectProvider(providers.value[0])
+            if (selectedProvider.value) {
+                const fresh = providers.value.find(item => item.id === selectedProvider.value.id)
+                if (fresh) selectProvider(fresh)
+            }
+        } else {
+            showMessage(res.message || '加载 AI 接入配置失败', 'error')
+        }
     } catch (e) {
-        showMessage('加载失败', 'error')
+        showMessage(e.message || '加载 AI 接入配置失败', 'error')
     } finally {
         loading.value = false
     }
 }
 
-const handleMigrate = async () => {
-    migrating.value = true
-    try {
-        const res = await migrateAiProviders()
-        if (res.success || res.code === 200) { showMessage('迁移成功'); loadData() }
-        else showMessage(res.message || '迁移失败', 'error')
-    } catch (e) {
-        showMessage('迁移失败', 'error')
-    } finally {
-        migrating.value = false
+const normalizeProvider = item => ({
+    ...item,
+    configData: {
+        ...emptyConfig(),
+        ...(item.configData || {}),
+        headers: item.configData?.headers || [],
+        models: item.configData?.models || [],
+        keys: item.configData?.keys || []
+    }
+})
+
+const resetForm = data => {
+    Object.assign(form, emptyForm(), data)
+    form.configData = {
+        ...emptyConfig(),
+        ...(data?.configData || {}),
+        headers: [...(data?.configData?.headers || [])],
+        models: [...(data?.configData?.models || [])],
+        keys: [...(data?.configData?.keys || [])]
     }
 }
 
-const handleAdd = () => {
-    isEditing.value = false
-    Object.assign(form, { id: null, name: '', displayName: '', type: 'chat', apiUrl: '', apiKey: '', priority: 100, isEnabled: true })
-    dialogVisible.value = true
+const selectProvider = item => {
+    selectedProvider.value = item
+    templateName.value = ''
+    fetchedModels.value = []
+    selectedFetchedModels.value = []
+    resetForm(normalizeProvider(item))
 }
 
-const handleEdit = (row) => {
-    isEditing.value = true
-    Object.assign(form, { id: row.id, name: row.name, displayName: row.displayName, type: row.type, apiUrl: row.apiUrl, apiKey: '', priority: row.priority, isEnabled: row.isEnabled })
-    dialogVisible.value = true
+const handleAdd = () => {
+    selectedProvider.value = null
+    templateName.value = ''
+    fetchedModels.value = []
+    selectedFetchedModels.value = []
+    resetForm(emptyForm())
+    activeTab.value = 'basic'
 }
+
+const applyTemplate = name => {
+    const tpl = providerTemplates.find(item => item.name === name)
+    if (!tpl) return
+    if (!isEditing.value && (!form.name || form.name === 'custom')) form.name = tpl.name
+    form.displayName = tpl.displayName
+    form.apiUrl = tpl.apiUrl
+    form.configData.protocol = tpl.protocol
+    form.configData.modelsPath = tpl.modelsPath
+    form.configData.chatPath = tpl.chatPath
+}
+
+const buildPayload = () => ({
+    name: form.name.trim(),
+    displayName: form.displayName.trim(),
+    type: form.type,
+    protocol: form.configData.protocol,
+    prefix: form.configData.prefix,
+    apiUrl: form.apiUrl.trim(),
+    priority: form.priority,
+    isEnabled: form.isEnabled,
+    configData: {
+        ...form.configData,
+        headers: form.configData.headers.filter(item => item.name || item.value),
+        models: form.configData.models.filter(item => item.id),
+        keys: form.configData.keys.filter(item => item.value || item.maskedValue)
+    }
+})
 
 const handleSubmit = async () => {
     const valid = await formRef.value?.validate().catch(() => false)
     if (!valid) return
     submitting.value = true
     try {
-        const data = { ...form }
-        if (isEditing.value && !data.apiKey) delete data.apiKey
-        const res = isEditing.value ? await updateAiProvider(form.id, data) : await createAiProvider(data)
-        if (res.success || res.code === 200) { showMessage(isEditing.value ? '更新成功' : '创建成功'); dialogVisible.value = false; loadData() }
-        else showMessage(res.message || '操作失败', 'error')
+        const payload = buildPayload()
+        const res = isEditing.value
+            ? await updateAiProvider(form.id, payload)
+            : await createAiProvider(payload)
+        if (res.success || res.code === 200) {
+            showMessage('AI 接入配置已保存', 'success')
+            await loadData()
+            if (res.data?.id) {
+                const saved = providers.value.find(item => item.id === res.data.id)
+                if (saved) selectProvider(saved)
+            }
+        } else {
+            showMessage(res.message || '保存失败', 'error')
+        }
     } catch (e) {
-        showMessage(e.message || '操作失败', 'error')
+        showMessage(e.message || '保存失败', 'error')
     } finally {
         submitting.value = false
     }
 }
 
-const handleDelete = async (row) => {
+const handleDelete = async () => {
+    if (!form.id) return
     try {
-        await ElMessageBox.confirm(`确定要删除 "${row.displayName}" 吗？`, '提示', { type: 'warning' })
-        const res = await deleteAiProvider(row.id)
-        if (res.success || res.code === 200) { showMessage('删除成功'); loadData() }
-        else showMessage(res.message || '删除失败', 'error')
-    } catch (e) {
-        if (e !== 'cancel') showMessage('删除失败', 'error')
-    }
-}
-
-const handleTest = async (row) => {
-    testingId.value = row.id
-    showMessage(`正在测试 ${row.displayName}...`, 'info')
-    const started = performance.now()
-    try {
-        const res = await testAiProvider(row.id)
-        const latencyMs = Math.round(performance.now() - started)
-        if ((res.success || res.code === 200) && res.data) {
-            lastTestMap.value[row.id] = { status: 'success', latencyMs, message: '连接成功' }
-            showMessage(`✓ 连接成功（${latencyMs}ms）`, 'success')
-            loadKeyPool()
-        }
-        else {
-            lastTestMap.value[row.id] = { status: 'error', latencyMs, message: res.message || '连接失败' }
-            showMessage(res.message || '✗ 连接失败', 'error')
-        }
-    } catch (e) {
-        lastTestMap.value[row.id] = { status: 'error', latencyMs: Math.round(performance.now() - started), message: e.message || '连接失败' }
-        showMessage(e.message || '✗ 连接失败', 'error')
-    } finally {
-        testingId.value = null
-    }
-}
-
-const handleToggleEnable = async (row, nextValue) => {
-    const previous = !nextValue
-    row._saving = true
-    try {
-        const res = await updateAiProvider(row.id, { displayName: row.displayName, type: row.type, apiUrl: row.apiUrl, isEnabled: nextValue, priority: row.priority })
-        if (!(res.success || res.code === 200)) {
-            row.isEnabled = previous
-            showMessage(res.message || '状态更新失败', 'error')
+        await ElMessageBox.confirm(`确定删除「${form.displayName || form.name}」吗？`, '删除提供商', { type: 'warning' })
+        const res = await deleteAiProvider(form.id)
+        if (res.success || res.code === 200) {
+            showMessage('提供商已删除', 'success')
+            selectedProvider.value = null
+            resetForm(emptyForm())
+            await loadData()
         } else {
-            showMessage(nextValue ? 'Provider 已启用' : 'Provider 已停用')
-            loadKeyPool()
+            showMessage(res.message || '删除失败', 'error')
         }
     } catch (e) {
-        row.isEnabled = previous
-        showMessage(e.message || '状态更新失败', 'error')
-    } finally {
-        row._saving = false
+        if (e !== 'cancel') showMessage(e.message || '删除失败', 'error')
     }
 }
 
-// 查看模型
-const modelsDialogVisible = ref(false)
-const currentProviderName = ref('')
-const providerModels = ref([])
-let allModels = []
-
-const handleViewModels = async (row) => {
-    currentProviderName.value = row.displayName
+const handleTest = async () => {
+    if (!form.id) {
+        showMessage('请先保存提供商后再测试', 'warning')
+        return
+    }
+    testing.value = true
     try {
-        const res = await getAvailableModels()
-        if (res.success || res.code === 200) allModels = res.data || []
-    } catch { showMessage('加载模型列表失败', 'error'); return }
-    // 用 provider 字段匹配（大小写不敏感）
-    const providerName = (row.name || '').toLowerCase()
-    providerModels.value = allModels.filter(m => (m.provider || '').toLowerCase() === providerName)
-    modelsDialogVisible.value = true
+        const defaultModel = form.configData.models.find(item => item.isDefault && item.isEnabled)?.id
+            || form.configData.models.find(item => item.isEnabled)?.id
+        const res = await testAiProviderWithOptions(form.id, { model: defaultModel })
+        showMessage((res.success || res.code === 200) && res.data ? '连通性测试成功' : (res.message || '连通性测试失败'), (res.success || res.code === 200) && res.data ? 'success' : 'error')
+    } catch (e) {
+        showMessage(e.message || '连通性测试失败', 'error')
+    } finally {
+        testing.value = false
+    }
 }
 
-onMounted(() => { loadData(); loadKeyPool() })
+const handleFetchModels = async () => {
+    if (!form.apiUrl) {
+        showMessage('请先填写 Base URL', 'warning')
+        return
+    }
+    fetchingModels.value = true
+    try {
+        const payload = {
+            apiUrl: form.apiUrl,
+            modelsPath: form.configData.modelsPath,
+            headers: form.configData.headers,
+            apiKey: form.configData.keys.find(item => item.value)?.value
+        }
+        const res = form.id ? await fetchProviderModels(form.id, payload) : await fetchModelsWithConfig(payload)
+        if (res.success || res.code === 200) {
+            fetchedModels.value = res.data || []
+            selectedFetchedModels.value = fetchedModels.value.map(item => item.id)
+            showMessage(`获取到 ${fetchedModels.value.length} 个模型`, 'success')
+        } else {
+            showMessage(res.message || '获取模型失败', 'error')
+        }
+    } catch (e) {
+        showMessage(e.message || '获取模型失败', 'error')
+    } finally {
+        fetchingModels.value = false
+    }
+}
+
+const addFetchedModels = () => {
+    const existing = new Set(form.configData.models.map(item => item.id))
+    fetchedModels.value
+        .filter(item => selectedFetchedModels.value.includes(item.id) && !existing.has(item.id))
+        .forEach(item => {
+            form.configData.models.push({
+                id: item.id,
+                name: item.name || item.id,
+                alias: '',
+                isEnabled: true,
+                isDefault: form.configData.models.length === 0
+            })
+        })
+    selectedFetchedModels.value = []
+}
+
+const addHeader = () => form.configData.headers.push({ name: '', value: '', enabled: true })
+const removeHeader = index => form.configData.headers.splice(index, 1)
+const addModel = () => form.configData.models.push({ id: '', name: '', alias: '', isEnabled: true, isDefault: form.configData.models.length === 0 })
+const removeModel = index => form.configData.models.splice(index, 1)
+const addKey = () => form.configData.keys.push({ id: `key_${Date.now()}`, value: '', proxyUrl: '', isEnabled: true, status: 'unknown' })
+const removeKey = index => form.configData.keys.splice(index, 1)
+
+const setDefaultModel = index => {
+    form.configData.models.forEach((model, idx) => { model.isDefault = idx === index })
+}
+
+const providerInitial = item => (item.displayName || item.name || 'AI').slice(0, 1).toUpperCase()
+
+onMounted(loadData)
 </script>
 
 <style scoped>
-.ai-page {
+.ai-access-page {
     min-height: 100%;
 }
 
-/* 页头图标 */
-.page-header__icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    flex-shrink: 0;
-}
-
-/* 迷你统计卡 */
 .mini-stat {
-    border-radius: 12px;
-    padding: 16px 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
     border: 1px solid transparent;
+    border-radius: 10px;
+    padding: 16px 18px;
 }
 
 .mini-stat__num {
-    font-size: 28px;
-    font-weight: 700;
+    font-size: 26px;
+    font-weight: 800;
     line-height: 1;
 }
 
 .mini-stat__label {
+    margin-top: 6px;
     font-size: 12px;
-    opacity: 0.75;
+    opacity: 0.72;
 }
 
-.mini-stat--blue   { background: linear-gradient(135deg,#eef2ff,#e0e7ff); color:#4338ca; border-color:#c7d2fe; }
-.mini-stat--green  { background: linear-gradient(135deg,#f0fdf4,#dcfce7); color:#16a34a; border-color:#bbf7d0; }
-.mini-stat--violet { background: linear-gradient(135deg,#fdf4ff,#f3e8ff); color:#9333ea; border-color:#e9d5ff; }
+.mini-stat--blue { background: rgba(59, 130, 246, 0.10); border-color: rgba(59, 130, 246, 0.22); color: #2563eb; }
+.mini-stat--green { background: rgba(16, 185, 129, 0.10); border-color: rgba(16, 185, 129, 0.22); color: #059669; }
+.mini-stat--amber { background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.24); color: #b45309; }
+.mini-stat--cyan { background: rgba(6, 182, 212, 0.10); border-color: rgba(6, 182, 212, 0.22); color: #0891b2; }
 
-:global(html.dark) .mini-stat--blue   { background: rgba(67, 56, 202, 0.15) !important; border-color: rgba(99, 102, 241, 0.3) !important; color: #a5b4fc !important; }
-:global(html.dark) .mini-stat--green  { background: rgba(22, 163, 74, 0.15) !important;  border-color: rgba(52, 211, 153, 0.3) !important; color: #34d399 !important; }
-:global(html.dark) .mini-stat--violet { background: rgba(147, 51, 234, 0.15) !important; border-color: rgba(167, 139, 250, 0.3) !important; color: #c084fc !important; }
-
-/* 主卡片 */
-.ai-card { border-radius: 14px !important; }
-
-.card-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-heading);
+.access-layout {
+    display: grid;
+    grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
 }
 
-.provider-name {
-    color: var(--admin-text);
+.provider-panel,
+.editor-panel {
+    border: 1px solid var(--admin-border);
+    border-radius: 10px;
+    background: var(--admin-bg-card);
+    box-shadow: var(--admin-shadow);
 }
 
-/* Provider 头像 */
-.provider-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    color: white;
-    font-size: 14px;
-    font-weight: 700;
+.provider-panel {
+    position: sticky;
+    top: 78px;
+    overflow: hidden;
+}
+
+.panel-toolbar {
+    padding: 14px;
+    border-bottom: 1px solid var(--admin-border);
+}
+
+.provider-list {
     display: flex;
+    max-height: calc(100vh - 260px);
+    min-height: 320px;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    padding: 12px;
+}
+
+.provider-item {
+    display: grid;
+    width: 100%;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 10px;
+    background: transparent;
+    text-align: left;
+    transition: all 0.18s ease;
+}
+
+.provider-item:hover,
+.provider-item.is-active {
+    border-color: rgba(6, 182, 212, 0.28);
+    background: rgba(6, 182, 212, 0.08);
+}
+
+.provider-item__avatar {
+    display: flex;
+    width: 36px;
+    height: 36px;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
+    border-radius: 8px;
+    color: #0f766e;
+    background: rgba(20, 184, 166, 0.14);
+    font-weight: 800;
 }
 
-.provider-health-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 12px;
-}
-
-.provider-health-item,
-.key-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    border-radius: 12px;
-    border: 1px solid var(--admin-border);
-    padding: 10px 12px;
-    font-size: 13px;
-    background: var(--admin-bg-soft);
-}
-
-.key-pill {
-    padding: 6px 10px;
-    font-family: var(--font-mono);
-    font-size: 12px;
-}
-
-.provider-health-item.is-healthy,
-.key-pill.is-healthy {
-    color: #34d399;
-    border-color: rgba(52, 211, 153, 0.28);
-    background: rgba(16, 185, 129, 0.10);
-}
-
-.provider-health-item.is-error,
-.key-pill.is-error {
-    color: #f87171;
-    border-color: rgba(248, 113, 113, 0.28);
-    background: rgba(239, 68, 68, 0.10);
-}
-
-.provider-status-cell {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
+.provider-item__main {
     min-width: 0;
 }
 
-.provider-status-text {
-    max-width: 120px;
-    color: var(--admin-text-muted);
-    font-size: 11px;
-    line-height: 1.2;
+.provider-item__main strong,
+.provider-item__main small {
+    display: block;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-/* 优先级样式 */
-.priority-high {
-    color: #16a34a;
-    font-weight: 700;
-    font-size: 15px;
-}
-.priority-normal {
-    color: #94a3b8;
+.provider-item__main strong {
+    color: var(--admin-text);
     font-size: 13px;
+}
+
+.provider-item__main small {
+    margin-top: 3px;
+    color: var(--admin-text-muted);
+    font-size: 12px;
+}
+
+.editor-panel {
+    overflow: hidden;
+}
+
+.editor-header,
+.editor-footer,
+.section-head,
+.model-tools,
+.fetched-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.editor-header {
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--admin-border);
+}
+
+.editor-header h2 {
+    margin: 0;
+    color: var(--admin-text);
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.editor-header p {
+    margin: 5px 0 0;
+    color: var(--admin-text-muted);
+    font-size: 13px;
+}
+
+.editor-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.access-form {
+    padding: 0 20px 18px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 16px;
+    padding-top: 12px;
+}
+
+.form-grid__wide {
+    grid-column: 1 / -1;
+}
+
+.section-head,
+.model-tools,
+.fetched-box {
+    padding: 12px 0;
+}
+
+.section-head span {
+    color: var(--admin-text);
+    font-weight: 700;
+}
+
+.model-tools__path {
+    max-width: 360px;
+}
+
+.fetched-box {
+    justify-content: flex-start;
+    border: 1px solid rgba(6, 182, 212, 0.18);
+    border-radius: 8px;
+    padding: 12px;
+    background: rgba(6, 182, 212, 0.06);
+}
+
+.fetched-box .el-select {
+    width: min(560px, 100%);
+}
+
+.rows {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.config-row {
+    display: grid;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--admin-border);
+    border-radius: 8px;
+    padding: 10px;
+    background: var(--admin-bg-soft);
+}
+
+.config-row--header {
+    grid-template-columns: auto minmax(160px, 0.8fr) minmax(200px, 1.2fr) auto;
+}
+
+.config-row--model {
+    grid-template-columns: auto minmax(160px, 1fr) minmax(140px, 0.8fr) minmax(120px, 0.7fr) auto auto;
+}
+
+.config-row--key {
+    grid-template-columns: auto minmax(220px, 1fr) minmax(220px, 1fr) auto auto;
+}
+
+.empty-panel {
+    border: 1px dashed var(--admin-border);
+    border-radius: 8px;
+    padding: 20px;
+    color: var(--admin-text-muted);
+    text-align: center;
+    font-size: 13px;
+}
+
+.editor-footer {
+    border-top: 1px solid var(--admin-border);
+    padding: 14px 20px;
+}
+
+.route-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    color: var(--admin-text-muted);
+    font-size: 12px;
+}
+
+.route-preview strong {
+    color: var(--admin-text);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 13px;
+}
+
+@media (max-width: 1080px) {
+    .access-layout,
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .provider-panel {
+        position: static;
+    }
+
+    .provider-list {
+        max-height: 360px;
+    }
+
+    .config-row,
+    .config-row--header,
+    .config-row--model,
+    .config-row--key {
+        grid-template-columns: 1fr;
+    }
+
+    .editor-header,
+    .editor-footer,
+    .model-tools,
+    .fetched-box {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .editor-actions {
+        width: 100%;
+    }
 }
 </style>

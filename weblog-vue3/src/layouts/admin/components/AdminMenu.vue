@@ -140,12 +140,8 @@ const menus = [
         'path': '/admin/ai',
         'children': [
             {
-                'name': 'AI 模型',
-                'path': '/admin/ai-model',
-            },
-            {
-                'name': 'AI Provider',
-                'path': '/admin/ai-provider',
+                'name': 'AI 接入',
+                'path': '/admin/ai-access',
             },
             {
                 'name': 'AI 插件',

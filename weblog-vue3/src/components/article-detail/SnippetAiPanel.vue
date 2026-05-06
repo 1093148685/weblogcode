@@ -95,6 +95,7 @@ const answerLoading = ref(false)
 const modelLoading = ref(false)
 const modelOptions = ref([])
 const selectedModelId = ref('')
+const selectedModelProvider = computed(() => modelOptions.value.find(model => model.id === selectedModelId.value)?.provider || '')
 const quickQuestions = ['解释这段', '总结要点', '举个例子', '有什么问题']
 
 const isMobile = () => window.innerWidth <= 768
@@ -252,6 +253,7 @@ const ask = async (prompt) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: selectedModelId.value,
+        provider: selectedModelProvider.value,
         mode: 'normal',
         messages: [
           {

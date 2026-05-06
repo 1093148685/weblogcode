@@ -68,6 +68,20 @@ public class AdminAgentController : ControllerBase
             var enabledProviders = _db.Queryable<AiProvider>().Where(p => p.IsEnabled).ToList();
             var enabledProviderNames = enabledProviders.Select(p => p.Name.ToLower()).ToHashSet();
 
+            foreach (var providerConfig in enabledProviders)
+            {
+                var advanced = AiProviderConfigParser.Parse(providerConfig.Config);
+                foreach (var model in AiProviderConfigParser.GetConfiguredModels(providerConfig.Name, providerConfig.DisplayName, advanced))
+                {
+                    models.Add(new AgentModelInfo
+                    {
+                        Id = model.Id,
+                        Name = model.Name,
+                        Provider = providerConfig.Name
+                    });
+                }
+            }
+
             // 优先从 Provider 注册表获取所有已启用 Provider 的模型列表
             var allMetadata = _registry.GetAllMetadata();
             foreach (var meta in allMetadata)
@@ -123,6 +137,11 @@ public class AdminAgentController : ControllerBase
             _logger.LogWarning(ex, "Failed to load available models");
         }
 
+        models = models
+            .GroupBy(m => $"{m.Provider}|{m.Id}", StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
+            .ToList();
+
         return Result<List<AgentModelInfo>>.Ok(models);
     }
 
@@ -134,7 +153,14 @@ public class AdminAgentController : ControllerBase
         Response.Headers.Connection   = "keep-alive";
 
         // 1. 选 Provider
-        var (provider, apiKey, error) = await _providerSelector.SelectAsync(type: AiProviderType.Chat);
+        var explicitProvider = request.Provider?.Trim();
+        var requestedRoute = AiProviderConfigParser.ParseModelRoute(request.Model);
+        var providerHint = string.IsNullOrWhiteSpace(explicitProvider)
+            ? requestedRoute.ProviderHint
+            : explicitProvider;
+        var (provider, apiKey, error) = await _providerSelector.SelectAsync(
+            preferredProvider: providerHint,
+            type: AiProviderType.Chat);
         if (provider == null || apiKey == null)
         {
             await SendEvent(new { type = "error", message = error ?? "没有可用的 AI Provider，请先在 AI 设置中配置" });
@@ -164,7 +190,14 @@ public class AdminAgentController : ControllerBase
         messages.Add(new AiChatMessage { Role = "user", Content = request.Message });
 
         var tools = BuildTools(enabledTools);
-        var model = request.Model ?? provider.DefaultModel ?? "";
+        var selectedConfig = _providerSelector.GetEnabledProviderConfigs()
+            .FirstOrDefault(p => p.Name.Equals(provider.Name, StringComparison.OrdinalIgnoreCase));
+        var resolvedRoute = selectedConfig == null
+            ? requestedRoute
+            : AiProviderConfigParser.ResolveRequestRoute(selectedConfig, request.Model, explicitProvider);
+        var model = string.IsNullOrWhiteSpace(resolvedRoute.ModelId)
+            ? provider.DefaultModel ?? ""
+            : resolvedRoute.ModelId;
 
         // 若带 sessionId，从数据库补充历史消息
         if (!string.IsNullOrEmpty(request.SessionId) && (request.History == null || request.History.Count == 0))
@@ -1189,6 +1222,7 @@ public class AgentChatRequest
     public string Message { get; set; } = string.Empty;
     public List<AgentHistoryItem>? History { get; set; }
     public string? Model { get; set; }
+    public string? Provider { get; set; }
     public AgentSettingsDto? Settings { get; set; }
     /// <summary>会话 ID，传入后自动加载/保存历史记录</summary>
     public string? SessionId { get; set; }

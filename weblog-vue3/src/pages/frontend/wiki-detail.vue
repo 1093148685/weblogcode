@@ -1058,8 +1058,8 @@ watch(
   --wiki-muted: #7c8794;
   --wiki-soft: #f3eee4;
   --wiki-border: #eadfcd;
-  --wiki-accent: #2f8f7b;
-  --wiki-accent-soft: #e8f3ec;
+  --wiki-accent: #111827;
+  --wiki-accent-soft: #f0f1f3;
   --wiki-shadow: 0 14px 36px rgba(74, 57, 32, 0.08);
   background:
     radial-gradient(circle at 30% 0%, rgba(255, 255, 255, 0.82), transparent 34rem),
@@ -1076,8 +1076,8 @@ watch(
   --wiki-muted: #afa79c;
   --wiki-soft: #22252b;
   --wiki-border: #3a332a;
-  --wiki-accent: #79c7ae;
-  --wiki-accent-soft: rgba(95, 168, 142, 0.16);
+  --wiki-accent: #f2eadf;
+  --wiki-accent-soft: rgba(255, 255, 255, 0.08);
   --wiki-shadow: 0 18px 44px rgba(0, 0, 0, 0.22);
   background:
     radial-gradient(circle at 30% 0%, rgba(255, 255, 255, 0.04), transparent 34rem),
@@ -1136,7 +1136,7 @@ watch(
   overflow-y: auto;
   overscroll-behavior: contain;
   padding-right: 4px;
-  scrollbar-color: rgba(47, 143, 123, 0.34) transparent;
+  scrollbar-color: rgba(17, 24, 39, 0.34) transparent;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   z-index: 6;
@@ -1148,7 +1148,7 @@ watch(
 
 .wiki-reading-sidebar::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: rgba(47, 143, 123, 0.28);
+  background: rgba(17, 24, 39, 0.28);
 }
 
 .wiki-left-sidebar {
@@ -1245,7 +1245,7 @@ watch(
   overflow-y: auto;
   overscroll-behavior: contain;
   padding-right: 4px;
-  scrollbar-color: rgba(47, 143, 123, 0.34) transparent;
+  scrollbar-color: rgba(17, 24, 39, 0.34) transparent;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
 }
@@ -1256,7 +1256,7 @@ watch(
 
 .wiki-catalog-tree::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: rgba(47, 143, 123, 0.28);
+  background: rgba(17, 24, 39, 0.28);
 }
 
 .wiki-catalog-item {
@@ -1292,8 +1292,8 @@ watch(
 }
 
 .wiki-catalog-item:hover {
-  background: rgba(232, 243, 236, 0.72);
-  color: #315d52;
+  background: rgba(17, 24, 39, 0.06);
+  color: #111827;
 }
 
 .wiki-catalog-item.active {
@@ -1328,7 +1328,7 @@ watch(
 .wiki-catalog-count {
   min-width: 18px;
   border-radius: 999px;
-  background: rgba(47, 143, 123, 0.1);
+  background: rgba(17, 24, 39, 0.08);
   color: var(--wiki-accent);
   font-size: 11px;
   font-weight: 900;
@@ -1342,7 +1342,7 @@ watch(
   height: 6px;
   border-radius: 999px;
   background: var(--wiki-accent);
-  box-shadow: 0 0 0 3px rgba(47, 143, 123, 0.12);
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.12);
 }
 
 .wiki-empty-catalog {
@@ -1365,7 +1365,7 @@ watch(
 }
 
 .wiki-side-outline {
-  border-left: 1px solid rgba(95, 168, 142, 0.28);
+  border-left: 1px solid rgba(17, 24, 39, 0.16);
   padding-left: 14px;
 }
 
@@ -1788,7 +1788,7 @@ watch(
 :global(html.dark) .wiki-tip-visual {
   border-color: #3a332a;
   background: linear-gradient(135deg, #22252b, #2c2a23) !important;
-  color: #79c7ae;
+  color: #f2eadf;
 }
 
 :global(html.dark) .wiki-left-head p,
@@ -1811,26 +1811,26 @@ watch(
 }
 
 :global(html.dark) .wiki-catalog-item:hover {
-  background: rgba(95, 168, 142, 0.12);
-  color: #bfe7da;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f2eadf;
 }
 
 :global(html.dark) .wiki-catalog-item.active {
-  background: rgba(95, 168, 142, 0.16);
-  color: #79c7ae;
+  background: rgba(255, 255, 255, 0.1);
+  color: #f2eadf;
 }
 
 :global(html.dark) .wiki-catalog-count {
-  background: rgba(95, 168, 142, 0.16);
-  color: #79c7ae;
+  background: rgba(255, 255, 255, 0.1);
+  color: #f2eadf;
 }
 
 :global(html.dark) .wiki-catalog-dot {
-  background: #79c7ae;
+  background: #f2eadf;
 }
 
 :global(html.dark) .wiki-side-outline {
-  border-left-color: rgba(121, 199, 174, 0.28);
+  border-left-color: rgba(255, 255, 255, 0.16);
 }
 
 :global(html.dark) .wiki-side-toc-item.level-3,
@@ -1843,11 +1843,11 @@ watch(
 :global(html.dark) .wiki-side-toc-item:hover,
 :global(html.dark) .wiki-side-toc-item.active {
   background: transparent;
-  color: #79c7ae;
+  color: #f2eadf;
 }
 
 :global(html.dark) .wiki-side-toc-item.active::before {
-  background: #79c7ae;
+  background: #f2eadf;
 }
 
 :global(html.dark) .mobile-action-bar,

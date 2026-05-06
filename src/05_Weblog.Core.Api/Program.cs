@@ -105,6 +105,7 @@ builder.Services.AddScoped<IAiAssistantService, AiAssistantService>();
 builder.Services.AddScoped<IRagService, RagService>();
 builder.Services.AddScoped<IRagAdminService, RagAdminService>();
 builder.Services.AddSingleton<IAiChatRoutingService, AiChatRoutingService>();
+builder.Services.AddSingleton<Weblog.Core.Service.AI.WebSearch.IMcpSearchService, Weblog.Core.Service.AI.WebSearch.McpSearchService>();
 builder.Services.AddHttpClient<Weblog.Core.Service.AI.WebSearch.IWebSearchService, Weblog.Core.Service.AI.WebSearch.WebSearchService>();
 builder.Services.AddHttpClient<IGiphyService, GiphyService>();
 builder.Services.AddHttpClient<ILinkPreviewService, LinkPreviewService>();

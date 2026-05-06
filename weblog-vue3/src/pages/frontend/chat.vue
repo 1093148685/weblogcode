@@ -1,6 +1,8 @@
 <template>
-    <div class="h-screen flex flex-col overflow-hidden bg-[var(--bg-base)] page-shell !p-0">
-        <ChatPanel />
+    <div class="page-shell chat-page !p-0">
+        <div class="chat-page-frame">
+            <ChatPanel />
+        </div>
     </div>
 </template>
 
@@ -9,3 +11,15 @@ import ChatPanel from '@/components/chat/ChatPanel.vue'
 
 defineOptions({ name: 'FrontendChat' })
 </script>
+
+<style scoped>
+.chat-page {
+    min-height: 100vh;
+    background: var(--bg-base);
+}
+
+.chat-page-frame {
+    height: 100vh;
+    min-height: 0;
+}
+</style>
