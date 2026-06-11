@@ -131,16 +131,14 @@ const total = ref(0)
 const pages = ref(0)
 
 function getArchives(currentNo) {
-    // 上下页是否能点击判断，当要跳转上一页且页码小于 1 时，则不允许跳转；当要跳转下一页且页码大于总页数时，则不允许跳转
     if (currentNo < 1 || (pages.value > 0 && currentNo > pages.value)) return
-    // 调用分页接口渲染数据
-    getArchivePageList({current: currentNo, size: size.value}).then((res) => {
+    getArchivePageList({pageNum: currentNo, pageSize: size.value}).then((res) => {
         if (res.success) {
-            archives.value = res.data
-            current.value = res.current
-            size.value = res.size
-            total.value = res.total
-            pages.value = res.pages
+            archives.value = res.data.list || []
+            current.value = res.data.pageNum || 1
+            size.value = res.data.pageSize || 10
+            total.value = res.data.total || 0
+            pages.value = Math.ceil(total.value / size.value) || 1
         }
     })
 }

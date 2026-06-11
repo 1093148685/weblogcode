@@ -138,7 +138,13 @@ const jump = (url) => {
 const statisticsInfo = ref({})
 getStatisticsInfo().then(res => {
     if (res.success) {
-        statisticsInfo.value = res.data
+        const d = res.data
+        statisticsInfo.value = {
+            articleTotalCount: d.articleCount || 0,
+            categoryTotalCount: d.categoryCount || 0,
+            tagTotalCount: d.tagCount || 0,
+            pvTotalCount: d.totalPv || 0
+        }
     }
 })
 </script>

@@ -364,11 +364,11 @@ function getCategoryArticles(currentNo) {
     // 调用分页接口渲染数据
     getCategoryArticlePageList({ current: currentNo, size: size.value, id: categoryId.value }).then((res) => {
         if (res.success) {
-            articles.value = res.data
-            current.value = res.current
-            size.value = res.size
-            total.value = res.total
-            pages.value = res.pages
+            articles.value = res.data.list || []
+            current.value = res.data.pageNum || 1
+            size.value = res.data.pageSize || 10
+            total.value = res.data.total || 0
+            pages.value = Math.ceil(total.value / size.value) || 1
             console.log(articles)
         }
     })
