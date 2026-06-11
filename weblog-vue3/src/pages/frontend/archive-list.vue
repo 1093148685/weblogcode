@@ -134,11 +134,17 @@ function getArchives(currentNo) {
     if (currentNo < 1 || (pages.value > 0 && currentNo > pages.value)) return
     getArchivePageList({pageNum: currentNo, pageSize: size.value}).then((res) => {
         if (res.success) {
-            archives.value = res.data.list || []
-            current.value = res.data.pageNum || 1
-            size.value = res.data.pageSize || 10
-            total.value = res.data.total || 0
-            pages.value = Math.ceil(total.value / size.value) || 1
+            if (Array.isArray(res.data)) {
+                archives.value = res.data
+                pages.value = 1
+                total.value = res.data.length
+            } else {
+                archives.value = res.data.list || []
+                current.value = res.data.pageNum || 1
+                size.value = res.data.pageSize || 10
+                total.value = res.data.total || 0
+                pages.value = Math.ceil(total.value / size.value) || 1
+            }
         }
     })
 }
