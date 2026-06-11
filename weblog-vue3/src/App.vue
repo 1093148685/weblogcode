@@ -2,7 +2,9 @@
 <template>
    <!-- 设置语言为中文 -->
    <el-config-provider :locale="locale">
-      <router-view></router-view>
+      <div class="flex flex-col min-h-screen">
+         <router-view></router-view>
+      </div>
    </el-config-provider>
 </template>
 
