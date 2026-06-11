@@ -176,6 +176,11 @@
                                 :class="[currPath == '/wiki/list' ? 'text-sky-600 md:border-b-2 md:border-sky-600 dark:text-sky-500 dark:md:border-sky-600' : 'text-gray-900 dark:text-white']"
                                 class="block py-2 pl-3 pr-4 rounded md:rounded-none hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-600 md:p-0 md:dark:hover:text-sky-500 dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700">知识库</a>
                         </li>
+                        <li>
+                            <a @click="router.push('/?view=message-wall')"
+                                :class="[isMessageWall ? 'text-sky-600 md:border-b-2 md:border-sky-600 dark:text-sky-500 dark:md:border-sky-600' : 'text-gray-900 dark:text-white']"
+                                class="block py-2 pl-3 pr-4 rounded md:rounded-none hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-600 md:p-0 md:dark:hover:text-sky-500 dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700">留言板</a>
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -441,7 +446,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, onBeforeUnmount, watch } from 'vue'
+import { onMounted, ref, onBeforeUnmount, watch, computed } from 'vue'
 import { initCollapses, initDropdowns, initModals, Modal } from 'flowbite'
 import { useBlogSettingsStore } from '@/stores/blogsettings'
 import { useUserStore } from '@/stores/user'
@@ -517,6 +522,9 @@ const route = useRoute()
 
 // 当前路由地址
 const currPath = ref(route.path)
+
+// 是否留言板页面
+const isMessageWall = computed(() => route.path === '/' && route.query.view === 'message-wall')
 
 // 引入博客设置信息 store
 const blogSettingsStore = useBlogSettingsStore()

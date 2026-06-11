@@ -79,6 +79,21 @@ const menus = [
         'icon': 'Setting',
         'path': '/admin/blog/settings',
     },
+    {
+        'name': '公告管理',
+        'icon': 'Bell',
+        'path': '/admin/announcement',
+    },
+    {
+        'name': '表情管理',
+        'icon': 'Present',
+        'path': '/admin/sticker/manage',
+    },
+    {
+        'name': '私密评论',
+        'icon': 'Lock',
+        'path': '/admin/comment/secret',
+    },
 ]
 </script>
 

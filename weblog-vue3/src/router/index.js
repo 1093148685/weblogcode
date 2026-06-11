@@ -16,6 +16,9 @@ import AdminTagList from '@/pages/admin/tag-list.vue'
 import AdminBlogSettings from '@/pages/admin/blog-settings.vue'
 import AdminWikiList from '@/pages/admin/wiki-list.vue'
 import AdminCommentList from '@/pages/admin/comment-list.vue'
+import AdminAnnouncement from '@/pages/admin/announcement.vue'
+import AdminStickerManager from '@/pages/admin/sticker-manager.vue'
+import AdminSecretComment from '@/pages/admin/secret-comment.vue'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import Admin from '@/layouts/admin/admin.vue'
 
@@ -151,6 +154,27 @@ const routes = [
                 component: AdminCommentList,
                 meta: {
                     title: '评论管理'
+                }
+            },
+            {
+                path: "/admin/announcement",
+                component: AdminAnnouncement,
+                meta: {
+                    title: '公告管理'
+                }
+            },
+            {
+                path: "/admin/sticker/manage",
+                component: AdminStickerManager,
+                meta: {
+                    title: '表情管理'
+                }
+            },
+            {
+                path: "/admin/comment/secret",
+                component: AdminSecretComment,
+                meta: {
+                    title: '私密评论'
                 }
             },
         ]
