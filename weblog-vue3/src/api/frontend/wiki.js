@@ -7,7 +7,7 @@ export function getWikiList() {
 
 // 获取知识库文章上一页
 export function getWikiArticlePreNext(data) {
-    return axios.post("/wiki/article/preNext", {wikiId: data.wikiId, articleId: data.articleId})
+    return axios.post("/wiki/article/preNext", data)
 }
 
 // 获取知识库目录

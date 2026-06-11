@@ -7,95 +7,79 @@
         <div class="grid grid-cols-4 gap-7">
             <!-- 左边栏，占用 3 列 -->
             <div class="col-span-4 md:col-span-3 mb-3">
-
-                <!-- 骨架屏 -->
-                <div v-if="isLoading">
-                    <div v-for="i in 4" :key="i" class="p-5 mb-4 border border-[var(--border-base)] rounded-lg bg-[var(--bg-card)] shadow-card">
-                        <Skeleton width="140px" height="1.5rem" class="mb-4" />
-                        <div class="divide-y divide-[var(--border-base)]">
-                            <div v-for="j in 3" :key="j" class="flex items-center gap-3 p-3">
-                                <Skeleton width="96px" height="48px" border-radius="8px" class="flex-shrink-0" />
-                                <div class="flex-1 min-w-0">
-                                    <Skeleton width="60%" height="1rem" class="mb-2" />
-                                    <Skeleton width="100px" height="0.75rem" />
+                <!-- 归档列表 -->
+                <div v-for="(archive, index) in archives" :key="index" class="p-5 mb-4 border border-gray-200 rounded-lg bg-white dark:bg-gray-800 dark:border-gray-700">
+                    <time class="text-lg font-semibold text-gray-900 dark:text-white">{{ archive.month }}</time>
+                    <ol class="mt-3 divide-y divider-gray-200 dark:divide-gray-700">
+                        <li v-for="(article, index2) in archive.articles" :key="index2">
+                            <a @click="goArticleDetailPage(article.id)" class="items-center block p-3 sm:flex hover:bg-gray-100 
+                            hover:rounded-lg dark:hover:bg-gray-700">
+                                <img class="w-24 h-12 mb-3 mr-3 rounded-lg sm:mb-0"
+                                    :src="article.cover"/>
+                                <div class="text-gray-600 dark:text-gray-400">
+                                    <h2 class="text-base font-normal text-gray-900 dark:text-white">
+                                        {{ article.title }}
+                                    </h2>
+                                    <span
+                                        class="inline-flex items-center text-xs font-normal text-gray-500 dark:text-gray-400">
+                                        <svg class="inline w-2.5 h-2.5 mr-2 text-gray-400"
+                                            aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                            viewBox="0 0 20 20">
+                                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M5 1v3m5-3v3m5-3v3M1 7h18M5 11h10M2 3h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
+                                        </svg>
+                                        {{ article.createDate }}
+                                    </span>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
+                            </a>
+                        </li>
+                    </ol>
                 </div>
 
-                <!-- 归档列表 -->
-                <template v-else>
-                    <div v-for="(archive, index) in archives" :key="index" class="p-5 mb-4 border border-[var(--border-base)] rounded-lg bg-[var(--bg-card)] shadow-card">
-                        <time class="text-lg font-semibold text-[var(--text-heading)]">{{ archive.month }}</time>
-                        <ol class="mt-3 space-y-4">
-                            <li v-for="(article, index2) in archive.articles" :key="index2" class="border border-[var(--border-base)] rounded-xl overflow-hidden bg-[var(--bg-card)]">
-                                <a @click="goArticleDetailPage(article.id)" class="items-center block p-4 sm:flex gap-4 hover:bg-[var(--bg-hover)] cursor-pointer">
-                                    <div class="archive-cover">
-                                        <img v-if="article.cover"
-                                            class="archive-cover__image"
-                                            :src="article.cover"
-                                            alt=""
-                                            @error="article.cover = ''" />
-                                        <div v-else class="archive-cover__placeholder">
-                                            <svg class="archive-cover__icon" fill="none" viewBox="0 0 24 24">
-                                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m3 16 5-7 6 6.5m6.5 2.5L16 13l-4.286 6M14 10h.01M4 19h16a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1Z"/>
-                                            </svg>
-                                        </div>
-                                    </div>
-                                    <div class="text-[var(--text-secondary)] flex-1 min-w-0">
-                                        <h2 class="text-base font-normal text-[var(--text-heading)] truncate">
-                                            {{ article.title }}
-                                        </h2>
-                                        <span class="inline-flex items-center text-xs font-normal text-[var(--text-muted)]">
-                                            <svg class="inline w-2.5 h-2.5 mr-2 text-[var(--text-muted)]"
-                                                aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
-                                                viewBox="0 0 20 20">
-                                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                                    stroke-width="2"
-                                                    d="M5 1v3m5-3v3m5-3v3M1 7h18M5 11h10M2 3h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
-                                            </svg>
-                                            {{ article.createDate }}
-                                        </span>
-                                    </div>
-                                </a>
-                            </li>
-                        </ol>
-                    </div>
+                <!-- 分页 -->
+                <nav aria-label="Page navigation example" class="mt-10 flex justify-center" v-if="pages > 1">
+                    <ul class="flex items-center -space-x-px h-10 text-base">
+                        <!-- 上一页 -->
+                        <li>
+                            <a @click="getArchives(current - 1)"
+                                class="flex items-center justify-center px-4 h-10 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                                :class="[current > 1 ? '' : 'cursor-not-allowed']"
+                                >
 
-                    <!-- 分页 -->
-                    <nav aria-label="Page navigation example" class="mt-10 flex justify-center" v-if="pages > 1">
-                        <ul class="flex items-center -space-x-px h-10 text-base">
-                            <li>
-                                <a @click="getArchives(current - 1)"
-                                    class="flex items-center justify-center px-4 h-10 ml-0 leading-tight text-[var(--text-muted)] bg-[var(--bg-card)] border border-[var(--border-base)] rounded-l-lg hover:bg-[var(--bg-hover)] hover:text-[var(--text-heading)]"
-                                    :class="[current > 1 ? 'cursor-pointer' : 'cursor-not-allowed']">
-                                    <span class="sr-only">上一页</span>
-                                    <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
-                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 1 1 5l4 4" />
-                                    </svg>
-                                </a>
-                            </li>
-                            <li v-for="(pageNo, index) in pages" :key="index">
-                                <a @click="getArchives(pageNo)"
-                                    class="flex items-center justify-center px-4 h-10 leading-tight border cursor-pointer"
-                                    :class="[pageNo == current ? 'text-[var(--color-primary)] bg-[var(--bg-hover)] border-[var(--border-base)] hover:bg-[var(--bg-active)] hover:text-[var(--text-heading)]' : 'text-[var(--text-muted)] border-[var(--border-base)] bg-[var(--bg-card)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-heading)]']">
-                                    {{ index + 1 }}
-                                </a>
-                            </li>
-                            <li>
-                                <a @click="getArchives(current + 1)"
-                                    class="flex items-center justify-center px-4 h-10 leading-tight text-[var(--text-muted)] bg-[var(--bg-card)] border border-[var(--border-base)] rounded-r-lg hover:bg-[var(--bg-hover)] hover:text-[var(--text-heading)]"
-                                    :class="[current < pages ? 'cursor-pointer' : 'cursor-not-allowed']">
-                                    <span class="sr-only">下一页</span>
-                                    <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
-                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 9 4-4-4-4" />
-                                    </svg>
-                                </a>
-                            </li>
-                        </ul>
-                    </nav>
-                </template>
+                                <span class="sr-only">上一页</span>
+                                <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                    viewBox="0 0 6 10">
+                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                        stroke-width="2" d="M5 1 1 5l4 4" />
+                                </svg>
+                            </a>
+                        </li>
+                        <!-- 页码 -->
+                        <li v-for="(pageNo, index) in pages" :key="index">
+                            <a @click="getArchives(pageNo)"
+                                class="flex items-center justify-center px-4 h-10 leading-tight border  dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                                :class="[pageNo == current ? 'text-blue-600  bg-blue-50 border-blue-300 hover:bg-blue-100 hover:text-blue-700' : 'text-gray-500 border-gray-300 bg-white hover:bg-gray-100 hover:text-gray-700']"
+                                >
+                                {{ index + 1 }}
+                            </a>
+                        </li>
+                        <!-- 下一页 -->
+                        <li>
+                            <a @click="getArchives(current + 1)"
+                                class="flex items-center justify-center px-4 h-10 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                                :class="[current < pages ? '' : 'cursor-not-allowed']"
+                                >
+                                <span class="sr-only">下一页</span>
+                                <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                    viewBox="0 0 6 10">
+                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                        stroke-width="2" d="m1 9 4-4-4-4" />
+                                </svg>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
 
             </div>
 
@@ -125,7 +109,6 @@
 <script setup>
 import Header from '@/layouts/frontend/components/Header.vue'
 import Footer from '@/layouts/frontend/components/Footer.vue'
-import Skeleton from '@/components/Skeleton.vue'
 import UserInfoCard from '@/layouts/frontend/components/UserInfoCard.vue'
 import TagListCard from '@/layouts/frontend/components/TagListCard.vue'
 import CategoryListCard from '@/layouts/frontend/components/CategoryListCard.vue'
@@ -133,114 +116,38 @@ import ScrollToTopButton from '@/layouts/frontend/components/ScrollToTopButton.v
 import { getArchivePageList } from '@/api/frontend/archive'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { setCache, getCache } from '@/composables/useCache'
 
 const router = useRouter()
 
 // 文章归档
 const archives = ref([])
+// 当前页码
 const current = ref(1)
+// 每页显示的文章数
 const size = ref(10)
+// 总文章数
 const total = ref(0)
+// 总共多少页
 const pages = ref(0)
-const isLoading = ref(true)
 
 function getArchives(currentNo) {
+    // 上下页是否能点击判断，当要跳转上一页且页码小于 1 时，则不允许跳转；当要跳转下一页且页码大于总页数时，则不允许跳转
     if (currentNo < 1 || (pages.value > 0 && currentNo > pages.value)) return
-
-    const cacheKey = `archives_page_${currentNo}_${size.value}`
-    const cached = getCache(cacheKey)
-    if (cached) {
-        archives.value = cached.data
-        current.value = cached.current
-        size.value = cached.size
-        total.value = cached.total
-        pages.value = cached.pages
-        isLoading.value = false
-        return
-    }
-
-    isLoading.value = true
+    // 调用分页接口渲染数据
     getArchivePageList({current: currentNo, size: size.value}).then((res) => {
-        isLoading.value = false
         if (res.success) {
             archives.value = res.data
             current.value = res.current
             size.value = res.size
             total.value = res.total
             pages.value = res.pages
-
-            setCache(cacheKey, {
-                data: res.data,
-                current: res.current,
-                size: res.size,
-                total: res.total,
-                pages: res.pages
-            }, 5 * 60 * 1000)
         }
     })
 }
 getArchives(current.value)
 
+// 跳转文章详情页
 const goArticleDetailPage = (articleId) => {
     router.push('/article/' + articleId)
 }
 </script>
-
-<style scoped>
-.archive-cover {
-    position: relative;
-    width: 112px;
-    height: 64px;
-    margin-right: 16px;
-    flex-shrink: 0;
-    overflow: hidden;
-    border-radius: 10px;
-    background: var(--bg-hover);
-    border: 1px solid var(--border-light);
-}
-
-.archive-cover__image {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.45s ease;
-}
-
-li:hover .archive-cover__image {
-    transform: scale(1.04);
-}
-
-.archive-cover__placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-    color: var(--text-muted);
-    background:
-        linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(16, 185, 129, 0.16)),
-        var(--bg-hover);
-}
-
-.archive-cover__icon {
-    width: 28px;
-    height: 28px;
-    opacity: 0.9;
-}
-
-@media (max-width: 640px) {
-    .archive-cover {
-        width: 100%;
-        height: 150px;
-        margin-right: 0;
-        margin-bottom: 12px;
-    }
-
-    .archive-cover__icon {
-        width: 42px;
-        height: 42px;
-    }
-}
-</style>
