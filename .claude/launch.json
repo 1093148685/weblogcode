@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Frontend (Vue3)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5173,
+      "cwd": "${workspaceFolder}/weblog-vue3"
+    },
+    {
+      "name": "Backend (.NET API)",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--urls", "http://0.0.0.0:5000"],
+      "port": 5000,
+      "cwd": "${workspaceFolder}/weblogcore/src/05_Weblog.Core.Api"
+    }
+  ]
+}

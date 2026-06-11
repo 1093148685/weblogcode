@@ -2,7 +2,7 @@
     <!-- 固钉组件 -->
     <el-affix :offset="0">
         <!-- Header 主体 -->
-        <div class="admin-header h-[64px] flex items-center pr-4">
+        <div class="admin-header flex items-center pr-4" style="height: var(--admin-header-height);">
 
             <!-- 左边：菜单折叠按钮 -->
             <div
@@ -52,10 +52,10 @@
                 </el-tooltip>
 
                 <!-- 夜晚模式 -->
-                <el-tooltip effect="dark" :content="themeStore.mode === 'dark' ? '切换白天模式' : '切换夜晚模式'" placement="bottom">
-                    <div class="header-btn w-[38px] h-[38px] cursor-pointer flex items-center justify-center rounded-lg theme-btn" @click="themeStore.toggle()">
+                <el-tooltip effect="dark" :content="isDark ? '切换白天模式' : '切换夜晚模式'" placement="bottom">
+                    <div class="header-btn w-[38px] h-[38px] cursor-pointer flex items-center justify-center rounded-lg" @click="toggleDark()">
                         <el-icon class="text-[16px]">
-                            <Sunny v-if="themeStore.mode === 'dark'" />
+                            <Sunny v-if="isDark" />
                             <Moon v-else />
                         </el-icon>
                     </div>
@@ -108,8 +108,7 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { useMenuStore } from '@/stores/menu'
 import { useUserStore } from '@/stores/user'
-import { useThemeStore } from '@/stores/theme'
-import { useFullscreen } from '@vueuse/core'
+import { useFullscreen, useDark, useToggle } from '@vueuse/core'
 import { updateAdminPassword } from '@/api/admin/user'
 import { showMessage, showModel } from '@/composables/util'
 import { useRouter, useRoute } from 'vue-router'
@@ -120,9 +119,11 @@ const route = useRoute()
 
 const { isFullscreen, toggle } = useFullscreen()
 
+const isDark = useDark()
+const toggleDark = useToggle(isDark)
+
 const menuStore = useMenuStore()
 const userStore = useUserStore()
-const themeStore = useThemeStore()
 
 // 当前页面标题（读取路由 meta）
 const currentPageTitle = computed(() => route.meta?.title || '')

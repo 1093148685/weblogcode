@@ -152,6 +152,12 @@
       />
 
       <SnippetCommentPanel
+        :visible="snippetCommentVisible"
+        :selected-text="selectedText"
+        :comments="activeSnippetComments"
+        @close="snippetCommentVisible = false"
+        @submit="submitSnippetComment"
+      />
 
       <Teleport to="body">
         <transition name="mobile-sheet-fade">

@@ -456,12 +456,16 @@ const size = ref(5)
 const pages = ref(0)
 const searchWord = ref('')
 const searchLoading = ref(false)
+let searchDebounceTimer = null
 
 watch(searchWord, (newVal, oldVal) => {
-    if (newVal && newVal !== oldVal) {
-        current.value = 1
-        renderSearchArticles({ current: 1, size: size.value, word: newVal })
-    } else if (!newVal) {
+    clearTimeout(searchDebounceTimer)
+    if (newVal) {
+        searchDebounceTimer = setTimeout(() => {
+            current.value = 1
+            renderSearchArticles({ current: 1, size: size.value, word: newVal })
+        }, 300)
+    } else {
         searchArticles.value = []
         total.value = 0
         pages.value = 0

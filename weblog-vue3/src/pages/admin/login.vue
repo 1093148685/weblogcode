@@ -11,7 +11,7 @@
                 </div>
 
                 <p class="visual-desc">
-                    基于 ASP.NET Core 8、SqlSugar、Vue 3 构建，聚合内容管理、文件上传、AI 写作与 RAG 知识库能力。
+                    基于 ASP.NET Core 8、SqlSugar、Vue 3 构建，聚合内容管理、文件上传等能力。
                 </p>
 
                 <div class="stack-grid compact">
@@ -23,15 +23,11 @@
                         <span>Data</span>
                         <strong>SqlSugar + MySQL</strong>
                     </div>
-                    <div class="stack-card">
-                        <span>AI</span>
-                        <strong>RAG + Provider</strong>
-                    </div>
                 </div>
 
                 <div class="feature-panel compact">
                     <span class="feature-dot cyan"></span>
-                    <p>结构清晰，适合学习 Controller、Service、Repository 分层，也方便继续扩展 AI 能力。</p>
+                    <p>结构清晰，适合学习 Controller、Service、Repository 分层。</p>
                 </div>
             </div>
         </section>

@@ -47,7 +47,7 @@ builder.Services.AddScoped<ISqlSugarClient>(s =>
         typeof(BlogSettings),
         typeof(Statistics),
         typeof(StatisticsArticlePv),
-        typeof(Announcement),
+        typeof(Announcement)
     );
 
     return db;

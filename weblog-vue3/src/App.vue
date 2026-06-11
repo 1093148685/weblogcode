@@ -64,12 +64,12 @@ const cachedViews = computed(() => {
    }
 }
 
-/* NProgress 加载条 - Cool Gray 主色 */
+/* NProgress 加载条 */
 #nprogress .bar {
-   background: var(--color-primary) !important;
+   background: var(--color-primary);
 }
 #nprogress .peg {
-   box-shadow: 0 0 10px var(--color-primary), 0 0 5px var(--color-primary) !important;
+   box-shadow: 0 0 10px var(--color-primary), 0 0 5px var(--color-primary);
 }
 
 /* Markdown 内容样式 */
@@ -126,12 +126,6 @@ const cachedViews = computed(() => {
     color: var(--text-secondary);
 }
 
-/* 公告内容限制高度 */
-.announcement-content {
-    max-height: 120px;
-    overflow: hidden;
-}
-
 /* 公告弹窗样式 */
 .announcement-dialog .el-dialog {
     border-radius: var(--radius-lg);
@@ -152,24 +146,6 @@ const cachedViews = computed(() => {
     background: var(--bg-hover);
     border-top: 1px solid var(--border-base);
     padding: 10px 20px;
-}
-.announcement-dialog .el-dialog__headerbtn .el-dialog__close {
-    color: var(--text-muted);
-    transition: color var(--transition-fast);
-}
-.announcement-dialog .el-dialog__headerbtn:hover .el-dialog__close {
-    color: var(--text-heading);
-}
-
-/* Element Plus 全局微调 */
-.el-button--primary {
-    border-radius: var(--radius-sm) !important;
-}
-.el-dialog {
-    border-radius: var(--radius-lg) !important;
-}
-.el-pagination.is-background .el-pager li:not(.is-disabled).is-active {
-    background-color: var(--color-primary) !important;
 }
 
 /* 自定义滚动条 */
