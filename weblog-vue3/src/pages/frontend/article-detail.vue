@@ -27,7 +27,7 @@
                             d="M682.666667 85.333333l213.333333 213.333334v597.674666a42.368 42.368 0 0 1-42.368 42.325334H170.368A42.666667 42.666667 0 0 1 128 896.341333V127.658667C128 104.277333 146.986667 85.333333 170.368 85.333333H682.666667z m-85.333334 256v212.864L512 469.333333l-84.906667 85.333334L426.666667 341.333333H341.333333v341.333334h85.333334l85.333333-85.333334 85.333333 85.333334h85.333334V341.333333h-85.333334z"
                             p-id="28618" fill="#8a8a8a"></path>
                     </svg>
-                    {{ article.totalWords }}
+                    {{ readingStats.totalWords }}
                 </div>
                 <!-- 文章字数 Tooltip -->
                 <div id="word-tooltip-bottom" role="tooltip"
@@ -46,7 +46,7 @@
                                 d="M513 33.22c-265.1 0-480 214.9-480 480s214.9 480 480 480 480-214.9 480-480-214.9-480-480-480z m208.9 652.59c-11.05 19.13-35.51 25.69-54.64 14.64L474.1 588.93c-13.06-7.54-20.26-21.34-19.99-35.42 0-0.17-0.01-0.34-0.01-0.51V329.95c0-22.09 17.91-40 40-40s40 17.91 40 40v201.23l173.17 99.98c19.12 11.05 25.68 35.51 14.63 54.65z"
                                 fill="#8a8a8a" p-id="37813"></path>
                         </svg>
-                        {{ article.readTime }}
+                        {{ readingStats.readTime }}
                     </div>
                     <!-- 阅读时长 Tooltip -->
                     <div id="read-time-tooltip-bottom" role="tooltip"
@@ -182,20 +182,17 @@
 
             <!-- 右边侧边栏，占用一列 -->
             <aside class="col-span-4 md:col-span-1">
-                <div>
-                    <!-- 博主信息 -->
-                    <UserInfoCard></UserInfoCard>
+                <!-- 博主信息 -->
+                <UserInfoCard></UserInfoCard>
 
-                    <!-- 分类 -->
-                    <CategoryListCard></CategoryListCard>
+                <!-- 分类 -->
+                <CategoryListCard></CategoryListCard>
 
-                    <!-- 标签 -->
-                    <TagListCard></TagListCard>
-                </div>
-                
-                <!-- 文章目录 -->
+                <!-- 标签 -->
+                <TagListCard></TagListCard>
+
+                <!-- 文章目录（sticky，滚动时跟上来并固定） -->
                 <Toc></Toc>
-
             </aside>
         </div>
     </main>
@@ -216,11 +213,12 @@ import ScrollToTopButton from '@/layouts/frontend/components/ScrollToTopButton.v
 import Toc from '@/layouts/frontend/components/Toc.vue'
 import { getArticleDetail } from '@/api/frontend/article'
 import { useRoute, useRouter } from 'vue-router'
-import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount, nextTick, computed } from 'vue'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/tokyo-night-dark.css'
 import { initTooltips } from 'flowbite'
 import Comment from '@/components/Comment.vue'
+import { computeReadingStats } from '@/composables/useReadingStats'
 
 import { useDark } from '@vueuse/core'
 
@@ -239,6 +237,9 @@ console.log(route.params.articleId)
 
 // 文章数据
 const article = ref({})
+
+// 根据文章内容计算阅读统计
+const readingStats = computed(() => computeReadingStats(article.value.content))
 
 // 获取文章详情
 function refreshArticleDetail(articleId) {
@@ -348,6 +349,21 @@ const handleMouseLeave = (event) => {
     color: #292525;
     line-height: 150%;
     font-family: PingFang SC, Helvetica Neue, Helvetica, Hiragino Sans GB, Microsoft YaHei, "\5FAE\8F6F\96C5\9ED1", Arial, sans-serif;
+}
+
+::v-deep(.article-content h1) {
+    font-size: 28px;
+    font-weight: 700;
+    margin-top: 44px;
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgb(241 245 249);
+}
+
+::v-deep(.dark .article-content h1) {
+    --tw-text-opacity: 1;
+    color: rgb(226 232 240/var(--tw-text-opacity));
+    border-bottom-color: rgb(55 65 81);
 }
 
 ::v-deep(.article-content h2) {

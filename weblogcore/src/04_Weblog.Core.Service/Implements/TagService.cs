@@ -107,11 +107,21 @@ public class TagService : ITagService
 
         // 获取每个标签的文章数量
         var dtos = list.Adapt<List<TagDto>>();
-        foreach (var dto in dtos)
+
+        if (list.Count > 0)
         {
-            dto.ArticlesTotal = await _dbContext.ArticleTagDb
-                .Where(it => it.TagId == dto.Id)
-                .CountAsync();
+            var tagIds = list.Select(t => t.Id).ToList();
+            var counts = await _dbContext.ArticleTagDb
+                .Where(it => tagIds.Contains(it.TagId))
+                .GroupBy(it => it.TagId)
+                .Select(it => new { TagId = it.TagId, Count = SqlFunc.AggregateCount(it.TagId) })
+                .ToListAsync();
+            var countDict = counts.ToDictionary(c => c.TagId, c => c.Count);
+
+            foreach (var dto in dtos)
+            {
+                dto.ArticlesTotal = countDict.TryGetValue(dto.Id, out var count) ? count : 0;
+            }
         }
 
         return new PageDto<TagDto>
@@ -160,16 +170,24 @@ public class TagService : ITagService
         }
 
         var list = await query.ToListAsync();
+        var dtos = list.Adapt<List<TagDto>>();
 
-        var result = new List<TagDto>();
-        foreach (var tag in list)
+        if (list.Count > 0)
         {
-            var count = await _dbContext.ArticleTagDb.Where(it => it.TagId == tag.Id).CountAsync();
-            var dto = tag.Adapt<TagDto>();
-            dto.ArticlesTotal = count;
-            result.Add(dto);
+            var tagIds = list.Select(t => t.Id).ToList();
+            var counts = await _dbContext.ArticleTagDb
+                .Where(it => tagIds.Contains(it.TagId))
+                .GroupBy(it => it.TagId)
+                .Select(it => new { TagId = it.TagId, Count = SqlFunc.AggregateCount(it.TagId) })
+                .ToListAsync();
+            var countDict = counts.ToDictionary(c => c.TagId, c => c.Count);
+
+            foreach (var dto in dtos)
+            {
+                dto.ArticlesTotal = countDict.TryGetValue(dto.Id, out var count) ? count : 0;
+            }
         }
 
-        return result;
+        return dtos;
     }
 }

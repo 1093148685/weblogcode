@@ -3,6 +3,8 @@ using SqlSugar;
 namespace Weblog.Core.Model.Entities;
 
 [SugarTable("t_article")]
+[SugarIndex("idx_status_deleted", nameof(Status), OrderByType.Asc, nameof(IsDeleted), OrderByType.Asc)]
+[SugarIndex("idx_create_time", nameof(CreateTime), OrderByType.Desc)]
 public class Article
 {
     [SugarColumn(IsPrimaryKey = true, IsIdentity = true)]

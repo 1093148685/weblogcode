@@ -7,15 +7,31 @@
         <div class="grid grid-cols-4 gap-7">
             <!-- 左边栏，占用 3 列 -->
             <div class="col-span-4 md:col-span-3 mb-3">
+                <!-- 骨架屏 -->
+                <div v-if="loading" class="space-y-4 slide-up-enter">
+                    <div v-for="i in 3" :key="i" class="p-5 border border-gray-200 rounded-lg bg-white dark:bg-gray-800 dark:border-gray-700 animate-pulse">
+                        <div class="h-5 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-3"></div>
+                        <div class="space-y-3">
+                            <div v-for="j in 3" :key="j" class="flex items-center gap-3 p-3">
+                                <div class="w-24 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                                <div class="flex-1">
+                                    <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+                                    <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- 归档列表 -->
-                <div v-for="(archive, index) in archives" :key="index" class="p-5 mb-4 border border-gray-200 rounded-lg bg-white dark:bg-gray-800 dark:border-gray-700">
+                <div v-for="(archive, index) in archives" :key="index" class="p-5 mb-4 border border-gray-200 rounded-lg bg-white dark:bg-gray-800 dark:border-gray-700 slide-up-enter">
                     <time class="text-lg font-semibold text-gray-900 dark:text-white">{{ archive.month }}</time>
                     <ol class="mt-3 divide-y divider-gray-200 dark:divide-gray-700">
                         <li v-for="(article, index2) in archive.articles" :key="index2">
                             <a @click="goArticleDetailPage(article.id)" class="items-center block p-3 sm:flex hover:bg-gray-100 
                             hover:rounded-lg dark:hover:bg-gray-700">
                                 <img class="w-24 h-12 mb-3 mr-3 rounded-lg sm:mb-0"
-                                    :src="article.cover"/>
+                                    :src="article.cover" loading="lazy"/>
                                 <div class="text-gray-600 dark:text-gray-400">
                                     <h2 class="text-base font-normal text-gray-900 dark:text-white">
                                         {{ article.title }}
@@ -119,6 +135,8 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
+const loading = ref(true)
+
 // 文章归档
 const archives = ref([])
 // 当前页码
@@ -132,6 +150,7 @@ const pages = ref(0)
 
 function getArchives(currentNo) {
     if (currentNo < 1 || (pages.value > 0 && currentNo > pages.value)) return
+    loading.value = true
     getArchivePageList({pageNum: currentNo, pageSize: size.value}).then((res) => {
         if (res.success) {
             if (Array.isArray(res.data)) {
@@ -146,6 +165,8 @@ function getArchives(currentNo) {
                 pages.value = Math.ceil(total.value / size.value) || 1
             }
         }
+    }).finally(() => {
+        loading.value = false
     })
 }
 getArchives(current.value)

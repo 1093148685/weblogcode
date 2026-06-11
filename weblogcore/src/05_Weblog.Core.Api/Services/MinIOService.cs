@@ -164,6 +164,20 @@ public class MinIOService
                 _logger.LogInformation("MinIO bucket created. Bucket={Bucket}", _bucketName);
             }
 
+            var policy = @"{
+                ""Version"": ""2012-10-17"",
+                ""Statement"": [{
+                    ""Effect"": ""Allow"",
+                    ""Principal"": {""AWS"": [""*""]},
+                    ""Action"": [""s3:GetObject""],
+                    ""Resource"": [""arn:aws:s3:::" + _bucketName + @"/*""]
+                }]
+            }";
+            await _minioClient.SetPolicyAsync(
+                new SetPolicyArgs().WithBucket(_bucketName).WithPolicy(policy))
+                .WaitAsync(StorageOperationTimeout);
+            _logger.LogInformation("MinIO bucket public-read policy set. Bucket={Bucket}", _bucketName);
+
             _bucketChecked = true;
             _logger.LogInformation("MinIO bucket check completed. Bucket={Bucket}", _bucketName);
         }

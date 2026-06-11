@@ -47,7 +47,7 @@
             <div class="grid grid-cols-4 gap-7">
                 <!-- 左边栏，占用 3 列 -->
                 <div class="col-span-4 md:col-span-3 mb-3">
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-2 gap-4 slide-up-stagger">
                         <!-- 骨架屏 -->
                         <template v-if="isLoading">
                             <div v-for="i in 6" :key="i" class="col-span-2 md:col-span-1">
@@ -145,7 +145,7 @@
 
                 <!-- 右边侧边栏 -->
                 <aside class="col-span-4 md:col-span-1">
-                    <div class="sticky top-[5.5rem] space-y-4">
+                    <div class="sticky top-[5.5rem] space-y-4 slide-up-enter">
                         <UserInfoCard></UserInfoCard>
 
                         <!-- 订阅卡片 -->

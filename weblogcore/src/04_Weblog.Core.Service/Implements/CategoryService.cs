@@ -90,11 +90,21 @@ public class CategoryService : ICategoryService
 
         // 获取每个分类的文章数量
         var dtos = list.Adapt<List<CategoryDto>>();
-        foreach (var dto in dtos)
+
+        if (list.Count > 0)
         {
-            dto.ArticlesTotal = await _dbContext.ArticleCategoryRelDb
-                .Where(it => it.CategoryId == dto.Id)
-                .CountAsync();
+            var categoryIds = list.Select(c => c.Id).ToList();
+            var counts = await _dbContext.ArticleCategoryRelDb
+                .Where(it => categoryIds.Contains(it.CategoryId))
+                .GroupBy(it => it.CategoryId)
+                .Select(it => new { CategoryId = it.CategoryId, Count = SqlFunc.AggregateCount(it.CategoryId) })
+                .ToListAsync();
+            var countDict = counts.ToDictionary(c => c.CategoryId, c => c.Count);
+
+            foreach (var dto in dtos)
+            {
+                dto.ArticlesTotal = countDict.TryGetValue(dto.Id, out var count) ? count : 0;
+            }
         }
 
         return new PageDto<CategoryDto>
@@ -133,16 +143,24 @@ public class CategoryService : ICategoryService
         }
 
         var list = await query.ToListAsync();
+        var dtos = list.Adapt<List<CategoryDto>>();
 
-        var result = new List<CategoryDto>();
-        foreach (var category in list)
+        if (list.Count > 0)
         {
-            var count = await _dbContext.ArticleCategoryRelDb.Where(it => it.CategoryId == category.Id).CountAsync();
-            var dto = category.Adapt<CategoryDto>();
-            dto.ArticlesTotal = count;
-            result.Add(dto);
+            var categoryIds = list.Select(c => c.Id).ToList();
+            var counts = await _dbContext.ArticleCategoryRelDb
+                .Where(it => categoryIds.Contains(it.CategoryId))
+                .GroupBy(it => it.CategoryId)
+                .Select(it => new { CategoryId = it.CategoryId, Count = SqlFunc.AggregateCount(it.CategoryId) })
+                .ToListAsync();
+            var countDict = counts.ToDictionary(c => c.CategoryId, c => c.Count);
+
+            foreach (var dto in dtos)
+            {
+                dto.ArticlesTotal = countDict.TryGetValue(dto.Id, out var count) ? count : 0;
+            }
         }
 
-        return result;
+        return dtos;
     }
 }

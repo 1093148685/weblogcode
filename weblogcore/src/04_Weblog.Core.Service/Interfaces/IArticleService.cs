@@ -18,7 +18,7 @@ public interface IArticlePortalService
 {
     Task<PageDto<ArticleDto>> GetPageAsync(PageRequest request);
     Task<PageDto<ArticleDto>> GetArchivePageAsync(PageRequest request);
-    Task<List<ArchiveArticleDto>> GetArchiveListAsync();
+    Task<List<ArchiveArticleDto>> GetArchiveListAsync(int? size = null);
     Task<PageDto<ArticleDto>> GetPageByCategoryAsync(long categoryId, PageRequest request);
     Task<PageDto<ArticleDto>> GetPageByTagAsync(long tagId, PageRequest request);
     Task<PageDto<ArticleDto>> GetPageByKeywordAsync(string keyword, PageRequest request);

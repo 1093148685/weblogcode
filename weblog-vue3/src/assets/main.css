@@ -2,6 +2,42 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ========== CSS 变量（供组件使用）========== */
+:root {
+  --bg-card: #fff;
+  --bg-base: #f9fafb;
+  --bg-hover: #f3f4f6;
+  --border-base: #e5e7eb;
+  --border-heavy: #d1d5db;
+  --border-light: #f3f4f6;
+  --text-heading: #111827;
+  --text-body: #374151;
+  --text-muted: #9ca3af;
+  --text-placeholder: #9ca3af;
+  --text-secondary: #6b7280;
+  --color-primary: #0284c7;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --focus-ring: rgba(14, 165, 233, 0.3);
+}
+
+.dark {
+  --bg-card: rgb(31 41 55);
+  --bg-base: rgb(55 65 81);
+  --bg-hover: rgb(75 85 99);
+  --border-base: rgb(55 65 81);
+  --border-heavy: rgb(75 85 99);
+  --border-light: rgb(55 65 81);
+  --text-heading: #fff;
+  --text-body: rgb(209 213 219);
+  --text-muted: rgb(156 163 175);
+  --text-placeholder: rgb(107 114 128);
+  --text-secondary: rgb(156 163 175);
+  --color-primary: #38bdf8;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+}
+
 body {
   font-family: -apple-system-font,BlinkMacSystemFont,Helvetica Neue,PingFang SC,Hiragino Sans GB,Microsoft YaHei UI,Microsoft YaHei,Arial,sans-serif;
   color: #4c4e4d;
@@ -13,3 +49,34 @@ body {
 [type='text']:focus, [type='email']:focus, [type='url']:focus, [type='password']:focus, [type='number']:focus, [type='date']:focus, [type='datetime-local']:focus, [type='month']:focus, [type='search']:focus, [type='tel']:focus, [type='time']:focus, [type='week']:focus, [multiple]:focus, textarea:focus, select:focus {
   box-shadow: 0 0 0 1px transparent inset!important;
 }
+
+/* ========== 页面入场动画 ========== */
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(80px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slide-up-enter {
+  animation: slideUpFade 0.65s ease-out both;
+}
+
+.slide-up-stagger > * {
+  opacity: 0;
+  animation: slideUpFade 0.6s ease-out forwards;
+}
+
+.slide-up-stagger > *:nth-child(1) { animation-delay: 0.08s; }
+.slide-up-stagger > *:nth-child(2) { animation-delay: 0.16s; }
+.slide-up-stagger > *:nth-child(3) { animation-delay: 0.24s; }
+.slide-up-stagger > *:nth-child(4) { animation-delay: 0.32s; }
+.slide-up-stagger > *:nth-child(5) { animation-delay: 0.40s; }
+.slide-up-stagger > *:nth-child(6) { animation-delay: 0.3s; }
+.slide-up-stagger > *:nth-child(7) { animation-delay: 0.35s; }
+.slide-up-stagger > *:nth-child(8) { animation-delay: 0.4s; }
+.slide-up-stagger > *:nth-child(n+9) { animation-delay: 0.45s; }

@@ -77,18 +77,18 @@ import Footer from '@/layouts/frontend/components/Footer.vue'
 import UserInfoCard from '@/layouts/frontend/components/UserInfoCard.vue'
 import CategoryListCard from '@/layouts/frontend/components/CategoryListCard.vue'
 import ScrollToTopButton from '@/layouts/frontend/components/ScrollToTopButton.vue'
-import { getTagList } from '@/api/frontend/tag'
-import { ref } from 'vue'
+import { usePortalStore } from '@/stores/portal'
+import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+const portalStore = usePortalStore()
 
 // 所有标签
-const tags = ref([])
-getTagList({}).then((res) => {
-    if (res.success) {
-        tags.value = res.data
-    }
+const tags = portalStore.tags
+
+onMounted(() => {
+    portalStore.loadSidebarData()
 })
 
 // 跳转标签文章列表页

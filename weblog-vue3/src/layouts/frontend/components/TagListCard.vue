@@ -44,20 +44,18 @@
 </template>
 
 <script setup>
-import { getTagList } from '@/api/frontend/tag'
-import { ref } from 'vue'
+import { usePortalStore } from '@/stores/portal'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+const portalStore = usePortalStore()
 
-// 所有标签
-const tags = ref([])
-// 一次显示的标签数
+const tags = portalStore.tags
 const size = ref(20)
-getTagList({ size: size.value }).then((res) => {
-    if (res.success) {
-        tags.value = res.data
-    }
+
+onMounted(() => {
+    portalStore.loadSidebarData()
 })
 
 // 跳转标签文章列表页

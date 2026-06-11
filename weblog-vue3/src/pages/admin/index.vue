@@ -176,16 +176,40 @@
                 <ArticlePVLineChat :value="articlePVInfo"></ArticlePVLineChat>
             </div>
         </div>
+
+        <!-- 分类文章数饼图 -->
+        <div class="col-span-4 md:col-span-2">
+            <div
+                class="w-full h-full px-5 py-7 mb-3 bg-white border border-gray-200 rounded-lg dark:bg-gray-800 dark:border-gray-700">
+                <h2 class="flex items-center mb-2 font-bold text-gray-600 uppercase dark:text-white">
+                    分类文章数统计
+                </h2>
+                <CategoryPieChart :value="categoryStatsInfo"></CategoryPieChart>
+            </div>
+        </div>
+
+        <!-- 标签文章数柱状图 -->
+        <div class="col-span-4 md:col-span-2">
+            <div
+                class="w-full h-full px-5 py-7 mb-3 bg-white border border-gray-200 rounded-lg dark:bg-gray-800 dark:border-gray-700">
+                <h2 class="flex items-center mb-2 font-bold text-gray-600 uppercase dark:text-white">
+                    标签文章数统计
+                </h2>
+                <TagBarChart :value="tagStatsInfo"></TagBarChart>
+            </div>
+        </div>
     </div>
 
 </main></template>
 
 <script setup>
 import { ref } from 'vue'
-import { getBaseStatisticsInfo, getPublishArticleStatisticsInfo, getArticlePVStatisticsInfo } from '@/api/admin/dashboard'
+import { getBaseStatisticsInfo, getPublishArticleStatisticsInfo, getArticlePVStatisticsInfo, getCategoryStatistics, getTagStatistics } from '@/api/admin/dashboard'
 import CountTo from '@/components/CountTo.vue'
 import ArticlePublishCalendar from '@/components/ArtilcePublishCalendar.vue'
 import ArticlePVLineChat from '@/components/ArticlePVLineChat.vue'
+import CategoryPieChart from '@/components/CategoryPieChart.vue'
+import TagBarChart from '@/components/TagBarChart.vue'
 
 // 文章总数，默认值为 0
 const articleTotalCount = ref(0)
@@ -226,6 +250,22 @@ getArticlePVStatisticsInfo({}).then((res) => {
             pvDates: res.data.map(item => item.date),
             pvCounts: res.data.map(item => item.viewCount)
         }
+    }
+})
+
+// 分类文章数统计
+const categoryStatsInfo = ref([])
+getCategoryStatistics().then((res) => {
+    if (res.success && res.data) {
+        categoryStatsInfo.value = res.data
+    }
+})
+
+// 标签文章数统计
+const tagStatsInfo = ref([])
+getTagStatistics().then((res) => {
+    if (res.success && res.data) {
+        tagStatsInfo.value = res.data
     }
 })
 

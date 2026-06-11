@@ -19,9 +19,15 @@ public class ArchiveController : ControllerBase
     }
 
     [HttpPost("list")]
-    public async Task<Result<List<ArchiveArticleDto>>> GetArchiveList()
+    [OutputCache(Duration = 300)]
+    public async Task<Result<List<ArchiveArticleDto>>> GetArchiveList([FromBody] ArchiveListRequest? request)
     {
-        var result = await _articlePortalService.GetArchiveListAsync();
+        var result = await _articlePortalService.GetArchiveListAsync(request?.Size ?? 50);
         return Result<List<ArchiveArticleDto>>.Ok(result);
     }
+}
+
+public class ArchiveListRequest
+{
+    public int? Size { get; set; }
 }

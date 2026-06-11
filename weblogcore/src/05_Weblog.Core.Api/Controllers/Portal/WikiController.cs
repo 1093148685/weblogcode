@@ -19,6 +19,7 @@ public class WikiPortalController : ControllerBase
     }
 
     [HttpPost("list")]
+    [OutputCache(Duration = 300)]
     public async Task<Result<List<WikiDto>>> GetPublishList()
     {
         var result = await _wikiService.GetPublishListAsync();

@@ -150,13 +150,22 @@ public class WikiService : IWikiService
 
         var dtos = list.Adapt<List<WikiDto>>();
 
-        foreach (var dto in dtos)
+        if (list.Count > 0)
         {
-            var firstCatalog = await _dbContext.WikiCatalogDb
-                .Where(it => it.WikiId == dto.Id && !it.IsDeleted && it.ArticleId != null)
+            var wikiIds = list.Select(w => w.Id).ToList();
+            var allCatalogs = await _dbContext.WikiCatalogDb
+                .Where(it => wikiIds.Contains(it.WikiId) && !it.IsDeleted && it.ArticleId != null)
                 .OrderBy(it => it.Sort)
-                .FirstAsync();
-            dto.FirstArticleId = firstCatalog?.ArticleId;
+                .ToListAsync();
+
+            var firstArticleDict = allCatalogs
+                .GroupBy(c => c.WikiId)
+                .ToDictionary(g => g.Key, g => g.First().ArticleId);
+
+            foreach (var dto in dtos)
+            {
+                dto.FirstArticleId = firstArticleDict.TryGetValue(dto.Id, out var articleId) ? articleId : null;
+            }
         }
 
         return dtos;

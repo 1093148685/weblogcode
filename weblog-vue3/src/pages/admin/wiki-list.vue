@@ -296,7 +296,7 @@ const handleCoverChange = (file) => {
         }
 
         // 成功则设置表单对象中的封面链接，并提示上传成功
-        form.cover = e.data.url
+        form.cover = e.data
         showMessage('上传成功')
     })
 }
@@ -427,7 +427,7 @@ const handleUpdateCoverChange = (file) => {
         }
 
         // 成功则设置表单对象中的封面链接，并提示上传成功
-        editForm.cover = e.data.url
+        editForm.cover = e.data
         showMessage('上传成功')
     })
 }

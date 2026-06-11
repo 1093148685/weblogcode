@@ -9,14 +9,28 @@
             <div class="col-span-12 md:col-span-8 lg:col-span-9 mb-3">
 
                 <!-- grid 表格布局，分为 12 列 -->
-                <div class="grid grid-cols-12 gap-7">
-                    <div v-if="wikis && wikis.length > 0" v-for="(wiki, index) in wikis" :key="index" class="col-span-12 md:col-span-6 lg:col-span-4 animate__animated animate__fadeInUp">
+                <div class="grid grid-cols-12 gap-7 slide-up-stagger">
+                    <!-- 骨架屏 -->
+                    <template v-if="loading">
+                        <div v-for="i in 6" :key="i" class="col-span-12 md:col-span-6 lg:col-span-4">
+                            <div class="relative bg-white h-full border border-gray-200 rounded-lg dark:bg-gray-800 dark:border-gray-700 animate-pulse">
+                                <div class="h-36 bg-gray-200 dark:bg-gray-700 rounded-t-lg"></div>
+                                <div class="p-5">
+                                    <div class="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+                                    <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-1"></div>
+                                    <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <div v-if="wikis && wikis.length > 0" v-for="(wiki, index) in wikis" :key="index" class="col-span-12 md:col-span-6 lg:col-span-4">
                         <div 
                             class="relative bg-white h-full border border-gray-200 rounded-lg hover:scale-[1.03] dark:bg-gray-800 dark:border-gray-700">
                             <!-- 知识库封面 -->
                             <a @click="goWikiArticleDetailPage(wiki.id, wiki.firstArticleId)" class="cursor-pointer">
                                 <img class="rounded-t-lg h-36 w-full"
-                                :src="wiki.cover" />
+                                :src="wiki.cover" loading="lazy"/>
                             </a>
                             <div class="p-5">
                                 <!-- 知识库标题 -->
@@ -70,18 +84,28 @@ import UserInfoCard from '@/layouts/frontend/components/UserInfoCard.vue'
 import TagListCard from '@/layouts/frontend/components/TagListCard.vue'
 import CategoryListCard from '@/layouts/frontend/components/CategoryListCard.vue'
 import ScrollToTopButton from '@/layouts/frontend/components/ScrollToTopButton.vue'
+import { usePortalStore } from '@/stores/portal'
 import { getWikiList } from '@/api/frontend/wiki'
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+const portalStore = usePortalStore()
+
+const loading = ref(true)
 
 // 知识库
 const wikis = ref([])
-getWikiList().then(res => {
-    if (res.success) {
-        wikis.value = res.data
-    }
+
+onMounted(() => {
+    portalStore.loadSidebarData()
+    getWikiList().then(res => {
+        if (res.success) {
+            wikis.value = res.data
+        }
+    }).finally(() => {
+        loading.value = false
+    })
 })
 
 // 跳转文章详情页

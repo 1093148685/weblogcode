@@ -6,6 +6,8 @@ namespace Weblog.Core.Model.Entities;
 /// 文章分类关联表
 /// </summary>
 [SugarTable("t_article_category_rel")]
+[SugarIndex("idx_article_id", nameof(ArticleId), OrderByType.Asc)]
+[SugarIndex("idx_category_id", nameof(CategoryId), OrderByType.Asc)]
 public class ArticleCategoryRel
 {
     [SugarColumn(IsPrimaryKey = true, IsIdentity = true)]

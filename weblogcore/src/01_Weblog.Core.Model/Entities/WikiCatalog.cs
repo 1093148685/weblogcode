@@ -3,6 +3,8 @@ using SqlSugar;
 namespace Weblog.Core.Model.Entities;
 
 [SugarTable("t_wiki_catalog")]
+[SugarIndex("idx_wiki_id", nameof(WikiId), OrderByType.Asc)]
+[SugarIndex("idx_article_id", nameof(ArticleId), OrderByType.Asc)]
 public class WikiCatalog
 {
     [SugarColumn(IsPrimaryKey = true, IsIdentity = true)]

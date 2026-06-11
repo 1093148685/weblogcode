@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using Weblog.Core.Api.Filters;
 using Weblog.Core.Api.Services;
 using Weblog.Core.Common.Result;
-using Weblog.Core.Service.Interfaces;
 
 namespace Weblog.Core.Api.Controllers.Admin;
 
@@ -12,7 +11,7 @@ namespace Weblog.Core.Api.Controllers.Admin;
 [Authorize]
 public class FileController : ControllerBase
 {
-    private const int DefaultImageMaxSizeMb = 5;
+    private const int DefaultImageMaxSizeMb = 20;
     private const int HardImageMaxSizeMb = 20;
     private const long HardImageMaxSizeBytes = (long)HardImageMaxSizeMb * 1024 * 1024;
 
@@ -21,16 +20,13 @@ public class FileController : ControllerBase
         ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg", ".ico"
     };
 
-    private readonly IBlogSettingsService _blogSettingsService;
     private readonly ILogger<FileController> _logger;
     private readonly MinIOService _minIOService;
 
     public FileController(
-        IBlogSettingsService blogSettingsService,
         ILogger<FileController> logger,
         MinIOService minIOService)
     {
-        _blogSettingsService = blogSettingsService;
         _logger = logger;
         _minIOService = minIOService;
     }
@@ -82,23 +78,8 @@ public class FileController : ControllerBase
         }
     }
 
-    private async Task<int> GetImageMaxSizeMbAsync()
+    private Task<int> GetImageMaxSizeMbAsync()
     {
-        try
-        {
-            var settings = await _blogSettingsService.GetAsync();
-            var configuredSize = settings?.CommentImageMaxSizeMb ?? DefaultImageMaxSizeMb;
-            if (configuredSize <= 0)
-            {
-                return DefaultImageMaxSizeMb;
-            }
-
-            return Math.Clamp(configuredSize, 1, HardImageMaxSizeMb);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "读取图片上传大小设置失败，使用默认限制");
-            return DefaultImageMaxSizeMb;
-        }
+        return Task.FromResult(DefaultImageMaxSizeMb);
     }
 }

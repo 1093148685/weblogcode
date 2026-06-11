@@ -18,71 +18,100 @@ public class ArticlePortalService : IArticlePortalService
     }
 
     /// <summary>
-    /// 从文章列表构建 ArticleDto（获取分类名和标签）
+    /// 批量构建 ArticleDto（一次查询所有关联数据，避免 N+1）
     /// </summary>
-    private async Task<ArticleDto> BuildArticleDtoAsync(Article article)
+    private async Task<List<ArticleDto>> BuildArticleDtosAsync(List<Article> articles)
     {
-        // 通过关联表获取分类 ID
-        var categoryRel = await _dbContext.ArticleCategoryRelDb
-            .FirstAsync(it => it.ArticleId == article.Id);
+        if (articles.Count == 0) return new List<ArticleDto>();
 
-        string? categoryName = null;
-        long categoryId = 0;
-        if (categoryRel != null)
-        {
-            categoryId = categoryRel.CategoryId;
-            var category = await _dbContext.CategoryDb
-                .FirstAsync(it => it.Id == categoryId);
-            categoryName = category?.Name;
-        }
+        var articleIds = articles.Select(a => a.Id).ToList();
 
-        // 获取标签列表
-        var articleTags = await _dbContext.ArticleTagDb
-            .Where(it => it.ArticleId == article.Id)
+        // 1. 批量查分类关联
+        var allCategoryRels = await _dbContext.ArticleCategoryRelDb
+            .Where(it => articleIds.Contains(it.ArticleId))
+            .ToListAsync();
+        var catRelDict = allCategoryRels.ToDictionary(r => r.ArticleId);
+
+        // 2. 批量查分类名称
+        var categoryIds = allCategoryRels.Select(r => r.CategoryId).Distinct().ToList();
+        var categories = categoryIds.Count > 0
+            ? await _dbContext.CategoryDb.Where(it => categoryIds.Contains(it.Id)).ToListAsync()
+            : new List<Category>();
+        var categoryDict = categories.ToDictionary(c => c.Id, c => c.Name);
+
+        // 3. 批量查标签关联
+        var allArticleTags = await _dbContext.ArticleTagDb
+            .Where(it => articleIds.Contains(it.ArticleId))
             .ToListAsync();
 
-        var tags = new List<TagSelectDto>();
-        foreach (var at in articleTags)
+        // 4. 批量查标签名称
+        var tagIds = allArticleTags.Select(t => t.TagId).Distinct().ToList();
+        var tags = tagIds.Count > 0
+            ? await _dbContext.TagDb.Where(it => tagIds.Contains(it.Id)).ToListAsync()
+            : new List<Tag>();
+        var tagDict = tags.ToDictionary(t => t.Id, t => t.Name);
+
+        // 5. 按文章分组标签
+        var tagsByArticle = allArticleTags
+            .GroupBy(t => t.ArticleId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(t => new TagSelectDto { Id = t.TagId, Name = tagDict.GetValueOrDefault(t.TagId, "") }).ToList()
+            );
+
+        // 6. 组装 DTO
+        var result = new List<ArticleDto>();
+        foreach (var article in articles)
         {
-            var tag = await _dbContext.TagDb.FirstAsync(it => it.Id == at.TagId);
-            if (tag != null)
+            var dto = article.Adapt<ArticleDto>();
+            dto.Content = null;
+
+            if (catRelDict.TryGetValue(article.Id, out var catRel))
             {
-                tags.Add(new TagSelectDto { Id = tag.Id, Name = tag.Name });
+                dto.CategoryId = catRel.CategoryId;
+                dto.CategoryName = categoryDict.GetValueOrDefault(catRel.CategoryId);
+                dto.Category = new CategorySimpleDto
+                {
+                    Id = catRel.CategoryId,
+                    Name = categoryDict.GetValueOrDefault(catRel.CategoryId, "")
+                };
             }
+
+            dto.Tags = tagsByArticle.GetValueOrDefault(article.Id, new List<TagSelectDto>());
+            result.Add(dto);
         }
 
-        var dto = article.Adapt<ArticleDto>();
-        dto.CategoryId = categoryId;
-        dto.CategoryName = categoryName;
-        dto.Category = categoryId > 0 ? new CategorySimpleDto { Id = categoryId, Name = categoryName ?? "" } : null;
-        dto.Tags = tags;
-        dto.Content = null;
-        return dto;
+        return result;
     }
 
     public async Task<PageDto<ArticleDto>> GetPageAsync(PageRequest request)
     {
-        var total = await _dbContext.ArticleDb
-            .Where(it => it.Status == 1 && !it.IsDeleted)
-            .CountAsync();
+        var baseQuery = _dbContext.ArticleDb
+            .Where(it => it.Status == 1 && !it.IsDeleted);
 
-        var list = await _dbContext.ArticleDb
-            .Where(it => it.Status == 1 && !it.IsDeleted)
+        var total = await baseQuery.CountAsync();
+
+        var list = await baseQuery
             .OrderByDescending(it => it.Weight)
             .OrderBy(it => it.CreateTime, OrderByType.Desc)
             .Skip((request.PageNum - 1) * request.PageSize)
             .Take(request.PageSize)
+            .Select(it => new Article
+            {
+                Id = it.Id,
+                Title = it.Title,
+                Cover = it.Cover,
+                Summary = it.Summary,
+                CreateTime = it.CreateTime,
+                ReadNum = it.ReadNum,
+                Weight = it.Weight,
+                Status = it.Status
+            })
             .ToListAsync();
-
-        var result = new List<ArticleDto>();
-        foreach (var article in list)
-        {
-            result.Add(await BuildArticleDtoAsync(article));
-        }
 
         return new PageDto<ArticleDto>
         {
-            List = result,
+            List = await BuildArticleDtosAsync(list),
             Total = total,
             PageNum = request.PageNum,
             PageSize = request.PageSize
@@ -94,44 +123,48 @@ public class ArticlePortalService : IArticlePortalService
         return await GetPageAsync(request);
     }
 
-    public async Task<List<ArchiveArticleDto>> GetArchiveListAsync()
+    public async Task<List<ArchiveArticleDto>> GetArchiveListAsync(int? size = null)
     {
-        var articles = await _dbContext.ArticleDb
+        var query = _dbContext.ArticleDb
             .Where(it => it.Status == 1 && !it.IsDeleted)
-            .OrderBy(it => it.CreateTime, OrderByType.Desc)
-            .ToListAsync();
+            .OrderBy(it => it.CreateTime, OrderByType.Desc);
 
-        var result = new List<ArchiveArticleDto>();
-
-        var groupedArticles = articles
-            .GroupBy(a => new { a.CreateTime.Year, a.CreateTime.Month })
-            .OrderByDescending(g => g.Key.Year)
-            .ThenByDescending(g => g.Key.Month);
-
-        foreach (var group in groupedArticles)
+        var limit = size ?? 50;
+        if (limit > 0)
         {
-            var yearMonth = $"{group.Key.Year}-{group.Key.Month:D2}";
-            var articleDtos = new List<ArticleDto>();
-
-            foreach (var article in group)
-            {
-                var dto = await BuildArticleDtoAsync(article);
-                articleDtos.Add(dto);
-            }
-
-            result.Add(new ArchiveArticleDto
-            {
-                Month = yearMonth,
-                Articles = articleDtos
-            });
+            query = query.Take(limit);
         }
 
-        return result;
+        var articles = await query.Select(it => new Article
+        {
+            Id = it.Id,
+            Title = it.Title,
+            Cover = it.Cover,
+            Summary = it.Summary,
+            CreateTime = it.CreateTime,
+            Weight = it.Weight,
+            Status = it.Status
+        }).ToListAsync();
+
+        if (articles.Count == 0) return new List<ArchiveArticleDto>();
+
+        var articleDtos = await BuildArticleDtosAsync(articles);
+        var dtoDict = articleDtos.ToDictionary(d => d.Id);
+
+        return articles
+            .GroupBy(a => new { a.CreateTime.Year, a.CreateTime.Month })
+            .OrderByDescending(g => g.Key.Year)
+            .ThenByDescending(g => g.Key.Month)
+            .Select(g => new ArchiveArticleDto
+            {
+                Month = $"{g.Key.Year}-{g.Key.Month:D2}",
+                Articles = g.Select(a => dtoDict.GetValueOrDefault(a.Id)).Where(d => d != null).ToList()!
+            })
+            .ToList();
     }
 
     public async Task<PageDto<ArticleDto>> GetPageByCategoryAsync(long categoryId, PageRequest request)
     {
-        // 通过关联表查询该分类下的文章 ID
         var articleIds = await _dbContext.ArticleCategoryRelDb
             .Where(it => it.CategoryId == categoryId)
             .Select(it => it.ArticleId)
@@ -146,17 +179,22 @@ public class ArticlePortalService : IArticlePortalService
             .OrderBy(it => it.CreateTime, OrderByType.Desc)
             .Skip((request.PageNum - 1) * request.PageSize)
             .Take(request.PageSize)
+            .Select(it => new Article
+            {
+                Id = it.Id,
+                Title = it.Title,
+                Cover = it.Cover,
+                Summary = it.Summary,
+                CreateTime = it.CreateTime,
+                ReadNum = it.ReadNum,
+                Weight = it.Weight,
+                Status = it.Status
+            })
             .ToListAsync();
-
-        var result = new List<ArticleDto>();
-        foreach (var article in list)
-        {
-            result.Add(await BuildArticleDtoAsync(article));
-        }
 
         return new PageDto<ArticleDto>
         {
-            List = result,
+            List = await BuildArticleDtosAsync(list),
             Total = total,
             PageNum = request.PageNum,
             PageSize = request.PageSize
@@ -179,17 +217,22 @@ public class ArticlePortalService : IArticlePortalService
             .OrderBy(it => it.CreateTime, OrderByType.Desc)
             .Skip((request.PageNum - 1) * request.PageSize)
             .Take(request.PageSize)
+            .Select(it => new Article
+            {
+                Id = it.Id,
+                Title = it.Title,
+                Cover = it.Cover,
+                Summary = it.Summary,
+                CreateTime = it.CreateTime,
+                ReadNum = it.ReadNum,
+                Weight = it.Weight,
+                Status = it.Status
+            })
             .ToListAsync();
-
-        var result = new List<ArticleDto>();
-        foreach (var article in list)
-        {
-            result.Add(await BuildArticleDtoAsync(article));
-        }
 
         return new PageDto<ArticleDto>
         {
-            List = result,
+            List = await BuildArticleDtosAsync(list),
             Total = total,
             PageNum = request.PageNum,
             PageSize = request.PageSize
@@ -207,7 +250,7 @@ public class ArticlePortalService : IArticlePortalService
             throw new Exception("文章不存在");
         }
 
-        // 通过关联表获取分类
+        // 获取分类
         var categoryRel = await _dbContext.ArticleCategoryRelDb
             .FirstAsync(it => it.ArticleId == id);
 
@@ -221,25 +264,25 @@ public class ArticlePortalService : IArticlePortalService
             categoryName = category?.Name;
         }
 
+        // 获取标签
         var articleTags = await _dbContext.ArticleTagDb
             .Where(it => it.ArticleId == id)
             .ToListAsync();
 
-        var tags = new List<TagSelectDto>();
-        foreach (var at in articleTags)
-        {
-            var tag = await _dbContext.TagDb.FirstAsync(it => it.Id == at.TagId);
-            if (tag != null)
-            {
-                tags.Add(new TagSelectDto { Id = tag.Id, Name = tag.Name });
-            }
-        }
+        var tagIds = articleTags.Select(t => t.TagId).ToList();
+        var tags = tagIds.Count > 0
+            ? await _dbContext.TagDb.Where(it => tagIds.Contains(it.Id)).ToListAsync()
+            : new List<Tag>();
+        var tagDict = tags.ToDictionary(t => t.Id, t => t.Name);
+
+        var tagDtos = articleTags
+            .Select(at => new TagSelectDto { Id = at.TagId, Name = tagDict.GetValueOrDefault(at.TagId, "") })
+            .ToList();
 
         // 获取文章内容
         var articleContent = await _dbContext.ArticleContentDb
             .FirstAsync(it => it.ArticleId == id);
 
-        // 将 Markdown 转换为 HTML
         var markdown = articleContent?.Content ?? "";
         var pipeline = new MarkdownPipelineBuilder()
             .UseAdvancedExtensions()
@@ -249,7 +292,7 @@ public class ArticlePortalService : IArticlePortalService
         var dto = article.Adapt<ArticleDto>();
         dto.CategoryId = categoryId;
         dto.CategoryName = categoryName;
-        dto.Tags = tags;
+        dto.Tags = tagDtos;
         dto.Content = htmlContent;
         return dto;
     }
@@ -277,17 +320,22 @@ public class ArticlePortalService : IArticlePortalService
             .OrderBy(it => it.CreateTime, OrderByType.Desc)
             .Skip((request.PageNum - 1) * request.PageSize)
             .Take(request.PageSize)
+            .Select(it => new Article
+            {
+                Id = it.Id,
+                Title = it.Title,
+                Cover = it.Cover,
+                Summary = it.Summary,
+                CreateTime = it.CreateTime,
+                ReadNum = it.ReadNum,
+                Weight = it.Weight,
+                Status = it.Status
+            })
             .ToListAsync();
-
-        var result = new List<ArticleDto>();
-        foreach (var article in list)
-        {
-            result.Add(await BuildArticleDtoAsync(article));
-        }
 
         return new PageDto<ArticleDto>
         {
-            List = result,
+            List = await BuildArticleDtosAsync(list),
             Total = total,
             PageNum = request.PageNum,
             PageSize = request.PageSize

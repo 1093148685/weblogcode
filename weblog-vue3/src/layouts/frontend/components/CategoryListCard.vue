@@ -59,26 +59,22 @@ dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:focus:ring-gray-
 </template>
 
 <script setup>
-import { getCategoryList } from '@/api/frontend/category'
-import { ref } from 'vue'
+import { usePortalStore } from '@/stores/portal'
 import { useRouter } from 'vue-router'
+import { onMounted } from 'vue'
 
 const router = useRouter()
+const portalStore = usePortalStore()
+
+const categories = portalStore.categories
+
+onMounted(() => {
+    portalStore.loadSidebarData()
+})
 
 // 跳转分类文章列表页
 const goCategoryArticleListPage = (id, name) => {
     // 跳转时通过 query 携带参数（分类 ID、分类名称）
     router.push({ path: '/category/article/list', query: { id, name } })
 }
-
-// 所有分类
-const categories = ref([])
-// 一次显示的分类数
-const size = ref(10)
-
-getCategoryList({ size: size.value }).then((res) => {
-    if (res.success) {
-        categories.value = res.data
-    }
-})
 </script>

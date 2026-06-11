@@ -77,25 +77,24 @@ import Header from '@/layouts/frontend/components/Header.vue'
 import Footer from '@/layouts/frontend/components/Footer.vue'
 import UserInfoCard from '@/layouts/frontend/components/UserInfoCard.vue'
 import TagListCard from '@/layouts/frontend/components/TagListCard.vue'
-import CategoryListCard from '@/layouts/frontend/components/CategoryListCard.vue'
 import ScrollToTopButton from '@/layouts/frontend/components/ScrollToTopButton.vue'
-import { getCategoryList } from '@/api/frontend/category'
-import { ref } from 'vue'
+import { usePortalStore } from '@/stores/portal'
+import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+const portalStore = usePortalStore()
+
+// 所有分类
+const categories = portalStore.categories
+
+onMounted(() => {
+    portalStore.loadSidebarData()
+})
 
 // 跳转分类文章列表页
 const goCategoryArticleListPage = (id, name) => {
     // 跳转时通过 query 携带参数（分类 ID、分类名称）
     router.push({ path: '/category/article/list', query: { id, name } })
 }
-
-// 所有分类
-const categories = ref([])
-getCategoryList({}).then((res) => {
-    if (res.success) {
-        categories.value = res.data
-    }
-})
 </script>

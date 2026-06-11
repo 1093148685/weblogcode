@@ -105,6 +105,79 @@
                         <el-text class="mx-1" type="info"  size="small">当被评论后，用于主动发送邮件通知博主</el-text>
                     </div>
                 </el-form-item>
+                <el-form-item label="评论图片大小上限(MB)">
+                    <el-input-number v-model="form.commentImageMaxSizeMb" :min="1" :max="50" />
+                </el-form-item>
+                <el-form-item label="贴纸包上传上限(张)">
+                    <el-input-number v-model="form.stickerZipMaxCount" :min="10" :max="500" />
+                </el-form-item>
+                <el-form-item label="评论链接预览">
+                    <el-switch v-model="form.isLinkPreviewOpen" inline-prompt :active-icon="Check" :inactive-icon="Close" />
+                </el-form-item>
+                <el-form-item label="链接预览白名单" v-if="form.isLinkPreviewOpen">
+                    <el-input v-model="form.linkPreviewWhitelist" type="textarea" rows="3" placeholder="每行一个域名，支持通配符如 *.example.com" />
+                </el-form-item>
+
+                <!-- 分割线 -->
+                <el-divider />
+
+                <el-form-item>
+                    <h2 class="font-bold text-base mb-1">邮件通知设置</h2>
+                </el-form-item>
+                <el-form-item label="开启邮件通知">
+                    <el-switch v-model="form.isEmailNotificationOpen" inline-prompt :active-icon="Check" :inactive-icon="Close" />
+                    <div class="flex items-center ml-3">
+                        <el-icon class="mr-2" color="#909399"><InfoFilled /></el-icon>
+                        <el-text class="mx-1" type="info"  size="small">开启后，有新评论或新订阅时将通过邮件通知博主</el-text>
+                    </div>
+                </el-form-item>
+                <template v-if="form.isEmailNotificationOpen">
+                    <el-form-item label="SMTP 主机">
+                        <el-input v-model="form.smtpHost" clearable placeholder="例如 smtp.qq.com" />
+                    </el-form-item>
+                    <el-form-item label="SMTP 端口">
+                        <el-input-number v-model="form.smtpPort" :min="1" :max="65535" />
+                    </el-form-item>
+                    <el-form-item label="SMTP 用户名">
+                        <el-input v-model="form.smtpUsername" clearable placeholder="SMTP 登录用户名" />
+                    </el-form-item>
+                    <el-form-item label="SMTP 密码">
+                        <el-input v-model="form.smtpPassword" type="password" show-password clearable placeholder="SMTP 登录密码" />
+                    </el-form-item>
+                    <el-form-item label="发件人邮箱">
+                        <el-input v-model="form.smtpFromEmail" clearable placeholder="例如 noreply@example.com" />
+                    </el-form-item>
+                    <el-form-item label="发件人名称">
+                        <el-input v-model="form.smtpFromName" clearable placeholder="例如 前锦阁" />
+                    </el-form-item>
+                    <el-form-item label="启用 SSL">
+                        <el-switch v-model="form.smtpEnableSsl" inline-prompt :active-icon="Check" :inactive-icon="Close" />
+                    </el-form-item>
+                </template>
+
+                <!-- 分割线 -->
+                <el-divider />
+
+                <el-form-item>
+                    <h2 class="font-bold text-base mb-1">订阅设置</h2>
+                </el-form-item>
+                <el-form-item label="展示订阅卡片">
+                    <el-switch v-model="form.isSubscribeCardOpen" inline-prompt :active-icon="Check" :inactive-icon="Close" />
+                </el-form-item>
+                <template v-if="form.isSubscribeCardOpen">
+                    <el-form-item label="订阅卡片标题">
+                        <el-input v-model="form.subscribeTitle" clearable placeholder="订阅更新" />
+                    </el-form-item>
+                    <el-form-item label="订阅卡片说明">
+                        <el-input v-model="form.subscribeDescription" type="textarea" rows="2" placeholder="订阅后，最新文章将通过邮件发送给你" />
+                    </el-form-item>
+                    <el-form-item label="订阅框占位文字">
+                        <el-input v-model="form.subscribePlaceholder" clearable placeholder="输入你的邮箱地址" />
+                    </el-form-item>
+                    <el-form-item label="订阅按钮文字">
+                        <el-input v-model="form.subscribeButtonText" clearable placeholder="订阅" />
+                    </el-form-item>
+                </template>
 
                 <el-form-item>
                     <el-button type="primary" :loading="btnLoading" @click="onSubmit">保存</el-button>
@@ -147,7 +220,24 @@ const form = reactive({
     csdnHomepage: '',
     isCommentSensiWordOpen: true, // 是否开启评论敏感词过滤
     isCommentExamineOpen: false, // 是否开启评论审核
-    mail: '' // 博主邮箱
+    mail: '', // 博主邮箱
+    commentImageMaxSizeMb: 5, // 评论图片大小上限
+    stickerZipMaxCount: 100, // 贴纸包上传上限
+    isLinkPreviewOpen: false, // 是否开启链接预览
+    linkPreviewWhitelist: '', // 链接预览白名单
+    isEmailNotificationOpen: false, // 是否开启邮件通知
+    smtpHost: '',
+    smtpPort: 465,
+    smtpUsername: '',
+    smtpPassword: '',
+    smtpEnableSsl: true,
+    smtpFromEmail: '',
+    smtpFromName: '',
+    isSubscribeCardOpen: false, // 是否展示订阅卡片
+    subscribeTitle: '',
+    subscribeDescription: '',
+    subscribePlaceholder: '',
+    subscribeButtonText: ''
 })
 
 // 规则校验
@@ -222,6 +312,23 @@ function initBlogSettings() {
             form.isCommentSensiWordOpen = e.data.isCommentSensiWordOpen
             form.isCommentExamineOpen = e.data.isCommentExamineOpen
             form.mail = e.data.mail
+            form.commentImageMaxSizeMb = e.data.commentImageMaxSizeMb ?? 5
+            form.stickerZipMaxCount = e.data.stickerZipMaxCount ?? 100
+            form.isLinkPreviewOpen = e.data.isLinkPreviewOpen ?? false
+            form.linkPreviewWhitelist = e.data.linkPreviewWhitelist ?? ''
+            form.isEmailNotificationOpen = e.data.isEmailNotificationOpen ?? false
+            form.smtpHost = e.data.smtpHost ?? ''
+            form.smtpPort = e.data.smtpPort ?? 465
+            form.smtpUsername = e.data.smtpUsername ?? ''
+            form.smtpPassword = e.data.smtpPassword ?? ''
+            form.smtpEnableSsl = e.data.smtpEnableSsl ?? true
+            form.smtpFromEmail = e.data.smtpFromEmail ?? ''
+            form.smtpFromName = e.data.smtpFromName ?? ''
+            form.isSubscribeCardOpen = e.data.isSubscribeCardOpen ?? false
+            form.subscribeTitle = e.data.subscribeTitle ?? ''
+            form.subscribeDescription = e.data.subscribeDescription ?? ''
+            form.subscribePlaceholder = e.data.subscribePlaceholder ?? ''
+            form.subscribeButtonText = e.data.subscribeButtonText ?? ''
         }
     })
 }
@@ -242,7 +349,7 @@ const handleLogoChange = (file) => {
         }
 
         // 成功则设置 logo 链接，并提示成功
-        form.logo = e.data.url
+        form.logo = e.data
         showMessage('上传成功')
     })
 }
@@ -262,7 +369,7 @@ const handleAvatarChange = (file) => {
         }
 
         // 成功则设置作者头像链接，并提示成功
-        form.avatar = e.data.url
+        form.avatar = e.data
         showMessage('上传成功')
     })
 }

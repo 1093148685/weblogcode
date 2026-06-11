@@ -15,3 +15,13 @@ export function getArticlePVStatisticsInfo(data = {}) {
     return axios.post("/admin/dashboard/pv/statistics", data)
 }
 
+// 获取分类文章数统计
+export function getCategoryStatistics(data = {}) {
+    return axios.post("/admin/dashboard/category/statistics", data)
+}
+
+// 获取标签文章数统计
+export function getTagStatistics(data = {}) {
+    return axios.post("/admin/dashboard/tag/statistics", data)
+}
+

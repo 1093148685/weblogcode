@@ -3,6 +3,8 @@ using SqlSugar;
 namespace Weblog.Core.Model.Entities;
 
 [SugarTable("t_article_tag")]
+[SugarIndex("idx_article_id", nameof(ArticleId), OrderByType.Asc)]
+[SugarIndex("idx_tag_id", nameof(TagId), OrderByType.Asc)]
 public class ArticleTag
 {
     [SugarColumn(IsPrimaryKey = true, IsIdentity = true)]

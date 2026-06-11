@@ -152,8 +152,8 @@
                         class="flex flex-col p-4 md:p-0 mt-4 font-medium border border-gray-100 rounded-lg bg-gray-50 md:flex-row md:space-x-8 md:mt-0 md:border-0 md:bg-white dark:bg-gray-800 md:dark:bg-gray-900 dark:border-gray-700">
                         <li>
                             <a @click="router.push('/')"
-                                :class="[currPath == '/' ? 'text-sky-600 md:border-b-2 md:border-sky-600 dark:text-sky-500 dark:md:border-sky-600' : 'text-gray-900 dark:text-white']"
-                                class="block py-2 pl-3 pr-4 rounded md:rounded-none hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-600 md:bg-transparent md:p-0 dark:hover:bg-gray-700 md:dark:hover:bg-transparent" 
+                                :class="[isHomeActive ? 'text-sky-600 md:border-b-2 md:border-sky-600 dark:text-sky-500 dark:md:border-sky-600' : 'text-gray-900 dark:text-white']"
+                                class="block py-2 pl-3 pr-4 rounded md:rounded-none hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-600 md:bg-transparent md:p-0 dark:hover:bg-gray-700 md:dark:hover:bg-transparent"
                                 aria-current="page">首页</a>
                         </li>
                         <li>
@@ -525,6 +525,9 @@ const currPath = ref(route.path)
 
 // 是否留言板页面
 const isMessageWall = computed(() => route.path === '/' && route.query.view === 'message-wall')
+
+// 首页激活态：排除留言板视图，避免两个导航栏同时高亮
+const isHomeActive = computed(() => route.path === '/' && route.query.view !== 'message-wall')
 
 // 引入博客设置信息 store
 const blogSettingsStore = useBlogSettingsStore()
