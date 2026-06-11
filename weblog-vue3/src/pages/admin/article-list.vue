@@ -299,13 +299,13 @@ function getTableData() {
     // 显示表格 loading
     tableLoading.value = true
     // 调用后台分页接口，并传入所需参数
-    getArticlePageList({ current: current.value, size: size.value, startDate: startDate.value, endDate: endDate.value, title: searchArticleTitle.value })
+    getArticlePageList({ pageNum: current.value, pageSize: size.value, startDate: startDate.value, endDate: endDate.value, title: searchArticleTitle.value })
         .then((res) => {
             if (res.success == true) {
-                tableData.value = res.data
-                current.value = res.current
-                size.value = res.size
-                total.value = res.total
+                tableData.value = res.data.list
+                current.value = res.data.pageNum
+                size.value = res.data.pageSize
+                total.value = res.data.total
             }
         })
         .finally(() => tableLoading.value = false) // 隐藏表格 loading

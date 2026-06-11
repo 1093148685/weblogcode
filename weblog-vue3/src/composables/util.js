@@ -1,4 +1,11 @@
 import nprogress from "nprogress"
+import { useUserStore } from '@/stores/user'
+
+// 判断是否为管理员
+export function isAdmin() {
+    const userStore = useUserStore()
+    return userStore.userInfo?.role === 'admin'
+}
 
 // 消息提示
 export function showMessage(message = '提示内容', type = 'success', customClass = '') {

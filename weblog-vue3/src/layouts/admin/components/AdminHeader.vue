@@ -27,7 +27,7 @@
                 <!-- 点击跳转前台首页 -->
                 <el-tooltip class="box-item" effect="dark" content="跳转前台" placement="bottom">
                     <div class="w-[42px] h-[64px] cursor-pointer flex items-center justify-center text-gray-700 hover:bg-gray-200"
-                        @click="router.push('/')">
+                        @click="goHome">
                         <el-icon>
                             <Monitor />
                         </el-icon>
@@ -50,7 +50,7 @@
                     <span class="el-dropdown-link flex items-center justify-center text-gray-700 text-xs">
                         <!-- 头像 Avatar -->
                         <el-avatar class="mr-2" :size="25"
-                            src="https://img.quanxiaoha.com/quanxiaoha/f97361c0429d4bb1bc276ab835843065.jpg" />
+                            src="src/assets/avr.jpg" />
                         {{ userStore.userInfo.username }}
                         <el-icon class="el-icon--right">
                             <arrow-down />
@@ -103,6 +103,11 @@ const { isFullscreen, toggle } = useFullscreen()
 const menuStore = useMenuStore()
 // 引入了用户 Store
 const userStore = useUserStore()
+
+const goHome = () => {
+    window.location.href = window.location.origin + window.location.pathname + '#/'
+    window.location.reload()
+}
 
 // icon 点击事件
 const handleMenuWidth = () => {

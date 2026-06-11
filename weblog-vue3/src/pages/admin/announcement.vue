@@ -96,7 +96,7 @@ const total = ref(0)
 
 // 搜索条件
 const searchContent = ref('')
-const searchIsEnabled = ref(null)
+const searchIsEnabled = ref('')
 const pickDate = ref('')
 const startDate = ref('')
 const endDate = ref('')
