@@ -19,6 +19,7 @@
             </template>
         </el-menu>
 
+        <div class="mt-5 p-2"><a href="https://www.quanxiaoha.com/column/10000.html" target="_blank"><img src="https://img.quanxiaoha.com/quanxiaoha/169496189031444"></a></div>
 
 </div></template>
 

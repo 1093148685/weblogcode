@@ -14,11 +14,8 @@ import AdminArticleList from '@/pages/admin/article-list.vue'
 import AdminCategoryList from '@/pages/admin/category-list.vue'
 import AdminTagList from '@/pages/admin/tag-list.vue'
 import AdminBlogSettings from '@/pages/admin/blog-settings.vue'
-import AdminAnnouncement from '@/pages/admin/announcement.vue'
 import AdminWikiList from '@/pages/admin/wiki-list.vue'
 import AdminCommentList from '@/pages/admin/comment-list.vue'
-import AdminSecretComment from '@/pages/admin/secret-comment.vue'
-import AdminStickerManager from '@/pages/admin/sticker-manager.vue'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import Admin from '@/layouts/admin/admin.vue'
 
@@ -72,7 +69,7 @@ const routes = [
         meta: { // meta 信息
             title: 'Weblog 详情页'
         }
-},
+    },
     {
         path: '/wiki/list', // 知识库
         component: WikiList,
@@ -143,38 +140,17 @@ const routes = [
                 }
             },
             {
-                path: "/admin/announcement",
-                component: AdminAnnouncement,
-                meta: {
-                    title: '公告管理'
-                }
-            },
-            {
                 path: "/admin/wiki/list",
                 component: AdminWikiList,
                 meta: {
                     title: '知识库管理'
                 }
             },
-{
+            {
                 path: "/admin/comment/list",
                 component: AdminCommentList,
                 meta: {
                     title: '评论管理'
-                }
-            },
-            {
-                path: "/admin/comment/secret",
-                component: AdminSecretComment,
-                meta: {
-                    title: '私密评论'
-                }
-            },
-            {
-                path: "/admin/sticker",
-                component: AdminStickerManager,
-                meta: {
-                    title: '贴纸管理'
                 }
             },
         ]

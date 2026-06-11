@@ -243,22 +243,15 @@ function getTableData() {
     tableLoading.value = true
     // 调用后台分页接口，并传入所需参数
     getCommentPageList({
-        pageNum: current.value, pageSize: size.value, startDate: startDate.value,
-        endDate: endDate.value, nickname: searchRouterUrl.value, status: status.value
+        current: current.value, size: size.value, startDate: startDate.value,
+        endDate: endDate.value, routerUrl: searchRouterUrl.value, status: status.value
     })
         .then((res) => {
             if (res.success == true) {
-                tableData.value = res.data.list.map(item => {
-                    if (item.images) {
-                        item.imagesArray = item.images.split(',').filter(img => img.trim())
-                    } else {
-                        item.imagesArray = []
-                    }
-                    return item
-                })
-                current.value = res.data.pageNum
-                size.value = res.data.pageSize
-                total.value = res.data.total
+                tableData.value = res.data
+                current.value = res.current
+                size.value = res.size
+                total.value = res.total
             }
         })
         .finally(() => tableLoading.value = false) // 隐藏表格 loading

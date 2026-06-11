@@ -7,7 +7,7 @@
             <div
                 class="flex justify-center items-center h-full flex-col animate__animated animate__bounceInLeft animate__fast">
                 <h2 class="font-bold text-4xl mb-7 text-white">Weblog 博客登录</h2>
-                <p class="text-white">一款由 ASP.NET Core 8 + SqlSugar + Vue 3 构建的前后端分离博客系统。</p>
+                <p class="text-white">一款由 Spring Boot + Mybaits Plus + Vue 3.2 + Vite 4 开发的前后端分离博客。</p>
                 <!-- 指定图片宽度为父级元素的 1/2 -->
                 <img src="@/assets/developer.png" class="w-1/2">
             </div>

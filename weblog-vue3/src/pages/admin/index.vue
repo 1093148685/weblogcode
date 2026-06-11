@@ -207,25 +207,17 @@ getBaseStatisticsInfo().then(res => {
 
 // 按日统计文章发布数据
 const articlePublishInfo = ref({})
-getPublishArticleStatisticsInfo({}).then((res) => {
-    if (res.success && res.data) {
-        const map = {}
-        res.data.forEach(item => {
-            const dateKey = item.date + '-01'
-            map[dateKey] = item.count
-        })
-        articlePublishInfo.value = map
+getPublishArticleStatisticsInfo().then((res) => {
+    if (res.success) {
+        articlePublishInfo.value = res.data
     }
 })
 
 // 近一周文章 PV 数据
 const articlePVInfo = ref({})
-getArticlePVStatisticsInfo({}).then((res) => {
+getArticlePVStatisticsInfo().then((res) => {
     if (res.success) {
-        articlePVInfo.value = {
-            pvDates: res.data.map(item => item.date),
-            pvCounts: res.data.map(item => item.viewCount)
-        }
+        articlePVInfo.value = res.data
     }
 })
 
