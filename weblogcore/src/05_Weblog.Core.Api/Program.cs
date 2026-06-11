@@ -200,4 +200,4 @@ using (var scope = app.Services.CreateScope())
     await aiKernel.InitializeAsync();
 }
 
-app.R
+app.Run();
