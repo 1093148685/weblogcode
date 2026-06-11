@@ -56,8 +56,6 @@ const cachedViews = computed(() => {
         'AdminTagList',
         'AdminBlogSettings',
         'AdminAnnouncement',
-        'AdminAiPlugin',
-        'AdminAiProvider',
         'AdminWikiList',
         'AdminCommentList'
     ]

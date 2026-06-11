@@ -32,24 +32,7 @@
             <!-- 分页列表 -->
             <el-table :data="tableData" border stripe style="width: 100%" class="admin-table compact-admin-table" v-loading="tableLoading">
                 <el-table-column prop="id" label="ID" width="72" align="center" />
-                <el-table-column prop="title" label="标题" min-width="360" show-overflow-tooltip>
-                    <template #default="scope">
-                        <div class="article-title-cell">
-                            <span class="article-title-text">{{ scope.row.title }}</span>
-                            <span
-                                :class="[
-                                    'article-summary-chip',
-                                    aiSummaryStatus[scope.row.id]?.hasSummary ? 'is-ready' : 'is-empty'
-                                ]"
-                            >
-                                <el-icon v-if="aiSummaryStatus[scope.row.id]?.loading" class="is-loading"><Loading /></el-icon>
-                                <el-icon v-else-if="aiSummaryStatus[scope.row.id]?.hasSummary"><CircleCheck /></el-icon>
-                                <el-icon v-else><CircleClose /></el-icon>
-                                {{ aiSummaryStatus[scope.row.id]?.loading ? '摘要生成中' : aiSummaryStatus[scope.row.id]?.hasSummary ? '已有 AI 摘要' : '暂无 AI 摘要' }}
-                            </span>
-                        </div>
-                    </template>
-                </el-table-column>
+                <el-table-column prop="title" label="标题" min-width="360" show-overflow-tooltip />
                 <el-table-column prop="cover" label="封面" width="140" align="center">
                     <template #default="scope">
                         <el-image style="width: 100px;" :src="scope.row.cover" />
@@ -95,13 +78,6 @@
                                 </el-button>
                                 <template #dropdown>
                                     <el-dropdown-menu>
-                                        <el-dropdown-item
-                                            :disabled="aiSummaryStatus[scope.row.id]?.loading"
-                                            @click="generateAiSummary(scope.row)"
-                                        >
-                                            <el-icon><MagicStick /></el-icon>
-                                            {{ aiSummaryStatus[scope.row.id]?.loading ? '摘要生成中' : '生成 AI 摘要' }}
-                                        </el-dropdown-item>
                                         <el-dropdown-item class="danger-dropdown-item" @click="deleteArticleSubmit(scope.row)">
                                             <el-icon><Delete /></el-icon>
                                             删除文章
@@ -130,10 +106,6 @@
                 <div class="article-editor-header">
                     <h4 class="font-bold">写文章</h4>
                     <div class="ml-auto flex">
-                        <el-button class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('draft'))">
-                            <el-icon class="mr-1"><MagicStick /></el-icon>
-                            AI 写作
-                        </el-button>
                         <el-button @click="isArticlePublishEditorShow = false">取消</el-button>
                         <el-button type="primary" @click="publishArticleSubmit">
                             <el-icon class="mr-1">
@@ -153,40 +125,6 @@
                                 clearable placeholder="输入一个清晰、有搜索价值的文章标题" />
                         </el-form-item>
                         <el-form-item label="内容" prop="content" class="article-content-item">
-                            <div class="article-ai-toolbar">
-                                <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('continue'))">
-                                    <el-icon><MagicStick /></el-icon>
-                                    续写
-                                </el-button>
-                                <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('outline'))">
-                                    <el-icon><MagicStick /></el-icon>
-                                    大纲
-                                </el-button>
-                                <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('title'))">
-                                    <el-icon><MagicStick /></el-icon>
-                                    标题
-                                </el-button>
-                                <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('polish'))">
-                                    <el-icon><MagicStick /></el-icon>
-                                    润色
-                                </el-button>
-                                <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('summary'))">
-                                    <el-icon><MagicStick /></el-icon>
-                                    摘要
-                                </el-button>
-                                <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('seo'))">
-                                    <el-icon><MagicStick /></el-icon>
-                                    SEO
-                                </el-button>
-                                <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('keywords'))">
-                                    <el-icon><MagicStick /></el-icon>
-                                    关键词
-                                </el-button>
-                                <el-button size="small" class="ai-btn" @click="showAiAssistant('publish', buildAiPrompt('review'))">
-                                    <el-icon><MagicStick /></el-icon>
-                                    检查
-                                </el-button>
-                            </div>
                             <MdEditor v-model="form.content" :theme="editorTheme" @onUploadImg="onUploadImg" editorId="publishArticleEditor" :no-upload-img="true" />
                         </el-form-item>
                     </section>
@@ -233,10 +171,6 @@
                 <div class="article-editor-header">
                     <h4 class="font-bold">编辑文章</h4>
                     <div class="ml-auto flex">
-                        <el-button class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('draft'))">
-                            <el-icon class="mr-1"><MagicStick /></el-icon>
-                            AI 写作
-                        </el-button>
                         <el-button @click="isArticleUpdateEditorShow = false">取消</el-button>
                         <el-button type="primary" @click="updateSubmit">
                             <el-icon class="mr-1">
@@ -256,40 +190,6 @@
                                 show-word-limit clearable placeholder="输入一个清晰、有搜索价值的文章标题" />
                         </el-form-item>
                         <el-form-item label="内容" prop="content" class="article-content-item">
-                            <div class="article-ai-toolbar">
-                                <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('continue'))">
-                                    <el-icon><MagicStick /></el-icon>
-                                    续写
-                                </el-button>
-                                <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('outline'))">
-                                    <el-icon><MagicStick /></el-icon>
-                                    大纲
-                                </el-button>
-                                <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('title'))">
-                                    <el-icon><MagicStick /></el-icon>
-                                    标题
-                                </el-button>
-                                <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('polish'))">
-                                    <el-icon><MagicStick /></el-icon>
-                                    润色
-                                </el-button>
-                                <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('summary'))">
-                                    <el-icon><MagicStick /></el-icon>
-                                    摘要
-                                </el-button>
-                                <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('seo'))">
-                                    <el-icon><MagicStick /></el-icon>
-                                    SEO
-                                </el-button>
-                                <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('keywords'))">
-                                    <el-icon><MagicStick /></el-icon>
-                                    关键词
-                                </el-button>
-                                <el-button size="small" class="ai-btn" @click="showAiAssistant('update', buildAiPrompt('review'))">
-                                    <el-icon><MagicStick /></el-icon>
-                                    检查
-                                </el-button>
-                            </div>
                             <MdEditor v-model="updateArticleForm.content" :theme="editorTheme" @onUploadImg="onUploadImg"
                                 editorId="updateArticleEditor" :no-upload-img="true" />
                         </el-form-item>
@@ -330,45 +230,27 @@
             </el-form>
         </el-dialog>
 
-        <!-- AI 助手弹窗 -->
-        <AiAssistantDialog v-model="isAiAssistantShow" :initial-prompt="aiAssistantPreset" :source-content="getActiveArticleForm().content" @insert-content="handleAiInsertContent" />
     </div>
 </template>
 
 <script setup>
 defineOptions({ name: 'AdminArticleList' })
 import { computed, ref, reactive } from 'vue'
-import { Search, RefreshRight, Check, Close, MagicStick, CircleCheck, CircleClose, Loading } from '@element-plus/icons-vue'
+import { Search, RefreshRight, Check, Close } from '@element-plus/icons-vue'
 import { getArticlePageList, deleteArticle, publishArticle, getArticleDetail, updateArticle, updateArticleIsTop, updateArticleStatus } from '@/api/admin/article'
 import { uploadFile } from '@/api/admin/file'
 import { getCategorySelectList } from '@/api/admin/category'
 import { searchTags, getTagSelectList } from '@/api/admin/tag'
-import { getAiSummaryAdmin, generateAiSummaryApi } from '@/api/admin/aiSummary'
 import moment from 'moment'
 import { showMessage, showModel } from '@/composables/util'
-import { getToken } from '@/composables/cookie'
 import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 import { useRouter } from 'vue-router'
-import AiAssistantDialog from '@/components/AiAssistantDialog.vue'
 import { useThemeStore } from '@/stores/theme'
 
 const router = useRouter()
 const themeStore = useThemeStore()
 const editorTheme = computed(() => themeStore.mode === 'dark' ? 'dark' : 'light')
-
-// AI 助手弹窗
-const isAiAssistantShow = ref(false)
-const aiAssistantTarget = ref('')
-const aiAssistantPreset = ref('')
-
-const showAiAssistant = (target, preset = '') => {
-    aiAssistantTarget.value = target
-    aiAssistantPreset.value = preset
-    isAiAssistantShow.value = true
-}
-
-const getActiveArticleForm = () => aiAssistantTarget.value === 'update' ? updateArticleForm : form
 
 const countPlainText = (value) => {
     return (value || '')
@@ -379,241 +261,6 @@ const countPlainText = (value) => {
         .replace(/[#>*_\-~|]/g, '')
         .replace(/\s/g, '')
         .length
-}
-
-const buildAiPrompt = (type) => {
-    const current = isArticleUpdateEditorShow.value ? updateArticleForm : form
-    const title = current.title || '未命名文章'
-    const content = (current.content || '').trim()
-    const summary = current.summary || ''
-
-    const contentBlock = content ? `\n\n当前正文：\n${content.slice(0, 3500)}` : ''
-    const summaryBlock = summary ? `\n\n当前摘要：${summary}` : ''
-
-    const prompts = {
-        outline: `请为这篇博客生成一份可直接使用的 Markdown 大纲。标题：${title}。要求包含 4-6 个一级/二级小节，每节给出写作要点和建议示例。${summaryBlock}${contentBlock}`,
-        title: `请为下面文章生成 8 个适合技术博客的标题。要求标题清晰、有搜索价值、不夸张，每行一个标题，不要编号外的解释。当前标题：${title}${summaryBlock}${contentBlock}`,
-        draft: `请帮我写一篇博客文章。标题：${title}。要求结构清晰、适合技术博客阅读，包含小标题、重点说明和必要的示例。${summaryBlock}${contentBlock}`,
-        continue: `请基于下面已有正文继续写，保持原有语气和结构，不要重复已有内容。标题：${title}${contentBlock}`,
-        polish: `请润色下面这篇博客文章，使表达更清晰、更有技术深度，保留 Markdown 结构。标题：${title}${contentBlock}`,
-        summary: `请为下面文章生成 80-140 字摘要。只输出摘要正文，不要输出标题建议或额外解释。标题：${title}${contentBlock}`,
-        seo: `请为下面文章生成 SEO 优化建议。标题：${title}。请输出：1. 5 个 SEO 标题；2. 8-12 个关键词；3. meta description；4. 可优化的小标题建议。${summaryBlock}${contentBlock}`,
-        keywords: `请根据下面文章生成 8-12 个中文或英文 SEO 关键词。只输出关键词，用逗号分隔，不要解释。标题：${title}${summaryBlock}${contentBlock}`,
-        review: `请审查下面这篇文章，重点检查结构完整性、技术准确性、表达清晰度、SEO、读者体验。请给出分点问题和可执行修改建议。标题：${title}${summaryBlock}${contentBlock}`
-    }
-
-    return prompts[type] || prompts.draft
-}
-
-// AI 摘要状态管理
-const aiSummaryStatus = reactive({})
-
-// 初始化 AI 摘要状态
-const initAiSummaryStatus = (articles) => {
-    articles.forEach(article => {
-        if (!aiSummaryStatus[article.id]) {
-            aiSummaryStatus[article.id] = { loading: false, hasSummary: null }
-        }
-    })
-}
-
-// 检查文章是否有 AI 摘要
-const checkAiSummaryStatus = (articleId) => {
-    if (aiSummaryStatus[articleId]?.hasSummary !== null) return
-    getAiSummaryAdmin(articleId).then(res => {
-        if (res.success && res.data && res.data.id) {
-            aiSummaryStatus[articleId] = { loading: false, hasSummary: true }
-        } else {
-            aiSummaryStatus[articleId] = { loading: false, hasSummary: false }
-        }
-    }).catch(() => {
-        aiSummaryStatus[articleId] = { loading: false, hasSummary: false }
-    })
-}
-
-// 生成 AI 摘要
-const generateAiSummary = async (row) => {
-    if (aiSummaryStatus[row.id]?.loading) return
-    
-    aiSummaryStatus[row.id] = { loading: true, hasSummary: aiSummaryStatus[row.id]?.hasSummary || false }
-    
-    try {
-        const token = getToken()
-        if (!token) {
-            showMessage('请先登录', 'error')
-            aiSummaryStatus[row.id] = { loading: false, hasSummary: aiSummaryStatus[row.id]?.hasSummary || false }
-            return
-        }
-        
-        const response = await fetch(`/api/admin/ai-summary/generate/${row.id}`, {
-            method: 'POST',
-            headers: {
-                'Authorization': 'Bearer ' + token,
-                'Content-Type': 'application/json'
-            }
-        })
-        
-        if (!response.ok) {
-            throw new Error('请求失败，状态码: ' + response.status)
-        }
-        
-        const reader = response.body?.getReader()
-        if (!reader) {
-            throw new Error('获取读取器失败')
-        }
-        
-        const decoder = new TextDecoder()
-        let result = ''
-        let hasError = false
-        
-        while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-            
-            const chunk = decoder.decode(value, { stream: true })
-            const lines = chunk.split('\n')
-            
-            for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                    try {
-                        const data = JSON.parse(line.slice(6))
-                        if (data.error) {
-                            showMessage(data.error, 'error')
-                            hasError = true
-                            break
-                        }
-                        if (data.content) {
-                            result += data.content
-                        }
-                        if (data.done) {
-                            break
-                        }
-                    } catch (e) {
-                        // Ignore parse errors for incomplete JSON
-                    }
-                }
-            }
-            if (hasError) break
-        }
-        
-        if (!hasError && result) {
-            aiSummaryStatus[row.id] = { loading: false, hasSummary: true }
-            showMessage('AI 摘要生成成功', 'success')
-        } else if (!hasError && !result) {
-            aiSummaryStatus[row.id] = { loading: false, hasSummary: aiSummaryStatus[row.id]?.hasSummary || false }
-        }
-    } catch (error) {
-        console.error('AI 摘要生成失败:', error)
-        showMessage('生成失败: ' + error.message, 'error')
-        aiSummaryStatus[row.id] = { loading: false, hasSummary: aiSummaryStatus[row.id]?.hasSummary || false }
-    }
-}
-
-const normalizeAiPayload = (payload) => {
-    if (typeof payload === 'string') {
-        return { action: 'append', content: payload }
-    }
-    return {
-        action: payload?.action || 'append',
-        content: payload?.content || ''
-    }
-}
-
-const cleanAiSummary = (content) => {
-    return (content || '')
-        .replace(/^#+\s*摘要[:：]?\s*/i, '')
-        .replace(/^摘要[:：]\s*/i, '')
-        .replace(/\*\*/g, '')
-        .trim()
-        .slice(0, 220)
-}
-
-const stripMarkdownLine = (line) => {
-    return (line || '')
-        .replace(/^#{1,6}\s*/, '')
-        .replace(/^[-*]\s*/, '')
-        .replace(/^\d+[.、)]\s*/, '')
-        .replace(/^标题\s*[:：]\s*/i, '')
-        .replace(/^SEO\s*标题\s*[:：]\s*/i, '')
-        .replace(/\*\*/g, '')
-        .replace(/["'“”]/g, '')
-        .trim()
-}
-
-const extractAiTitle = (content) => {
-    const lines = (content || '')
-        .split(/\r?\n/)
-        .map(stripMarkdownLine)
-        .filter(Boolean)
-
-    const candidate = lines.find(line => {
-        if (/^(关键词|meta\s*description|摘要|说明|理由|建议)[:：]/i.test(line)) return false
-        return line.length >= 4 && line.length <= 40
-    })
-
-    return candidate || ''
-}
-
-const extractMetaDescription = (content) => {
-    const text = (content || '').replace(/\r/g, '')
-    const match = text.match(/meta\s*description\s*[:：]\s*([^\n]+)/i)
-        || text.match(/描述\s*[:：]\s*([^\n]+)/i)
-        || text.match(/摘要\s*[:：]\s*([^\n]+)/i)
-
-    return cleanAiSummary(match?.[1] || '')
-}
-
-const extractKeywords = (content) => {
-    const text = (content || '').replace(/\r/g, '')
-    const match = text.match(/关键词\s*[:：]\s*([^\n]+)/i)
-        || text.match(/keywords\s*[:：]\s*([^\n]+)/i)
-
-    const raw = match?.[1] || text
-    return raw
-        .split(/[，,、\n]/)
-        .map(stripMarkdownLine)
-        .filter(Boolean)
-        .slice(0, 12)
-}
-
-const handleAiInsertContent = (payload) => {
-    const { action, content } = normalizeAiPayload(payload)
-    if (!content) return
-
-    const target = getActiveArticleForm()
-    if (action === 'replace') {
-        target.content = content
-        return
-    }
-
-    if (action === 'summary') {
-        target.summary = cleanAiSummary(content)
-        return
-    }
-
-    if (action === 'title') {
-        const title = extractAiTitle(content)
-        if (title) {
-            target.title = title
-            return
-        }
-    }
-
-    if (action === 'seo') {
-        const title = extractAiTitle(content)
-        const description = extractMetaDescription(content)
-        const keywords = extractKeywords(content)
-
-        if (title) target.title = title
-        if (description) target.summary = description
-        if (keywords.length > 0) {
-            const seoNote = `\n\n<!-- AI SEO 关键词：${keywords.join('，')} -->`
-            target.content = target.content ? target.content + seoNote : seoNote.trim()
-        }
-        return
-    }
-
-    target.content = target.content ? target.content + '\n\n' + content : content
 }
 
 // 模糊搜索的文章标题
@@ -694,12 +341,6 @@ function getTableData() {
                 current.value = res.data.pageNum
                 size.value = res.data.pageSize
                 total.value = res.data.total
-                // 初始化 AI 摘要状态
-                initAiSummaryStatus(res.data.list)
-                // 检查每篇文章的 AI 摘要状态
-                res.data.list.forEach(article => {
-                    checkAiSummaryStatus(article.id)
-                })
             }
         })
         .finally(() => tableLoading.value = false) // 隐藏表格 loading

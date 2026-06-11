@@ -129,42 +129,6 @@ const menus = [
         'icon': 'Setting',
         'path': '/admin/blog/settings',
     },
-    {
-        'name': '公告管理',
-        'icon': 'Bell',
-        'path': '/admin/announcement',
-    },
-    {
-        'name': 'AI 管理',
-        'icon': 'Cpu',
-        'path': '/admin/ai',
-        'children': [
-            {
-                'name': 'AI 接入',
-                'path': '/admin/ai-access',
-            },
-            {
-                'name': 'AI 插件',
-                'path': '/admin/ai-plugin',
-            },
-            {
-                'name': 'RAG 知识库',
-                'path': '/admin/knowledge-base',
-            },
-            {
-                'name': 'Prompt 模板',
-                'path': '/admin/ai/prompt-list',
-            },
-            {
-                'name': '写作助手',
-                'path': '/admin/ai-assistant',
-            },
-            {
-                'name': '智能 Agent',
-                'path': '/admin/agent',
-            },
-        ]
-    },
 ]
 </script>
 

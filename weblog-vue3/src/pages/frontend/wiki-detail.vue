@@ -148,24 +148,10 @@
         @search="searchSelectedText"
         @copy="copySelectedText"
         @translate="translateSelectedText"
-        @ask-ai="openSnippetAi"
         @comment="openSnippetComment"
       />
 
-      <SnippetAiPanel
-        :visible="snippetAiVisible"
-        :selected-text="selectedText"
-        @close="snippetAiVisible = false"
-      />
-
       <SnippetCommentPanel
-        :visible="snippetCommentVisible"
-        :selected-text="selectedText"
-        :comments="activeSnippetComments"
-        @close="snippetCommentVisible = false"
-        @ask-ai="openSnippetAi"
-        @submit="submitSnippetComment"
-      />
 
       <Teleport to="body">
         <transition name="mobile-sheet-fade">
@@ -289,7 +275,6 @@ import ShareDrawer from '@/components/article-detail/ShareDrawer.vue'
 import NotesDrawer from '@/components/article-detail/NotesDrawer.vue'
 import FloatingActionBar from '@/components/article-detail/FloatingActionBar.vue'
 import SelectionToolbar from '@/components/article-detail/SelectionToolbar.vue'
-import SnippetAiPanel from '@/components/article-detail/SnippetAiPanel.vue'
 import SnippetCommentPanel from '@/components/article-detail/SnippetCommentPanel.vue'
 import MessageWallForm from '@/components/MessageWallForm.vue'
 import MessageWallPanel from '@/components/MessageWallPanel.vue'
@@ -780,13 +765,6 @@ const copySelectedText = async () => {
 const translateSelectedText = () => {
   if (!selectedText.value) return
   window.open(`https://www.bing.com/translator?from=auto&to=zh-Hans&text=${encodeURIComponent(selectedText.value)}`, '_blank', 'noopener,noreferrer')
-  hideSelectionToolbar()
-}
-
-const openSnippetAi = () => {
-  if (!selectedText.value) return
-  snippetAiVisible.value = true
-  snippetCommentVisible.value = false
   hideSelectionToolbar()
 }
 

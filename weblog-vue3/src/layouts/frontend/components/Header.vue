@@ -406,7 +406,6 @@ const navItems = [
     { label: '归档', path: '/archive/list' },
     { label: '知识库', path: '/wiki/list', prefix: '/wiki' },
     { label: '留言板', path: '/', query: { view: 'message-wall' }, viewKey: 'message-wall' },
-    { label: 'AI 聊天', path: '/', query: { view: 'ai-chat' }, viewKey: 'ai-chat' },
 ]
 
 const isActive = (item) => {

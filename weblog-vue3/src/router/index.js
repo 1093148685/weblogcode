@@ -8,7 +8,6 @@ import ArticleDetail from '@/pages/frontend/article-detail.vue'
 import WikiList from '@/pages/frontend/wiki-list.vue'
 import WikiDetail from '@/pages/frontend/wiki-detail.vue'
 import NotFound from '@/pages/frontend/404.vue'
-import FrontendChat from '@/pages/frontend/chat.vue'
 import Login from '@/pages/admin/login.vue'
 import AdminIndex from '@/pages/admin/index.vue'
 import AdminArticleList from '@/pages/admin/article-list.vue'
@@ -16,17 +15,10 @@ import AdminCategoryList from '@/pages/admin/category-list.vue'
 import AdminTagList from '@/pages/admin/tag-list.vue'
 import AdminBlogSettings from '@/pages/admin/blog-settings.vue'
 import AdminAnnouncement from '@/pages/admin/announcement.vue'
-import AdminAiProvider from '@/pages/admin/ai-provider.vue'
-import AdminAiPlugin from '@/pages/admin/ai-plugin.vue'
-import AdminKnowledgeBase from '@/pages/admin/knowledge-base.vue'
-import AdminAgent from '@/pages/admin/admin-agent.vue'
-import AdminAiAssistant from '@/pages/admin/ai-assistant.vue'
 import AdminWikiList from '@/pages/admin/wiki-list.vue'
 import AdminCommentList from '@/pages/admin/comment-list.vue'
 import AdminSecretComment from '@/pages/admin/secret-comment.vue'
 import AdminStickerManager from '@/pages/admin/sticker-manager.vue'
-import AdminAiPromptList from '@/pages/admin/ai/prompt-list.vue'
-import AdminAiPromptEdit from '@/pages/admin/ai/prompt-edit.vue'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import Admin from '@/layouts/admin/admin.vue'
 
@@ -96,13 +88,6 @@ const routes = [
         }
     },
     {
-        path: '/chat', // AI 聊天页
-        component: FrontendChat,
-        meta: {
-            title: 'AI 聊天助手'
-        }
-    },
-    {
         path: '/login', // 登录页
         component: Login,
         meta: {
@@ -162,69 +147,6 @@ const routes = [
                 component: AdminAnnouncement,
                 meta: {
                     title: '公告管理'
-                }
-            },
-            {
-                path: "/admin/ai-access",
-                component: AdminAiProvider,
-                meta: {
-                    title: 'AI 接入配置'
-                }
-            },
-            {
-                path: "/admin/ai-model",
-                redirect: "/admin/ai-access",
-                meta: {
-                    title: 'AI模型管理'
-                }
-            },
-            {
-                path: "/admin/ai-provider",
-                component: AdminAiProvider,
-                meta: {
-                    title: 'AI Provider'
-                }
-            },
-            {
-                path: "/admin/ai-plugin",
-                component: AdminAiPlugin,
-                meta: {
-                    title: 'AI 插件市场'
-                }
-            },
-            {
-                path: "/admin/knowledge-base",
-                component: AdminKnowledgeBase,
-                meta: {
-                    title: 'RAG 知识库'
-                }
-            },
-            {
-                path: "/admin/ai/prompt-list",
-                component: AdminAiPromptList,
-                meta: {
-                    title: 'Prompt 模板管理'
-                }
-            },
-            {
-                path: "/admin/ai/prompt/edit/:id",
-                component: AdminAiPromptEdit,
-                meta: {
-                    title: '编辑 Prompt 模板'
-                }
-            },
-            {
-                path: "/admin/agent",
-                component: AdminAgent,
-                meta: {
-                    title: '博客智能 Agent'
-                }
-            },
-            {
-                path: "/admin/ai-assistant",
-                component: AdminAiAssistant,
-                meta: {
-                    title: 'AI 写作助手'
                 }
             },
             {

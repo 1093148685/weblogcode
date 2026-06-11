@@ -9,12 +9,6 @@ using Weblog.Core.Repository;
 using Weblog.Core.Repository.UnitOfWork;
 using Weblog.Core.Service.Implements;
 using Weblog.Core.Service.Interfaces;
-using Weblog.Core.Service.AI;
-using Weblog.Core.Service.AI.Core;
-using Weblog.Core.Service.AI.Providers;
-using Weblog.Core.Service.AI.Plugins;
-using Weblog.Core.Service.AI.Rag;
-using Weblog.Core.Service.AI.Routing;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -54,17 +48,6 @@ builder.Services.AddScoped<ISqlSugarClient>(s =>
         typeof(Statistics),
         typeof(StatisticsArticlePv),
         typeof(Announcement),
-        typeof(AiSummary),
-        typeof(AiModel),
-        typeof(AiProvider),
-        typeof(AiPlugin),
-        typeof(AiConversation),
-        typeof(AiUsageLog),
-        typeof(AiAgentLog),
-        typeof(AiAgentConfig),
-        typeof(KnowledgeBase),
-        typeof(KbDocument),
-        typeof(KbChunk)
     );
 
     return db;
@@ -89,24 +72,8 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<ISubscribeService, SubscribeService>();
 builder.Services.AddScoped<IWikiService, WikiService>();
 builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
-builder.Services.AddScoped<IAiSummaryService, AiSummaryService>();
-builder.Services.AddScoped<IAiModelService, AiModelService>();
 builder.Services.AddScoped<IStickerService, StickerService>();
 
-var aesKey = builder.Configuration["AiEncryption:AesKey"] ?? "Your-AiEncryption-Fallback-Key";
-builder.Services.AddSingleton<Weblog.Core.Service.AI.Core.IAiKeyEncryptionService>(sp => 
-    new Weblog.Core.Service.AI.Core.AesKeyEncryptionService(aesKey));
-builder.Services.AddAiProviders();
-builder.Services.AddSingleton<Weblog.Core.Service.AI.Core.AiProviderSelector>();
-builder.Services.AddScoped<Weblog.Core.Service.AI.IAiProviderService, Weblog.Core.Service.AI.AiProviderService>();
-builder.Services.AddSingleton<Weblog.Core.Service.AI.Plugins.PluginManager>();
-builder.Services.AddScoped<Weblog.Core.Service.AI.IAiKernel, Weblog.Core.Service.AI.AiKernel>();
-builder.Services.AddScoped<IAiAssistantService, AiAssistantService>();
-builder.Services.AddScoped<IRagService, RagService>();
-builder.Services.AddScoped<IRagAdminService, RagAdminService>();
-builder.Services.AddSingleton<IAiChatRoutingService, AiChatRoutingService>();
-builder.Services.AddSingleton<Weblog.Core.Service.AI.WebSearch.IMcpSearchService, Weblog.Core.Service.AI.WebSearch.McpSearchService>();
-builder.Services.AddHttpClient<Weblog.Core.Service.AI.WebSearch.IWebSearchService, Weblog.Core.Service.AI.WebSearch.WebSearchService>();
 builder.Services.AddHttpClient<IGiphyService, GiphyService>();
 builder.Services.AddHttpClient<ILinkPreviewService, LinkPreviewService>();
 
@@ -194,10 +161,5 @@ app.UseOutputCache();
 
 app.MapControllers();
 
-using (var scope = app.Services.CreateScope())
-{
-    var aiKernel = scope.ServiceProvider.GetRequiredService<Weblog.Core.Service.AI.IAiKernel>();
-    await aiKernel.InitializeAsync();
-}
 
 app.Run();

@@ -2,9 +2,7 @@
     <Header></Header>
 
     <!-- 主内容区域 -->
-    <main :class="currentView === 'ai-chat'
-        ? 'h-[calc(100vh-72px)] overflow-hidden'
-        : 'max-w-content mx-auto px-6 py-8'">
+    <main class="max-w-content mx-auto px-6 py-8">
 
         <!-- 公告区域 -->
         <div v-if="announcement && announcement.isEnabled && !announcementHidden && currentView === 'article'" class="mb-6 animate-fade-in">
@@ -312,16 +310,13 @@
             </div>
         </div>
 
-        <!-- AI 聊天视图 -->
-        <div v-else-if="currentView === 'ai-chat'" class="h-full">
-            <ChatPanel />
-        </div>
+        <!-- AI 聊天视图已被移除 -->
     </main>
 
     <!-- 返回顶部 -->
-    <ScrollToTopButton v-if="currentView !== 'ai-chat'"></ScrollToTopButton>
+    <ScrollToTopButton></ScrollToTopButton>
 
-    <Footer v-if="currentView !== 'ai-chat'"></Footer>
+    <Footer></Footer>
 </template>
 
 <script setup>
@@ -334,7 +329,6 @@ import TagListCard from '@/layouts/frontend/components/TagListCard.vue'
 import ScrollToTopButton from '@/layouts/frontend/components/ScrollToTopButton.vue'
 import MessageWallPanel from '@/components/MessageWallPanel.vue'
 import MessageWallForm from '@/components/MessageWallForm.vue'
-import ChatPanel from '@/components/chat/ChatPanel.vue'
 import messageWallHeroImage from '@/assets/liuyanban.png'
 import { onMounted, ref, computed, watch, nextTick } from 'vue'
 import { marked } from 'marked'
@@ -451,8 +445,6 @@ const initScrollAnimation = () => {
 const updateViewFromQuery = () => {
     if (route.query.view === 'message-wall') {
         currentView.value = 'message-wall'
-    } else if (route.query.view === 'ai-chat') {
-        currentView.value = 'ai-chat'
     } else {
         currentView.value = 'article'
     }

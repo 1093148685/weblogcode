@@ -34,14 +34,4 @@ public class DbContext
     public ISugarQueryable<CommentAdmin> CommentAdminDb => _db.Queryable<CommentAdmin>();
     public ISugarQueryable<EmailSubscriber> EmailSubscriberDb => _db.Queryable<EmailSubscriber>();
     public ISugarQueryable<LinkPreviewCache> LinkPreviewCacheDb => _db.Queryable<LinkPreviewCache>();
-    public ISugarQueryable<AiProvider> AiProviderDb => _db.Queryable<AiProvider>();
-    public ISugarQueryable<AiPlugin> AiPluginDb => _db.Queryable<AiPlugin>();
-    public ISugarQueryable<AiConversation> AiConversationDb => _db.Queryable<AiConversation>();
-    public ISugarQueryable<AiAgentLog> AiAgentLogDb => _db.Queryable<AiAgentLog>();
-    public ISugarQueryable<AiAgentConfig> AiAgentConfigDb => _db.Queryable<AiAgentConfig>();
-
-    // RAG 知识库
-    public ISugarQueryable<KnowledgeBase> KnowledgeBaseDb => _db.Queryable<KnowledgeBase>();
-    public ISugarQueryable<KbDocument> KbDocumentDb => _db.Queryable<KbDocument>();
-    public ISugarQueryable<KbChunk> KbChunkDb => _db.Queryable<KbChunk>();
 }

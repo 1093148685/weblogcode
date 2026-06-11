@@ -22,9 +22,7 @@
           :style="readingStyle"
           @go-tag="goTagArticleListPage"
           @go-category="goCategoryArticleListPage"
-        >
-          <AiSummaryCard :article-id="articleIdNumber" :content="article.content" :ready="articleReady" />
-        </ArticleContent>
+        ></ArticleContent>
 
         <div v-else class="space-y-5 rounded-2xl border border-[#e5e7eb] bg-white p-8 shadow-[0_12px_40px_rgba(15,23,42,.08)]">
           <div class="h-7 w-24 animate-pulse rounded-full bg-slate-100"></div>
@@ -83,14 +81,7 @@
         @search="searchSelectedText"
         @copy="copySelectedText"
         @translate="translateSelectedText"
-        @ask-ai="openSnippetAi"
         @comment="openSnippetComment"
-      />
-
-      <SnippetAiPanel
-        :visible="snippetAiVisible"
-        :selected-text="selectedText"
-        @close="snippetAiVisible = false"
       />
 
       <SnippetCommentPanel
@@ -98,7 +89,6 @@
         :selected-text="selectedText"
         :comments="activeSnippetComments"
         @close="snippetCommentVisible = false"
-        @ask-ai="openSnippetAi"
         @submit="submitSnippetComment"
       />
 
@@ -233,9 +223,7 @@ import ShareDrawer from '@/components/article-detail/ShareDrawer.vue'
 import NotesDrawer from '@/components/article-detail/NotesDrawer.vue'
 import FloatingActionBar from '@/components/article-detail/FloatingActionBar.vue'
 import SelectionToolbar from '@/components/article-detail/SelectionToolbar.vue'
-import SnippetAiPanel from '@/components/article-detail/SnippetAiPanel.vue'
 import SnippetCommentPanel from '@/components/article-detail/SnippetCommentPanel.vue'
-import AiSummaryCard from '@/components/AiSummaryCard.vue'
 import MessageWallForm from '@/components/MessageWallForm.vue'
 import MessageWallPanel from '@/components/MessageWallPanel.vue'
 import { getArticleDetail, getArticlePageList, clearArticleDetailCache } from '@/api/frontend/article'
@@ -736,13 +724,6 @@ const copySelectedText = async () => {
 const translateSelectedText = () => {
   if (!selectedText.value) return
   window.open(`https://www.bing.com/translator?from=auto&to=zh-Hans&text=${encodeURIComponent(selectedText.value)}`, '_blank', 'noopener,noreferrer')
-  hideSelectionToolbar()
-}
-
-const openSnippetAi = () => {
-  if (!selectedText.value) return
-  snippetAiVisible.value = true
-  snippetCommentVisible.value = false
   hideSelectionToolbar()
 }
 
