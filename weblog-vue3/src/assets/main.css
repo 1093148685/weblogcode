@@ -283,6 +283,14 @@ img {
   outline: none;
 }
 
+/* 排除聊天输入框的全局焦点样式 */
+.chat-input-wrapper textarea:focus {
+  box-shadow: none !important;
+  border-color: transparent !important;
+  outline: none !important;
+}
+
+/* === 滚动条 === */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -1415,6 +1423,11 @@ html.dark .chart-card__title {
   color: #d4d4d4 !important;
 }
 
+/* ── AI 页面迷你统计卡暗色 ── */
+html.dark .mini-stat--blue   { background: rgba(67, 56, 202, 0.15) !important; border-color: rgba(99, 102, 241, 0.3) !important; color: #a5b4fc !important; }
+html.dark .mini-stat--green  { background: rgba(22, 163, 74, 0.15) !important;  border-color: rgba(52, 211, 153, 0.3) !important; color: #34d399 !important; }
+html.dark .mini-stat--violet { background: rgba(147, 51, 234, 0.15) !important; border-color: rgba(167, 139, 250, 0.3) !important; color: #c084fc !important; }
+html.dark .mini-stat--orange { background: rgba(194, 65, 12, 0.15) !important; border-color: rgba(249, 115, 22, 0.3) !important; color: #fb923c !important; }
 
 /* ── mini-stat 暗色 ── */
 html.dark .mini-stat {
@@ -1443,6 +1456,10 @@ html:not(.dark) .theme-btn .el-icon {
   color: #3b82f6 !important;
 }
 
+/* ============================================
+   暗色模式 - 页面级文字 & AI 页面补充覆盖
+   ============================================ */
+
 /* ── 页面通用标题文字（各 admin 页面的 h1 标题） ── */
 html.dark .text-slate-800 {
   color: #e2e8f0 !important;
@@ -1464,6 +1481,35 @@ html.dark .text-slate-400 {
   color: #475569 !important;
 }
 
+/* ── AI 页面背景（prompt-edit 页面） ── */
+html.dark .prompt-edit-page {
+  background: var(--admin-bg-page) !important;
+}
+
+/* ── ai-card 卡片（AI 各子页面使用） ── */
+.ai-card {
+  border-radius: 8px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid #e4e7ed !important;
+  background: #ffffff !important;
+  transition: all 0.2s ease !important;
+}
+
+html.dark .ai-card {
+  background-color: #242424 !important;
+  border-color: #333333 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* ── card-section-title ── */
+html.dark .card-section-title {
+  color: #cbd5e1 !important;
+}
+
+/* ── card-title（各列表页卡片头部标题） ── */
+html.dark .card-title {
+  color: #e2e8f0 !important;
+}
 
 /* ── mini-stat 统计卡（通用基础暗色） ── */
 html.dark .mini-stat {

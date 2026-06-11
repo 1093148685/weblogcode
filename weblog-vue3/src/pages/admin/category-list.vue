@@ -84,8 +84,8 @@ const searchCategoryName = ref('')
 const pickDate = ref('')
 
 // 查询条件：开始结束时间
-const startDate = ref(null)
-const endDate = ref(null)
+const startDate = reactive({})
+const endDate = reactive({})
 
 // 监听日期组件改变事件，并将开始结束时间设置到变量中
 const datepickerChange = (e) => {

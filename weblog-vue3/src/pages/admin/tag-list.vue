@@ -22,7 +22,7 @@
         <el-card shadow="never">
             <!-- 新增按钮 -->
             <div class="mb-5">
-                <el-button type="primary" @click="addTagBtnClick">
+                <el-button type="primary" @click="addCategoryBtnClick">
                     <el-icon class="mr-1">
                         <Plus />
                     </el-icon>
@@ -98,8 +98,8 @@ const searchTagName = ref('')
 const pickDate = ref('')
 
 // 查询条件：开始结束时间
-const startDate = ref(null)
-const endDate = ref(null)
+const startDate = reactive({})
+const endDate = reactive({})
 
 // 监听日期组件改变事件，并将开始结束时间设置到变量中
 const datepickerChange = (e) => {
@@ -200,8 +200,8 @@ const reset = () => {
 // 对话框是否显示
 const formDialogRef = ref(null)
 
-// 新增标签按钮点击事件
-const addTagBtnClick = () => {
+// 新增分类按钮点击事件
+const addCategoryBtnClick = () => {
     formDialogRef.value.open()
 }
 
@@ -209,18 +209,23 @@ const addTagBtnClick = () => {
 // 表单引用
 const formRef = ref(null)
 
+// 添加文章分类表单对象
+const form = reactive({
+    tags: []
+})
+
+
 const onSubmit = () => {
     // 先验证 form 表单字段
     formRef.value.validate((valid) => {
-        if (!valid) {
-            return false
-        }
         // 显示提交按钮 loading
         formDialogRef.value.showBtnLoading()
         // 发送标签数组到后端
         addTag({ tags: dynamicTags.value }).then((res) => {
             if (res.success == true) {
                 showMessage('添加成功')
+                // 将表单中标签数组置空
+                form.tags = []
                 dynamicTags.value = []
                 // 隐藏对话框
                 formDialogRef.value.close()

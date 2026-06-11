@@ -43,7 +43,7 @@
                 <!-- 开启 Github 访问 -->
                 <el-form-item label="开启 GihHub 访问">
                     <el-switch v-model="isGithubChecked" inline-prompt :active-icon="Check" :inactive-icon="Close"
-                        @change="checked => { if (!checked) form.githubHomepage = '' }" />
+                        @change="githubSwitchChange" />
                 </el-form-item>
                 <el-form-item label="GitHub 主页访问地址" v-if="isGithubChecked">
                     <el-input v-model="form.githubHomepage" clearable placeholder="请输入 GitHub 主页访问的 URL" />
@@ -52,7 +52,7 @@
                 <!-- 开启 Gitee 访问 -->
                 <el-form-item label="开启 Gitee 访问">
                     <el-switch v-model="isGiteeChecked" inline-prompt :active-icon="Check" :inactive-icon="Close"
-                        @change="checked => { if (!checked) form.giteeHomepage = '' }" />
+                        @change="giteeSwitchChange" />
                 </el-form-item>
                 <el-form-item label="Gitee 主页访问地址" v-if="isGiteeChecked">
                     <el-input v-model="form.giteeHomepage" clearable placeholder="请输入 Gitee 主页访问的 URL" />
@@ -61,7 +61,7 @@
                 <!-- 开启知乎访问 -->
                 <el-form-item label="开启知乎访问">
                     <el-switch v-model="isZhihuChecked" inline-prompt :active-icon="Check" :inactive-icon="Close"
-                        @change="checked => { if (!checked) form.zhihuHomepage = '' }" />
+                        @change="zhihuSwitchChange" />
                 </el-form-item>
                 <el-form-item label="知乎主页访问地址" v-if="isZhihuChecked">
                     <el-input v-model="form.zhihuHomepage" clearable placeholder="请输入知乎主页访问的 URL" />
@@ -70,7 +70,7 @@
                 <!-- 开启 CSDN 访问 -->
                 <el-form-item label="开启 CSDN 访问">
                     <el-switch v-model="isCSDNChecked" inline-prompt :active-icon="Check" :inactive-icon="Close"
-                        @change="checked => { if (!checked) form.csdnHomepage = '' }" />
+                        @change="csdnSwitchChange" />
                 </el-form-item>
                 <el-form-item label="CSDN 主页访问地址" v-if="isCSDNChecked">
                     <el-input v-model="form.csdnHomepage" clearable placeholder="请输入 CSDN 主页访问的 URL" />
@@ -121,7 +121,7 @@
                 
                 <el-form-item label="链接预览">
                     <el-switch v-model="form.isLinkPreviewOpen" inline-prompt :active-icon="Check" :inactive-icon="Close"
-                    @change="checked => { if (!checked) form.linkPreviewWhitelist = '' }"/>
+                    @change="linkPreviewSwitchChange"/>
                     <div class="flex items-center ml-3">
                         <el-icon class="mr-2" color="#909399"><InfoFilled /></el-icon>
                         <el-text class="mx-1" type="info"  size="small">开启后，评论中的网站链接将显示预览卡片</el-text>
@@ -285,6 +285,41 @@ const rules = {
     introduction: [{ required: true, message: '请输入介绍语', trigger: 'blur' }],
 }
 
+// 监听 Github Switch 改变事件
+const githubSwitchChange = (checked) => {
+    if (checked == false) {
+        form.githubHomepage = ''
+    }
+}
+
+// 监听 Gitee Switch 改变事件
+const giteeSwitchChange = (checked) => {
+    if (checked == false) {
+        form.giteeHomepage = ''
+    }
+}
+
+// 监听知乎 Switch 改变事件
+const zhihuSwitchChange = (checked) => {
+    if (checked == false) {
+        form.zhihuHomepage = ''
+    }
+}
+
+// 监听 CSDN Switch 改变事件
+const csdnSwitchChange = (checked) => {
+    if (checked == false) {
+        form.csdnHomepage = ''
+    }
+}
+
+// 监听链接预览 Switch 改变事件
+const linkPreviewSwitchChange = (checked) => {
+    if (checked == false) {
+        form.linkPreviewWhitelist = ''
+    }
+}
+
 // 数据是否已加载
 const dataLoaded = ref(false)
 
@@ -418,6 +453,14 @@ const onSubmit = () => {
     })
 }
 
+// 评论敏感词过滤 switch 组件 change 事件
+const sensiWordSwitchChange = (checked) => form.isCommentSensiWordOpen = checked
+// 评论审核 switch 组件 change 事件
+const examineSwitchChange = (checked) => form.isCommentExamineOpen = checked
+// 邮件通知 switch 组件 change 事件
+const emailNotificationSwitchChange = (checked) => form.isEmailNotificationOpen = checked
+
+
 </script>
 
 <style scoped>
@@ -426,10 +469,15 @@ const onSubmit = () => {
     height: 100px;
     display: block;
 }
+</style>
+
+<style>
+/* 解决 textarea :focus 状态下，边框消失的问题 */
 .el-textarea__inner:focus {
-    outline: 0;
-    box-shadow: 0 0 0 1px var(--el-input-focus-border-color) inset;
+    outline: 0 !important;
+    box-shadow: 0 0 0 1px var(--el-input-focus-border-color) inset !important;
 }
+
 .avatar-uploader .el-upload {
     border: 1px dashed var(--el-border-color);
     border-radius: 6px;
@@ -438,9 +486,11 @@ const onSubmit = () => {
     overflow: hidden;
     transition: var(--el-transition-duration-fast);
 }
+
 .avatar-uploader .el-upload:hover {
     border-color: var(--el-color-primary);
 }
+
 .el-icon.avatar-uploader-icon {
     font-size: 28px;
     color: #8c939d;

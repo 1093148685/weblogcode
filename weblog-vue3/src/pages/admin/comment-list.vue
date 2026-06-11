@@ -224,13 +224,13 @@ import { showMessage, showModel } from '@/composables/util'
 import FormDialog from '@/components/FormDialog.vue'
 
 // 模糊搜索的路由
-const searchNickname = ref('')
+const searchRouterUrl = ref('')
 // 日期
 const pickDate = ref('')
 
 // 查询条件：开始结束时间
-const startDate = ref(null)
-const endDate = ref(null)
+const startDate = reactive({})
+const endDate = reactive({})
 
 // 监听日期组件改变事件，并将开始结束时间设置到变量中
 const datepickerChange = (e) => {
@@ -292,7 +292,7 @@ const reset = () => {
     pickDate.value = ''
     startDate.value = null
     endDate.value = null
-    searchNickname.value = ''
+    searchRouterUrl.value = ''
     status.value = null
     current.value = 1
     dataLoaded.value = false
@@ -345,7 +345,7 @@ function getTableData() {
     // 调用后台分页接口，并传入所需参数
     getCommentPageList({
         pageNum: current.value, pageSize: size.value, startDate: startDate.value,
-        endDate: endDate.value, nickname: searchNickname.value, status: status.value
+        endDate: endDate.value, nickname: searchRouterUrl.value, status: status.value
     })
         .then((res) => {
             if (res.success == true) {

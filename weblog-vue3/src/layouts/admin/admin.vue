@@ -3,14 +3,14 @@
     <el-container class="admin-layout">
 
         <!-- 左边侧边栏 -->
-        <el-aside :width='menuStore.menuWidth' class="transition-all duration-300 flex-shrink-0 fixed left-0 top-0 h-screen" style="z-index: var(--z-sidebar);">
+        <el-aside :width='menuStore.menuWidth' class="transition-all duration-300 flex-shrink-0 fixed left-0 top-0 h-screen z-50">
             <AdminMenu></AdminMenu>
         </el-aside>
 
         <!-- 右边主内容区域 -->
         <el-container class="right-container" :style="{ paddingLeft: menuStore.menuWidth }">
             <!-- 顶栏容器 -->
-            <el-header style="height: var(--admin-header-height); padding: 0;">
+            <el-header>
                 <AdminHeader></AdminHeader>
             </el-header>
 
@@ -19,19 +19,17 @@
                 <AdminTagList></AdminTagList>
 
                 <!-- 主内容（根据路由动态展示不同页面） -->
-                <div class="admin-content">
-                    <router-view v-slot="{ Component, route }">
-                        <Transition :key="route.fullPath" name="fade" mode="out-in">
-                            <KeepAlive :include="cachedViews" :max="10">
-                                <component :is="Component" :key="route.fullPath"></component>
-                            </KeepAlive>
-                        </Transition>
-                    </router-view>
-                </div>
+                <router-view v-slot="{ Component, route }">
+                    <Transition :key="route.fullPath" name="fade" mode="out-in">
+                        <KeepAlive :include="cachedViews" :max="10">
+                            <component :is="Component" :key="route.fullPath"></component>
+                        </KeepAlive>
+                    </Transition>
+                </router-view>
             </el-main>
 
             <!-- 底栏容器 -->
-            <el-footer style="height: var(--admin-footer-height); padding: 0;">
+            <el-footer>
                 <AdminFooter></AdminFooter>
             </el-footer>
         </el-container>
@@ -62,53 +60,44 @@ const cachedViews = computed(() => {
 })
 
 onMounted(() => {
-    // 主题由 useDark 管理
+    // 移除 html 标签中的 class="dark"
+    document.documentElement.classList.remove('dark');
 })
 </script>
 
 <style scoped>
 .admin-layout {
     min-height: 100vh;
-    background: var(--admin-content-bg);
+    background: var(--admin-bg-page);
     color: var(--admin-text);
 }
 
 .right-container {
     min-height: 100vh;
-    background: var(--admin-content-bg);
-    transition: padding-left var(--admin-transition);
+    background: var(--admin-bg-page);
+    transition: padding-left 0.28s ease;
 }
 
 .el-header {
-    background: var(--admin-header-bg);
-    border-bottom: 1px solid var(--admin-header-border);
-    box-shadow: var(--admin-shadow-sm);
-    position: sticky;
-    top: 0;
-    z-index: var(--z-header);
+    padding: 0 !important;
+    height: 64px;
 }
 
 .el-footer {
-    padding: 0;
+    padding: 0 !important;
     height: auto;
 }
 
 .admin-main {
-    display: flex;
-    flex-direction: column;
     padding: 0;
-    overflow: hidden;
-    background: var(--admin-content-bg);
-    min-height: calc(100vh - var(--admin-header-height));
+    background: var(--admin-bg-page);
+    min-height: calc(100vh - 64px - 44px - 50px);
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+    position: relative;
 }
 
-.admin-content {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-    background: var(--admin-content-bg);
-}
-
+/* 内容区域过渡动画 */
 .fade-enter-active {
     transition: all 0.25s ease-out;
 }
