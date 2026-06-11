@@ -1,0 +1,22 @@
+-- 贴纸包表
+CREATE TABLE `t_sticker_pack` (
+  `Id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `Name` VARCHAR(50) NOT NULL COMMENT '贴纸包名称',
+  `Icon` VARCHAR(500) COMMENT '封面图URL',
+  `Description` VARCHAR(200) COMMENT '描述',
+  `IsActive` TINYINT(1) DEFAULT 1 COMMENT '是否启用',
+  `CreateTime` DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 贴纸表
+CREATE TABLE `t_sticker` (
+  `Id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `PackId` BIGINT NOT NULL COMMENT '所属贴纸包ID',
+  `Category` VARCHAR(50) COMMENT '分类名称（子文件夹名）',
+  `ImageUrl` VARCHAR(500) NOT NULL COMMENT '原图URL',
+  `ThumbnailUrl` VARCHAR(500) COMMENT '缩略图URL',
+  `Width` INT COMMENT '宽度',
+  `Height` INT COMMENT '高度',
+  `IsAnimated` TINYINT(1) DEFAULT 0 COMMENT '是否动画',
+  FOREIGN KEY (`PackId`) REFERENCES `t_sticker_pack`(`Id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
