@@ -35,22 +35,7 @@ export function getWikiCatalogs(id) {
     return axios.post("/admin/wiki/catalog/list", {id})
 }
 
-// 新增知识库目录
-export function addWikiCatalog(data) {
-    return axios.post("/admin/wiki/catalog/add", data)
-}
-
 // 更新知识库目录
 export function updateWikiCatalogs(data) {
-    return axios.post("/admin/wiki/catalog/batchUpdate", data)
-}
-
-// 删除知识库目录
-export function deleteWikiCatalog(id) {
-    return axios.post("/admin/wiki/catalog/delete", {id})
-}
-
-// 获取全部 Wiki（供知识库导入用）
-export function getWikiList() {
-    return axios.post("/admin/wiki/list", { pageNum: 1, pageSize: 200 })
+    return axios.post("/admin/wiki/catalog/update", data)
 }

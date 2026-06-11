@@ -1,4 +1,4 @@
-﻿<template>
+<template>
     <div>
         <!-- 表头分页查询条件， shadow="never" 指定 card 卡片组件没有阴影 -->
         <el-card shadow="never" class="mb-5">
@@ -50,7 +50,7 @@
             <div class="mt-10 flex justify-center">
                 <el-pagination v-model:current-page="current" v-model:page-size="size" :page-sizes="[10, 20, 50]"
                 :small="false" :background="true" layout="total, sizes, prev, pager, next, jumper"
-                :total="total" @size-change="handleSizeChange" @current-change="handleCurrentChange" />
+                :total="total" @size-change="handleSizeChange" @current-change="getTableData" />
             </div>
 
         </el-card>
@@ -68,11 +68,8 @@
 </template>
 
 <script setup>
-defineOptions({
-    name: 'AdminCategoryList'
-})
 import { Search, RefreshRight } from '@element-plus/icons-vue'
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive } from 'vue'
 import { getCategoryPageList, addCategory, deleteCategory } from '@/api/admin/category'
 import moment from 'moment'
 import { showMessage, showModel } from '@/composables/util'
@@ -92,6 +89,7 @@ const datepickerChange = (e) => {
     startDate.value = moment(e[0]).format('YYYY-MM-DD')
     endDate.value = moment(e[1]).format('YYYY-MM-DD')
 
+    console.log('开始时间：' + startDate.value + ', 结束时间：' + endDate.value)
 }
 
 const shortcuts = [
@@ -136,41 +134,30 @@ const total = ref(0)
 const size = ref(10)
 
 
-// 数据是否已加载
-const dataLoaded = ref(false)
-
 // 获取分页数据
 function getTableData() {
     // 显示表格 loading
     tableLoading.value = true
     // 调用后台分页接口，并传入所需参数
-
-    getCategoryPageList({pageNum: current.value, pageSize: size.value, startDate: startDate.value, endDate: endDate.value, name: searchCategoryName.value}, true)
+    
+    getCategoryPageList({current: current.value, size: size.value, startDate: startDate.value, endDate: endDate.value, name: searchCategoryName.value})
     .then((res) => {
         if (res.success == true) {
-            tableData.value = res.data.list
-            current.value = res.data.pageNum
-            size.value = res.data.pageSize
-            total.value = res.data.total
-            dataLoaded.value = true
+        
+            tableData.value = res.data
+            current.value = res.current
+            size.value = res.size
+            total.value = res.total
         }
     })
     .finally(() => tableLoading.value = false) // 隐藏表格 loading
 }
-
-onMounted(() => {
-    getTableData()
-})
+getTableData()
 
 // 每页展示数量变更事件
 const handleSizeChange = (chooseSize) => {
+    console.log('选择的页码' + chooseSize)
     size.value = chooseSize
-    getTableData()
-}
-
-// 当前页码变更事件
-const handleCurrentChange = (page) => {
-    current.value = page
     getTableData()
 }
 
@@ -215,6 +202,7 @@ const onSubmit = () => {
     // 先验证 form 表单字段
     formRef.value.validate((valid) => {
         if (!valid) {
+            console.log('表单验证不通过')
             return false
         }
         
@@ -242,12 +230,12 @@ const onSubmit = () => {
 
 // 删除分类
 const deleteCategorySubmit = (row) => {
+    console.log(row)
     showModel('是否确定要删除该分类？').then(() => {
         deleteCategory(row.id).then((res) => {
             if (res.success == true) {
                 showMessage('删除成功')
                 // 重新请求分页接口，渲染数据
-                dataLoaded.value = false
                 getTableData()
             } else {
                 // 获取服务端返回的错误消息
@@ -257,6 +245,7 @@ const deleteCategorySubmit = (row) => {
             }
         })
     }).catch(() => {
+        console.log('取消了')
     })
 }
 

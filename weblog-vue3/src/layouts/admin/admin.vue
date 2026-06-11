@@ -1,33 +1,35 @@
 <template>
     <!-- 外层容器 -->
-    <el-container class="admin-layout">
-
+    <el-container>
+    
         <!-- 左边侧边栏 -->
-        <el-aside :width='menuStore.menuWidth' class="transition-all duration-300 flex-shrink-0 fixed left-0 top-0 h-screen z-50">
+        <el-aside :width='menuStore.menuWidth' class="transition-all duration-300">
             <AdminMenu></AdminMenu>
         </el-aside>
-
+        
         <!-- 右边主内容区域 -->
-        <el-container class="right-container" :style="{ paddingLeft: menuStore.menuWidth }">
+        <el-container>
             <!-- 顶栏容器 -->
             <el-header>
                 <AdminHeader></AdminHeader>
             </el-header>
-
-            <el-main class="admin-main">
+            
+            <el-main>
                 <!-- 标签导航栏 -->
                 <AdminTagList></AdminTagList>
 
                 <!-- 主内容（根据路由动态展示不同页面） -->
-                <router-view v-slot="{ Component, route }">
-                    <Transition :key="route.fullPath" name="fade" mode="out-in">
-                        <KeepAlive :include="cachedViews" :max="10">
-                            <component :is="Component" :key="route.fullPath"></component>
+                <router-view v-slot="{ Component }">
+                    <Transition name="fade">
+                        <!-- max 指定最多缓存 10 个组件 -->
+                        <KeepAlive :max="10">
+                            <component :is="Component"></component>
                         </KeepAlive>
                     </Transition>
+                    
                 </router-view>
             </el-main>
-
+            
             <!-- 底栏容器 -->
             <el-footer>
                 <AdminFooter></AdminFooter>
@@ -37,27 +39,16 @@
 </template>
 
 <script setup>
+// 引入组件
 import AdminFooter from './components/AdminFooter.vue';
 import AdminHeader from './components/AdminHeader.vue';
 import AdminMenu from './components/AdminMenu.vue';
 import AdminTagList from './components/AdminTagList.vue';
-import { onMounted, computed } from 'vue';
+import { onMounted } from 'vue';
+
 import { useMenuStore } from '@/stores/menu'
 
 const menuStore = useMenuStore()
-
-const cachedViews = computed(() => {
-    return [
-        'AdminIndex',
-        'AdminArticleList',
-        'AdminCategoryList',
-        'AdminTagList',
-        'AdminBlogSettings',
-        'AdminAnnouncement',
-        'AdminWikiList',
-        'AdminCommentList'
-    ]
-})
 
 onMounted(() => {
     // 移除 html 标签中的 class="dark"
@@ -66,52 +57,44 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.admin-layout {
-    min-height: 100vh;
-    background: var(--admin-bg-page);
-    color: var(--admin-text);
-}
-
-.right-container {
-    min-height: 100vh;
-    background: var(--admin-bg-page);
-    transition: padding-left 0.28s ease;
-}
-
 .el-header {
-    padding: 0 !important;
-    height: 64px;
+    padding: 0!important;
 }
 
 .el-footer {
-    padding: 0 !important;
-    height: auto;
+    padding: 0!important;
 }
 
-.admin-main {
-    padding: 0;
-    background: var(--admin-bg-page);
-    min-height: calc(100vh - 64px - 44px - 50px);
-    overflow-x: visible !important;
-    overflow-y: visible !important;
-    position: relative;
-}
-
-/* 内容区域过渡动画 */
-.fade-enter-active {
-    transition: all 0.25s ease-out;
-}
-
-.fade-leave-active {
-    transition: all 0.15s ease-in;
-}
-
+/* 内容区域过渡动画：淡入淡出效果 */
+/* 刚开始进入时 */
 .fade-enter-from {
+    /* 透明度 */
     opacity: 0;
-    transform: translateY(8px);
 }
 
+/* 刚开始结束 */
+.fade-enter-to {
+    opacity: 1;
+}
+
+/* 刚开始离开 */
+.fade-leave-from {
+  opacity: 1;
+}
+
+/* 离开已结束 */
 .fade-leave-to {
-    opacity: 0;
+  opacity: 0;
+}
+
+/* 离开进行中 */
+.fade-leave-active {
+    transition: all 0.3s;
+}
+
+/* 进入进行中 */
+.fade-enter-active {
+    transition: all 0.3s;
+    transition-delay: 0.3s;
 }
 </style>

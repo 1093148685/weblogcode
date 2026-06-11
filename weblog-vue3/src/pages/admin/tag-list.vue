@@ -1,4 +1,4 @@
-﻿<template>
+<template>
     <div>
         <!-- 表头分页查询条件， shadow="never" 指定 card 卡片组件没有阴影 -->
         <el-card shadow="never" class="mb-5">
@@ -54,7 +54,7 @@
             <div class="mt-10 flex justify-center">
                 <el-pagination v-model:current-page="current" v-model:page-size="size" :page-sizes="[10, 20, 50]"
                     :small="false" :background="true" layout="total, sizes, prev, pager, next, jumper" :total="total"
-                    @size-change="handleSizeChange" @current-change="handleCurrentChange" />
+                    @size-change="handleSizeChange" @current-change="getTableData" />
             </div>
 
         </el-card>
@@ -82,11 +82,8 @@
 </template>
 
 <script setup>
-defineOptions({
-    name: 'AdminTagList'
-})
 import { Search, RefreshRight } from '@element-plus/icons-vue'
-import { ref, reactive, nextTick, onMounted } from 'vue'
+import { ref, reactive, nextTick } from 'vue'
 import { getTagPageList, addTag, deleteTag } from '@/api/admin/tag'
 import moment from 'moment'
 import { showMessage, showModel } from '@/composables/util'
@@ -106,6 +103,7 @@ const datepickerChange = (e) => {
     startDate.value = moment(e[0]).format('YYYY-MM-DD')
     endDate.value = moment(e[1]).format('YYYY-MM-DD')
 
+    console.log('开始时间：' + startDate.value + ', 结束时间：' + endDate.value)
 }
 
 const shortcuts = [
@@ -149,9 +147,6 @@ const total = ref(0)
 // 每页显示的数据量，给了个默认值 10
 const size = ref(10)
 
-// 数据是否已加载
-const dataLoaded = ref(false)
-
 
 // 获取分页数据
 function getTableData() {
@@ -159,33 +154,24 @@ function getTableData() {
     tableLoading.value = true
     // 调用后台分页接口，并传入所需参数
 
-    getTagPageList({ pageNum: current.value, pageSize: size.value, startDate: startDate.value, endDate: endDate.value, keyword: searchTagName.value }, true)
+    getTagPageList({ current: current.value, size: size.value, startDate: startDate.value, endDate: endDate.value, name: searchTagName.value })
         .then((res) => {
             if (res.success == true) {
 
-                tableData.value = res.data.list
-                current.value = res.data.pageNum
-                size.value = res.data.pageSize
-                total.value = res.data.total
-                dataLoaded.value = true
+                tableData.value = res.data
+                current.value = res.current
+                size.value = res.size
+                total.value = res.total
             }
         })
         .finally(() => tableLoading.value = false) // 隐藏表格 loading
 }
-
-onMounted(() => {
-    getTableData()
-})
+getTableData()
 
 // 每页展示数量变更事件
 const handleSizeChange = (chooseSize) => {
+    console.log('选择的页码' + chooseSize)
     size.value = chooseSize
-    getTableData()
-}
-
-// 当前页码变更事件
-const handleCurrentChange = (page) => {
-    current.value = page
     getTableData()
 }
 
@@ -220,8 +206,8 @@ const onSubmit = () => {
     formRef.value.validate((valid) => {
         // 显示提交按钮 loading
         formDialogRef.value.showBtnLoading()
-        // 发送标签数组到后端
-        addTag({ tags: dynamicTags.value }).then((res) => {
+        form.tags = dynamicTags.value
+        addTag(form).then((res) => {
             if (res.success == true) {
                 showMessage('添加成功')
                 // 将表单中标签数组置空
@@ -243,12 +229,12 @@ const onSubmit = () => {
 
 // 删除标签
 const deleteTagSubmit = (row) => {
+    console.log(row)
     showModel('是否确定要删除该标签？').then(() => {
         deleteTag(row.id).then((res) => {
             if (res.success == true) {
                 showMessage('删除成功')
                 // 重新请求分页接口，渲染数据
-                dataLoaded.value = false
                 getTableData()
             } else {
                 // 获取服务端返回的错误消息
@@ -258,6 +244,7 @@ const deleteTagSubmit = (row) => {
             }
         })
     }).catch(() => {
+        console.log('取消了')
     })
 }
 
