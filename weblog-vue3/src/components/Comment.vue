@@ -419,8 +419,13 @@ initFormCommentUserInfo()
 
 // 邮箱正则
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+// 是否正在提交中（防止重复点击）
+const isSubmitting = ref(false)
+
 // 一级评论发布点击事件
 const onPublishCommentClick = () => {
+    if (isSubmitting.value) return
+
     initFormCommentUserInfo()
     // 校验
     if (commentForm.nickname.length === 0) {
@@ -436,6 +441,7 @@ const onPublishCommentClick = () => {
         return
     }
 
+    isSubmitting.value = true
     publishComment(commentForm).then(res => {
         if (!res.success) {
             // 获取服务端返回的错误消息
@@ -451,11 +457,13 @@ const onPublishCommentClick = () => {
         } else {
             showMessage('评论发布成功')
         }
-        
+
         // 将表单对象中的 content 评论内容置空
         commentForm.content = ''
         // 重新渲染表单列表
         initComments()
+    }).finally(() => {
+        isSubmitting.value = false
     })
 }
 
@@ -549,6 +557,8 @@ const addReplyEmoji = (emoji) => {
 
 // 评论回复发送事件
 const onReplyContentSubmit = () => {
+    if (isSubmitting.value) return
+
     initFormCommentUserInfo()
     // 校验
     if (commentForm.nickname.length === 0) {
@@ -568,6 +578,7 @@ const onReplyContentSubmit = () => {
     commentForm.replyCommentId = currReplyCommentId.value
     commentForm.parentCommentId = currParentCommentId.value
 
+    isSubmitting.value = true
     // 请求接口
     publishComment(commentForm).then(res => {
         if (!res.success) {
@@ -584,12 +595,14 @@ const onReplyContentSubmit = () => {
         } else {
             showMessage('回复评论成功')
         }
-        
+
         // 将评论回复的内容置空
         replyContent.value = ''
         commentForm.content = ''
         // 重新渲染评论列表
         initComments()
+    }).finally(() => {
+        isSubmitting.value = false
     })
 }
 

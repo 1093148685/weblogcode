@@ -34,6 +34,16 @@ const routes = [
         meta: { title: 'Weblog 标签文章页' }
     },
     {
+        path: '/journal/list',
+        component: () => import('@/pages/frontend/journal-list.vue'),
+        meta: { title: 'Weblog 日志列表' }
+    },
+    {
+        path: '/journal/:journalId',
+        component: () => import('@/pages/frontend/journal-detail.vue'),
+        meta: { title: 'Weblog 日志详情' }
+    },
+    {
         path: '/article/:articleId',
         component: () => import('@/pages/frontend/article-detail.vue'),
         meta: { title: 'Weblog 详情页' }
@@ -112,6 +122,11 @@ const routes = [
                 path: "/admin/comment/secret",
                 component: () => import('@/pages/admin/secret-comment.vue'),
                 meta: { title: '私密评论' }
+            },
+            {
+                path: "/admin/journal/list",
+                component: () => import('@/pages/admin/journal-list.vue'),
+                meta: { title: '日志管理' }
             },
         ]
     }

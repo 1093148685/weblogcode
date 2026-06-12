@@ -47,7 +47,9 @@ builder.Services.AddScoped<ISqlSugarClient>(s =>
         typeof(BlogSettings),
         typeof(Statistics),
         typeof(StatisticsArticlePv),
-        typeof(Announcement)
+        typeof(Announcement),
+        typeof(Journal),
+        typeof(JournalContent)
     );
 
     return db;
@@ -73,6 +75,8 @@ builder.Services.AddScoped<ISubscribeService, SubscribeService>();
 builder.Services.AddScoped<IWikiService, WikiService>();
 builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
 builder.Services.AddScoped<IStickerService, StickerService>();
+builder.Services.AddScoped<IJournalService, JournalService>();
+builder.Services.AddScoped<IJournalPortalService, JournalPortalService>();
 
 builder.Services.AddHttpClient<IGiphyService, GiphyService>();
 builder.Services.AddHttpClient<ILinkPreviewService, LinkPreviewService>();

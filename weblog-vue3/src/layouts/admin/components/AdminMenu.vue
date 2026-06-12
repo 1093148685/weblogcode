@@ -94,6 +94,11 @@ const menus = [
         'icon': 'Lock',
         'path': '/admin/comment/secret',
     },
+    {
+        'name': '日志管理',
+        'icon': 'Notebook',
+        'path': '/admin/journal/list',
+    },
 ]
 </script>
 
