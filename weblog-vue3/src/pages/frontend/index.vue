@@ -390,6 +390,8 @@ function getArticles(currentNo) {
 
     const cacheKey = `articles_page_${ARTICLE_LIST_CACHE_VERSION}_${currentNo}_${size.value}`
     const cached = getCache(cacheKey)
+
+    // SWR: 有缓存立即展示，再后台刷新
     if (cached) {
         articles.value = cached.list
         current.value = cached.pageNum
@@ -398,6 +400,22 @@ function getArticles(currentNo) {
         pages.value = Math.ceil(cached.total / cached.pageSize)
         articlesLoaded.value = true
         isLoading.value = false
+        // 后台静默刷新（不显示 loading）
+        getArticlePageList({ pageNum: currentNo, pageSize: size.value }).then((res) => {
+            if (res.success) {
+                articles.value = res.data.list || []
+                current.value = res.data.pageNum || 1
+                size.value = res.data.pageSize || 10
+                total.value = res.data.total || 0
+                pages.value = Math.ceil(total.value / size.value)
+                setCache(cacheKey, {
+                    list: articles.value,
+                    pageNum: current.value,
+                    pageSize: size.value,
+                    total: total.value
+                }, 5 * 60 * 1000)
+            }
+        })
         return
     }
 

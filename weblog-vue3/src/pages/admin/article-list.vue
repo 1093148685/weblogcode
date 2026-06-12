@@ -129,7 +129,7 @@
                 </el-form-item>
                 <el-form-item label="分类" prop="categoryId">
                     <el-select v-model="form.categoryId" clearable placeholder="---请选择---" size="large">
-                        <el-option v-for="item in categories" :key="item.value" :label="item.label" :value="item.value" />
+                        <el-option v-for="item in categories" :key="item.id" :label="item.name" :value="item.id" />
                     </el-select>
                 </el-form-item>
                 <el-form-item label="标签" prop="tags">
@@ -138,7 +138,7 @@
                         <el-select v-model="form.tags" multiple filterable remote reserve-keyword placeholder="请输入文章标签"
                             remote-show-suffix allow-create default-first-option :remote-method="remoteMethod"
                             :loading="tagSelectLoading" size="large">
-                            <el-option v-for="item in tags" :key="item.value" :label="item.label" :value="item.value" />
+                            <el-option v-for="item in tags" :key="item.id" :label="item.name" :value="item.id" />
                         </el-select>
                     </span>
                 </el-form-item>
@@ -194,7 +194,7 @@
                 </el-form-item>
                 <el-form-item label="分类" prop="categoryId">
                     <el-select v-model="updateArticleForm.categoryId" clearable placeholder="---请选择---" size="large">
-                        <el-option v-for="item in categories" :key="item.value" :label="item.label" :value="item.value" />
+                        <el-option v-for="item in categories" :key="item.id" :label="item.name" :value="item.id" />
                     </el-select>
                 </el-form-item>
                 <el-form-item label="标签" prop="tags">
@@ -203,7 +203,7 @@
                         <el-select v-model="updateArticleForm.tags" multiple filterable remote reserve-keyword
                             placeholder="请输入文章标签" remote-show-suffix allow-create default-first-option
                             :remote-method="remoteMethod" :loading="tagSelectLoading" size="large">
-                            <el-option v-for="item in tags" :key="item.value" :label="item.label" :value="item.value" />
+                            <el-option v-for="item in tags" :key="item.id" :label="item.name" :value="item.id" />
                         </el-select>
                     </span>
                 </el-form-item>
@@ -221,6 +221,7 @@ import { getCategorySelectList } from '@/api/admin/category'
 import { searchTags, getTagSelectList } from '@/api/admin/tag'
 import moment from 'moment'
 import { showMessage, showModel } from '@/composables/util'
+import { setCache, getCache, clearCacheByPrefix } from '@/composables/useCache'
 import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 import { useRouter } from 'vue-router'
@@ -296,9 +297,20 @@ const size = ref(10)
 
 // 获取分页数据
 function getTableData() {
-    // 显示表格 loading
-    tableLoading.value = true
-    // 调用后台分页接口，并传入所需参数
+    const cacheKey = `admin_articles_${current.value}_${size.value}_${searchArticleTitle.value || ''}_${startDate.value || ''}_${endDate.value || ''}`
+
+    // SWR: 有缓存先展示缓存，再发请求刷新
+    const cached = getCache(cacheKey)
+    if (cached) {
+        tableData.value = cached.list
+        current.value = cached.pageNum
+        size.value = cached.pageSize
+        total.value = cached.total
+        tableLoading.value = false
+    } else {
+        tableLoading.value = true
+    }
+
     getArticlePageList({ pageNum: current.value, pageSize: size.value, startDate: startDate.value, endDate: endDate.value, title: searchArticleTitle.value })
         .then((res) => {
             if (res.success == true) {
@@ -306,9 +318,16 @@ function getTableData() {
                 current.value = res.data.pageNum
                 size.value = res.data.pageSize
                 total.value = res.data.total
+                // 缓存 30 秒，后台数据变更频繁度适中
+                setCache(cacheKey, {
+                    list: res.data.list,
+                    pageNum: res.data.pageNum,
+                    pageSize: res.data.pageSize,
+                    total: res.data.total
+                }, 30 * 1000)
             }
         })
-        .finally(() => tableLoading.value = false) // 隐藏表格 loading
+        .finally(() => tableLoading.value = false)
 }
 getTableData()
 
@@ -333,6 +352,9 @@ const deleteArticleSubmit = (row) => {
             }
 
             showMessage('删除成功')
+            // 清除缓存
+            clearCacheByPrefix('articles_page_')
+            clearCacheByPrefix('admin_articles_')
             // 重新请求分页接口，渲染数据
             getTableData()
         })
@@ -430,10 +452,11 @@ const onUploadImg = async (files, callback) => {
                 formData.append("file", file);
                 uploadFile(formData).then((res) => {
                     console.log(res)
-                    console.log('访问路径：' + res.data.url)
+                    console.log('访问路径：' + res.data)
                     // 调用 callback 函数，回显上传图片
-                    callback([res.data.url]);
-                })
+                    callback([res.data]);
+                    rev(res.data)
+                }).catch(rej)
             });
         })
     );
@@ -485,14 +508,15 @@ const publishArticleSubmit = () => {
 
         publishArticle(form).then((res) => {
             if (res.success == false) {
-                // 获取服务端返回的错误消息
                 let message = res.message
-                // 提示错误消息
                 showMessage(message, 'error')
                 return
             }
 
             showMessage('发布成功')
+            // 清除缓存：前端文章列表 + 后台表格
+            clearCacheByPrefix('articles_page_')
+            clearCacheByPrefix('admin_articles_')
             // 隐藏发布文章对话框
             isArticlePublishEditorShow.value = false
             // 将 form 表单字段置空
@@ -553,6 +577,9 @@ const updateSubmit = () => {
             }
 
             showMessage('保存成功')
+            // 清除缓存
+            clearCacheByPrefix('articles_page_')
+            clearCacheByPrefix('admin_articles_')
             // 隐藏编辑框
             isArticleUpdateEditorShow.value = false
             // 重新请求分页接口，渲染列表数据
