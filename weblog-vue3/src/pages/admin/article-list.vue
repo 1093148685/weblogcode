@@ -594,21 +594,21 @@ const goArticleDetailPage = (articleId) => {
     router.push('/article/' + articleId)
 }
 
-// 点击置顶
+// 点击置顶（乐观更新：先改 UI，失败再回滚）
 const handleIsTopChange = (row) => {
+    const previousValue = !row.isTop
     updateArticleIsTop({id: row.id, isTop: row.isTop}).then((res) => {
-        // 重新请求分页接口，渲染列表数据
-        getTableData()
-
         if (res.success == false) {
-            // 获取服务端返回的错误消息
+            // 回滚
+            row.isTop = previousValue
             let message = res.message
-            // 提示错误消息
             showMessage(message, 'error')
             return
         }
-
         showMessage(row.isTop ? '置顶成功' : "已取消置顶")
+    }).catch(() => {
+        // 网络错误也回滚
+        row.isTop = previousValue
     })
 }
 </script>

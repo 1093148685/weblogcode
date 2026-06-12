@@ -9,6 +9,35 @@ const instance = axios.create({
     timeout: 30000
 })
 
+// --- 请求去重：同一 GET 请求在 pending 期间共享同一个 promise ---
+const inFlight = new Map()
+
+function getRequestKey(config) {
+    const { method, url, params, data } = config
+    return [method, url, JSON.stringify(params), JSON.stringify(data)].join('&')
+}
+
+// 接管适配器：命中则返回已在进行中的 promise，避免重复请求
+const originalAdapter = instance.defaults.adapter
+instance.defaults.adapter = (config) => {
+    // 只对 GET 请求去重，POST/PUT/DELETE 每次都发
+    if (config.method !== 'get') {
+        return originalAdapter(config)
+    }
+
+    const key = getRequestKey(config)
+    if (inFlight.has(key)) {
+        return inFlight.get(key)
+    }
+
+    const promise = originalAdapter(config).finally(() => {
+        inFlight.delete(key)
+    })
+
+    inFlight.set(key, promise)
+    return promise
+}
+// --- 请求去重结束 ---
 
 // 添加请求拦截器
 instance.interceptors.request.use(function (config) {
@@ -35,12 +64,11 @@ instance.interceptors.response.use(function (response) {
     return response.data
 }, function (error) {
     // 超出 2xx 范围的状态码都会触发该函数。
-    // 对响应错误做点什么
     if (!error.response) {
         showMessage('网络错误，请检查后端服务是否运行', 'error')
         return Promise.reject(error)
     }
-    
+
     let status = error.response.status
 
     // 状态码 401

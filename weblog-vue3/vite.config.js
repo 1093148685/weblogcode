@@ -17,6 +17,17 @@ export default defineConfig({
       },
     }
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'element-plus': ['element-plus'],
+          'md-editor': ['md-editor-v3'],
+          'vue-vendor': ['vue', 'vue-router', 'pinia'],
+        }
+      }
+    }
+  },
   plugins: [
     vue(),
     AutoImport({

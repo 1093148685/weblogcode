@@ -74,6 +74,7 @@ import { getCategoryPageList, addCategory, deleteCategory } from '@/api/admin/ca
 import moment from 'moment'
 import { showMessage, showModel } from '@/composables/util'
 import FormDialog from '@/components/FormDialog.vue'
+import { setCache, getCache } from '@/composables/useCache'
 
 // 分页查询的分类名称
 const searchCategoryName = ref('')
@@ -136,10 +137,19 @@ const size = ref(10)
 
 // 获取分页数据
 function getTableData() {
-    // 显示表格 loading
-    tableLoading.value = true
-    // 调用后台分页接口，并传入所需参数
-    
+    const cacheKey = `admin_categories_${current.value}_${size.value}_${searchCategoryName.value || ''}_${startDate.value || ''}_${endDate.value || ''}`
+
+    const cached = getCache(cacheKey)
+    if (cached) {
+        tableData.value = cached.list
+        current.value = cached.pageNum
+        size.value = cached.pageSize
+        total.value = cached.total
+        tableLoading.value = false
+    } else {
+        tableLoading.value = true
+    }
+
     getCategoryPageList({pageNum: current.value, pageSize: size.value, startDate: startDate.value, endDate: endDate.value, name: searchCategoryName.value})
     .then((res) => {
         if (res.success == true) {
@@ -147,9 +157,15 @@ function getTableData() {
             current.value = res.data.pageNum
             size.value = res.data.pageSize
             total.value = res.data.total
+            setCache(cacheKey, {
+                list: res.data.list,
+                pageNum: res.data.pageNum,
+                pageSize: res.data.pageSize,
+                total: res.data.total
+            }, 30 * 1000)
         }
     })
-    .finally(() => tableLoading.value = false) // 隐藏表格 loading
+    .finally(() => tableLoading.value = false)
 }
 getTableData()
 
