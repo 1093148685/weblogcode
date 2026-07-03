@@ -54,7 +54,7 @@
             <div class="mt-10 flex justify-center">
                 <el-pagination v-model:current-page="current" v-model:page-size="size" :page-sizes="[10, 20, 50]"
                     :small="false" :background="true" layout="total, sizes, prev, pager, next, jumper" :total="total"
-                    @size-change="handleSizeChange" @current-change="handleCurrentChange" />
+                    @size-change="handleSizeChange" @current-change="getTableData" />
             </div>
 
         </el-card>
@@ -82,15 +82,13 @@
 </template>
 
 <script setup>
-defineOptions({
-    name: 'AdminTagList'
-})
 import { Search, RefreshRight } from '@element-plus/icons-vue'
-import { ref, reactive, nextTick, onMounted } from 'vue'
+import { ref, reactive, nextTick } from 'vue'
 import { getTagPageList, addTag, deleteTag } from '@/api/admin/tag'
 import moment from 'moment'
 import { showMessage, showModel } from '@/composables/util'
 import FormDialog from '@/components/FormDialog.vue'
+import { setCache, getCache } from '@/composables/useCache'
 
 // 分页查询的标签名称
 const searchTagName = ref('')
@@ -150,44 +148,45 @@ const total = ref(0)
 // 每页显示的数据量，给了个默认值 10
 const size = ref(10)
 
-// 数据是否已加载
-const dataLoaded = ref(false)
-
 
 // 获取分页数据
 function getTableData() {
-    // 显示表格 loading
-    tableLoading.value = true
-    // 调用后台分页接口，并传入所需参数
+    const cacheKey = `admin_tags_${current.value}_${size.value}_${searchTagName.value || ''}_${startDate.value || ''}_${endDate.value || ''}`
 
-    getTagPageList({ pageNum: current.value, pageSize: size.value, startDate: startDate.value, endDate: endDate.value, keyword: searchTagName.value }, true)
+    const cached = getCache(cacheKey)
+    if (cached) {
+        tableData.value = cached.list
+        current.value = cached.pageNum
+        size.value = cached.pageSize
+        total.value = cached.total
+        tableLoading.value = false
+    } else {
+        tableLoading.value = true
+    }
+
+    getTagPageList({ pageNum: current.value, pageSize: size.value, startDate: startDate.value, endDate: endDate.value, keyword: searchTagName.value })
         .then((res) => {
             if (res.success == true) {
-
                 tableData.value = res.data.list
                 current.value = res.data.pageNum
                 size.value = res.data.pageSize
                 total.value = res.data.total
-                dataLoaded.value = true
+                setCache(cacheKey, {
+                    list: res.data.list,
+                    pageNum: res.data.pageNum,
+                    pageSize: res.data.pageSize,
+                    total: res.data.total
+                }, 30 * 1000)
             }
         })
-        .finally(() => tableLoading.value = false) // 隐藏表格 loading
+        .finally(() => tableLoading.value = false)
 }
-
-onMounted(() => {
-    getTableData()
-})
+getTableData()
 
 // 每页展示数量变更事件
 const handleSizeChange = (chooseSize) => {
     console.log('选择的页码' + chooseSize)
     size.value = chooseSize
-    getTableData()
-}
-
-// 当前页码变更事件
-const handleCurrentChange = (page) => {
-    current.value = page
     getTableData()
 }
 
@@ -222,8 +221,8 @@ const onSubmit = () => {
     formRef.value.validate((valid) => {
         // 显示提交按钮 loading
         formDialogRef.value.showBtnLoading()
-        // 发送标签数组到后端
-        addTag({ tags: dynamicTags.value }).then((res) => {
+        form.tags = dynamicTags.value
+        addTag(form).then((res) => {
             if (res.success == true) {
                 showMessage('添加成功')
                 // 将表单中标签数组置空
@@ -251,7 +250,6 @@ const deleteTagSubmit = (row) => {
             if (res.success == true) {
                 showMessage('删除成功')
                 // 重新请求分页接口，渲染数据
-                dataLoaded.value = false
                 getTableData()
             } else {
                 // 获取服务端返回的错误消息

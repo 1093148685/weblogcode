@@ -74,7 +74,7 @@
                         </el-tooltip>
                         
                         <el-tooltip class="box-item" effect="dark" content="预览" placement="bottom">
-                            <el-button size="small" @click="showPreviewDialog(scope.row)" :icon="View" circle>
+                            <el-button size="small" :icon="View" circle>
                             </el-button>
                         </el-tooltip>
                             
@@ -141,36 +141,8 @@
                                 :rows="3" 
                                 maxlength="30" show-word-limit type="textarea" placeholder="请输入知识库摘要" clearable />
                             </el-form-item>
-                            <el-form-item label="置顶" prop="isTop" label-width="80px" size="large">
-                                <el-switch v-model="editForm.isTop" />
-                            </el-form-item>
-                            <el-form-item label="发布" prop="isPublish" label-width="80px" size="large">
-                                <el-switch v-model="editForm.isPublish" />
-                            </el-form-item>
                     </el-form>
             </FormDialog>
-
-            <!-- 预览知识库 -->
-            <el-dialog v-model="previewDialogVisible" title="知识库预览" width="60%">
-                <div v-if="previewWiki">
-                    <h2>{{ previewWiki.title }}</h2>
-                    <el-image :src="previewWiki.cover" style="width: 200px; margin: 10px 0;" />
-                    <p>{{ previewWiki.summary }}</p>
-                    <div v-if="previewCatalogs.length > 0" class="mt-5">
-                        <h3>目录：</h3>
-                        <ul>
-                            <li v-for="(catalog, index) in previewCatalogs" :key="index" class="mt-2">
-                                <span class="font-bold">{{ catalog.title }}</span>
-                                <ul v-if="catalog.children && catalog.children.length > 0" class="ml-5">
-                                    <li v-for="(child, childIndex) in catalog.children" :key="childIndex">
-                                        {{ child.title }}
-                                    </li>
-                                </ul>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </el-dialog>
 
             <!-- 目录编辑 -->
             <WikiCatalogEditDialog ref="editCatalogFormDialogRef" title="编辑目录" width="70%" destroyOnClose></WikiCatalogEditDialog>
@@ -178,13 +150,10 @@
 </template>
 
 <script setup>
-defineOptions({
-    name: 'AdminWikiList'
-})
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive } from 'vue'
 import { Search, RefreshRight, Check, Close, Delete, Edit, Tickets, View } from '@element-plus/icons-vue'
 import moment from 'moment'
-import { getWikiPageList, addWiki, updateWikiIsTop, updateWikiIsPublish, deleteWiki, updateWiki, getWikiCatalogs } from '@/api/admin/wiki'
+import { getWikiPageList, addWiki, updateWikiIsTop, updateWikiIsPublish, deleteWiki, updateWiki } from '@/api/admin/wiki'
 import FormDialog from '@/components/FormDialog.vue'
 import WikiCatalogEditDialog from '@/components/WikiCatalogEditDialog.vue'
 import { uploadFile } from '@/api/admin/file'
@@ -256,9 +225,6 @@ const total = ref(0)
 // 每页显示的数据量，给了个默认值 10
 const size = ref(10)
 
-// 数据是否已加载
-const dataLoaded = ref(false)
-
 
 // 获取分页数据
 function getTableData() {
@@ -272,15 +238,11 @@ function getTableData() {
                 current.value = res.data.pageNum
                 size.value = res.data.pageSize
                 total.value = res.data.total
-                dataLoaded.value = true
             }
         })
         .finally(() => tableLoading.value = false) // 隐藏表格 loading
 }
-
-onMounted(() => {
-    getTableData()
-})
+getTableData()
 
 // 每页展示数量变更事件
 const handleSizeChange = (chooseSize) => {
@@ -374,37 +336,37 @@ const onSubmit = () => {
 
 // 更新置顶
 const handleIsTopChange = (row) => {
-    const originalValue = !row.isTop
     updateWikiIsTop({id: row.id, isTop: row.isTop}).then((res) => {
         // 重新请求分页接口，渲染列表数据
         getTableData()
 
         if (res.success == false) {
-            row.isTop = originalValue
+            // 获取服务端返回的错误消息
+            let message = res.message
+            // 提示错误消息
+            showMessage(message, 'error')
             return
         }
 
         showMessage(row.isTop ? '置顶成功' : "已取消置顶")
-    }).catch(() => {
-        row.isTop = originalValue
     })
 }
 
 // 更新发布状态
 const handleIsPublishChange = (row) => {
-    const originalValue = !row.isPublish
     updateWikiIsPublish({id: row.id, isPublish: row.isPublish}).then((res) => {
         // 重新请求分页接口，渲染列表数据
         getTableData()
 
         if (res.success == false) {
-            row.isPublish = originalValue
+            // 获取服务端返回的错误消息
+            let message = res.message
+            // 提示错误消息
+            showMessage(message, 'error')
             return
         }
 
         showMessage(row.isPublish ? '发布成功' : "已取消发布")
-    }).catch(() => {
-        row.isPublish = originalValue
     })
 }
 
@@ -422,7 +384,6 @@ const deleteWikiSubmit = (row) => {
 
             showMessage('删除成功')
             // 重新请求分页接口，渲染数据
-            dataLoaded.value = false
             getTableData()
         })
     }).catch((e) => {
@@ -439,8 +400,6 @@ const showEditWikiDialog = (row) => {
     editForm.title = row.title
     editForm.cover = row.cover
     editForm.summary = row.summary
-    editForm.isTop = row.isTop || row.weight > 0
-    editForm.isPublish = row.isPublish
 }
 
 // 表单引用
@@ -450,26 +409,8 @@ const editForm = reactive({
     id: null,
     title: '',
     cover: '',
-    summary: '',
-    isTop: false,
-    isPublish: true
+    summary: ''
 })
-
-// 预览对话框
-const previewDialogVisible = ref(false)
-const previewWiki = ref(null)
-const previewCatalogs = ref([])
-
-const showPreviewDialog = (row) => {
-    previewWiki.value = row
-    previewDialogVisible.value = true
-    // 获取目录数据
-    getWikiCatalogs(row.id).then(res => {
-        if (res.success) {
-            previewCatalogs.value = res.data || []
-        }
-    })
-}
 
 // 知识库编辑：上传封面图片
 const handleUpdateCoverChange = (file) => {
@@ -500,19 +441,9 @@ const onEditWikiSubmit = () => {
             return false
         }
         
-        // 构造提交数据，isTop 转换为 Weight
-        const submitData = {
-            id: editForm.id,
-            title: editForm.title,
-            cover: editForm.cover,
-            summary: editForm.summary,
-            weight: editForm.isTop ? 1 : 0,
-            isPublish: editForm.isPublish
-        }
-        
         // 显示提交按钮 loading
         editFormDialogRef.value.showBtnLoading()
-        updateWiki(submitData).then((res) => {
+        updateWiki(editForm).then((res) => {
             if (!res.success) {
                 // 获取服务端返回的错误消息
                 let message = res.message
@@ -527,15 +458,13 @@ const onEditWikiSubmit = () => {
             editForm.title = ''
             editForm.cover = ''
             editForm.summary = ''
-            editForm.isTop = false
             // 隐藏对话框
             editFormDialogRef.value.close()
             // 重新请求分页接口，渲染数据
-            dataLoaded.value = false
             getTableData()
         }).finally(() => editFormDialogRef.value.closeBtnLoading()) // 隐藏提交按钮 loading
 
-    })
+})
 }
 
 // 编辑目录对话框是否显示

@@ -41,6 +41,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
 
 # Editor directories and files
 .idea/
@@ -48,29 +49,42 @@ pnpm-debug.log*
 *.swo
 *~
 .vscode/
+!.vscode/extensions.json
 
 # OS generated files
 .DS_Store
 Thumbs.db
 Desktop.ini
 
-# ===== Sensitive / Config files =====
+# Sensitive / Config files
 *.env
 .env.*
+*.db
+*.sqlite
+*.sqlite3
+data/
+backups/
+.cache/
 
-# ===== Misc =====
+# Local AI/agent workspace files
+.hermes/
+.claude/
+AGENTS.md
+CLAUDE.md
+
+# Misc
 *.zip
 *.rar
 *.7z
 nul
 
-# ===== Excluded directories (not part of the project) =====
-weblog-springboot/
-weblog-vue3-2/
-hongjin-ai-robot/
-spoilerjs-main/
-spoiler-implementation/
-GenPassword/
-Blue岛/
-比赛材料/
-docs/
+# Frontend local
+*.local
+dist-ssr/
+coverage/
+/cypress/videos/
+/cypress/screenshots/
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

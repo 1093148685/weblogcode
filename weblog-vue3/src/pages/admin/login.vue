@@ -7,7 +7,7 @@
             <div
                 class="flex justify-center items-center h-full flex-col animate__animated animate__bounceInLeft animate__fast">
                 <h2 class="font-bold text-4xl mb-7 text-white">Weblog 博客登录</h2>
-                <p class="text-white">一款由 Spring Boot + Mybaits Plus + Vue 3.2 + Vite 4 开发的前后端分离博客。</p>
+                <p class="text-white">一款由 ASP.NET Core 8 + SqlSugar + Vue 3 构建的前后端分离博客系统。</p>
                 <!-- 指定图片宽度为父级元素的 1/2 -->
                 <img src="@/assets/developer.png" class="w-1/2">
             </div>
@@ -63,6 +63,7 @@ import { useRouter } from 'vue-router'
 import { showMessage} from '@/composables/util'
 import { setToken } from '@/composables/cookie'
 import { useUserStore } from '@/stores/user'
+import { useDark, useToggle } from '@vueuse/core'
 
 const userStore = useUserStore()
 
@@ -158,36 +159,28 @@ onBeforeUnmount(() => {
 })
 
 // 是否是白天
-const isLight = ref(!document.documentElement.classList.contains('dark'))
-const isDark = ref(document.documentElement.classList.contains('dark'))
-const toggleDark = () => {
-    isDark.value = !isDark.value
-    isLight.value = !isDark.value
-    if (isDark.value) {
-        document.documentElement.classList.add('dark')
-        localStorage.setItem('color-scheme', 'dark')
+const isLight = ref(true)
+const isDark = useDark({
+  onChanged(dark) {
+    // update the dom, call the API or something
+    console.log('onchange:' + dark)
+    if (dark) {
+        // 给 body 添加 class="dark"
+        document.documentElement.classList.add('dark');
+        // 设置 switch 的值
+        isLight.value = false
     } else {
-        document.documentElement.classList.remove('dark')
-        localStorage.setItem('color-scheme', 'light')
+        // 移除 body 中添加 class="dark"
+        document.documentElement.classList.remove('dark');
+        isLight.value = true
     }
-}
+  },
+})
+const toggleDark = useToggle(isDark)
 </script>
 
 <style scoped>
 /* The switch - the box around the slider */
-/* 使用CSS自定义属性 <!-- 在 Vue 单文件组件中，配合 scoped 使用 -->*/
-:deep(.el-button--primary) {
-  --el-button-bg-color: #6366f1;
-  --el-button-border-color: #6366f1;
-  --el-button-hover-bg-color: #818cf8;
-  --el-button-hover-border-color: #818cf8;
-  --el-button-active-bg-color: #4f46e5;
-  --el-button-active-border-color: #4f46e5;
-}
-.el-input {
-  --el-input-focus-border-color: #6366f1 !important;
-  --el-input-hover-border-color: #a5b4fc !important;
-}
 .switch {
   font-size: 14px;
   position: relative;

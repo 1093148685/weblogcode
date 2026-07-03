@@ -1,0 +1,60 @@
+/* ============================================
+   Admin Layout Design Tokens
+   - sidebar: 固定深色，不随暗色模式变化
+   - content area: 可随暗色模式变化
+   ============================================ */
+
+:root {
+  /* ===== 布局尺寸 ===== */
+  --admin-header-height: 56px;
+  --admin-taglist-height: 40px;
+  --admin-footer-height: 48px;
+  --admin-sidebar-width-expand: 240px;
+  --admin-sidebar-width-collapse: 64px;
+
+  /* ===== z-index 分层 (低 → 高) ===== */
+  --z-content: 1;
+  --z-header: 100;
+  --z-taglist: 110;
+  --z-sidebar: 120;
+  --z-dropdown: 200;
+
+  /* ===== 侧栏（固定深色） ===== */
+  --admin-sidebar-bg: #1e293b;
+  --admin-sidebar-text: #ffffff;
+  --admin-sidebar-text-muted: rgba(255, 255, 255, 0.65);
+  --admin-sidebar-item-hover: rgba(255, 255, 255, 0.08);
+  --admin-sidebar-item-active-bg: var(--el-color-primary);
+  --admin-sidebar-item-active-text: #ffffff;
+  --admin-sidebar-logo-bg: rgba(255, 255, 255, 0.04);
+  --admin-sidebar-border: rgba(255, 255, 255, 0.06);
+
+  /* ===== 内容区（可切换亮/暗） ===== */
+  --admin-content-bg: #f4f7fb;
+  --admin-header-bg: rgba(255, 255, 255, 0.92);
+  --admin-taglist-bg: rgba(255, 255, 255, 0.88);
+  --admin-footer-bg: rgba(255, 255, 255, 0.85);
+  --admin-header-border: #e2e8f0;
+  --admin-taglist-border: #e2e8f0;
+
+  /* ===== 阴影 ===== */
+  --admin-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --admin-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --admin-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
+
+  /* ===== 过渡 ===== */
+  --admin-transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===== 暗色模式 - 内容区变量覆盖 ===== */
+html.dark {
+  --admin-content-bg: #11151b;
+  --admin-header-bg: rgba(13, 18, 30, 0.92);
+  --admin-taglist-bg: rgba(13, 18, 30, 0.88);
+  --admin-footer-bg: rgba(13, 18, 30, 0.85);
+  --admin-header-border: rgba(71, 85, 105, 0.34);
+  --admin-taglist-border: rgba(71, 85, 105, 0.34);
+  --admin-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --admin-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --admin-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+}

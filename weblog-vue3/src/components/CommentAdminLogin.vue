@@ -3,7 +3,7 @@
         <!-- 未登录状态 -->
         <div v-if="!commentAdminStore.isLoggedIn" class="flex items-center gap-2">
             <button @click="showLoginModal = true"
-                class="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-md transition-colors">
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] bg-[var(--bg-card)] border border-[var(--border-base)] hover:border-[var(--border-heavy)] hover:text-[var(--text-heading)] rounded-md transition-colors shadow-sm">
                 管理员登录
             </button>
         </div>

@@ -1,25 +1,25 @@
 <template>
     <div>
-        <!-- 表头分页查询条件 -->
-        <el-card class="mb-5">
+        <!-- 表头分页查询条件， shadow="never" 指定 card 卡片组件没有阴影 -->
+        <el-card shadow="never" class="mb-5">
             <!-- flex 布局，内容垂直居中 -->
-            <div class="flex items-center flex-wrap gap-3">
-                <span class="text-sm text-[var(--admin-text)] font-medium">文章标题</span>
-                <div class="w-52"><el-input v-model="searchArticleTitle" placeholder="请输入（模糊查询）" size="default" /></div>
+            <div class="flex items-center">
+                <el-text>文章标题</el-text>
+                <div class="ml-3 w-52 mr-5"><el-input v-model="searchArticleTitle" placeholder="请输入（模糊查询）" /></div>
 
-                <span class="text-sm text-[var(--admin-text)] font-medium">创建日期</span>
-                <div class="w-72">
+                <el-text>创建日期</el-text>
+                <div class="ml-3 w-30 mr-5">
                     <!-- 日期选择组件（区间选择） -->
                     <el-date-picker v-model="pickDate" type="daterange" range-separator="至" start-placeholder="开始时间"
-                        end-placeholder="结束时间" size="default" :shortcuts="shortcuts" @change="datepickerChange" style="width: 100%" />
+                        end-placeholder="结束时间" size="default" :shortcuts="shortcuts" @change="datepickerChange" />
                 </div>
 
-                <el-button type="primary" class="ml-auto" :icon="Search" @click="getTableData">查询</el-button>
-                <el-button :icon="RefreshRight" @click="reset">重置</el-button>
+                <el-button type="primary" class="ml-3" :icon="Search" @click="getTableData">查询</el-button>
+                <el-button class="ml-3" :icon="RefreshRight" @click="reset">重置</el-button>
             </div>
         </el-card>
 
-        <el-card>
+        <el-card shadow="never">
             <!-- 写文章按钮 -->
             <div class="mb-5">
                 <el-button type="primary" @click="isArticlePublishEditorShow = true">
@@ -32,13 +32,13 @@
             <!-- 分页列表 -->
             <el-table :data="tableData" border stripe style="width: 100%" v-loading="tableLoading">
                 <el-table-column prop="id" label="ID" width="50" />
-                <el-table-column prop="title" label="标题" width="300" />
-                <el-table-column prop="cover" label="封面" width="120">
+                <el-table-column prop="title" label="标题" width="380" />
+                <el-table-column prop="cover" label="封面" width="180">
                     <template #default="scope">
                         <el-image style="width: 100px;" :src="scope.row.cover" />
                     </template>
                 </el-table-column>
-                <el-table-column prop="isTop" label="置顶" width="100" align="center">
+                <el-table-column prop="isTop" label="是否置顶" width="100">
                     <template #default="scope">
                         <el-switch
                             @change="handleIsTopChange(scope.row)"
@@ -50,43 +50,22 @@
                     </template>
                 </el-table-column>
                 <el-table-column prop="createTime" label="发布时间" width="180" />
-                <el-table-column label="AI摘要" width="110" align="center">
-                    <template #default="scope">
-                        <el-tag v-if="aiSummaryStatus[scope.row.id]?.hasSummary" type="success" size="small" effect="plain">
-                            <el-icon class="mr-1"><CircleCheck /></el-icon>
-                            有
-                        </el-tag>
-                        <el-tag v-else-if="aiSummaryStatus[scope.row.id]?.loading" type="warning" size="small" effect="plain">
-                            <el-icon class="is-loading"><Loading /></el-icon>
-                            生成中
-                        </el-tag>
-                        <el-tag v-else type="info" size="small" effect="plain">
-                            <el-icon class="mr-1"><CircleClose /></el-icon>
-                            无
-                        </el-tag>
-                    </template>
-                </el-table-column>
                 <el-table-column label="操作">
                     <template #default="scope">
                         <el-button size="small" @click="showArticleUpdateEditor(scope.row)">
-                            <el-icon class="mr-1"><Edit /></el-icon>
-                            编辑
-                        </el-button>
-                        <el-button size="small" @click="goArticleDetailPage(scope.row.id)">
-                            <el-icon class="mr-1"><View /></el-icon>
-                            预览
-                        </el-button>
-                        <el-button
-                            type="warning"
-                            size="small"
-                            @click="generateAiSummary(scope.row)"
-                            :disabled="aiSummaryStatus[scope.row.id]?.loading"
-                        >
-                            <el-icon class="mr-1"><MagicStick /></el-icon>
-                            {{ aiSummaryStatus[scope.row.id]?.loading ? '生成中' : 'AI摘要' }}
-                        </el-button>
+                            <el-icon class="mr-1">
+                                <Edit />
+                            </el-icon>
+                            编辑</el-button>
+                            <el-button size="small" @click="goArticleDetailPage(scope.row.id)">
+                            <el-icon class="mr-1">
+                                <View />
+                            </el-icon>
+                            预览</el-button>
                         <el-button type="danger" size="small" @click="deleteArticleSubmit(scope.row)">
-                            <el-icon class="mr-1"><Delete /></el-icon>
+                            <el-icon class="mr-1">
+                                <Delete />
+                            </el-icon>
                             删除
                         </el-button>
                     </template>
@@ -102,7 +81,7 @@
 
         </el-card>
 
-<!-- 写博客 -->
+        <!-- 写博客 -->
         <el-dialog v-model="isArticlePublishEditorShow" :fullscreen="true" :show-close="false"
             :close-on-press-escape="false">
             <template #header="{ close, titleId, titleClass }">
@@ -133,7 +112,7 @@
                 </el-form-item>
                 <el-form-item label="内容" prop="content">
                     <!-- Markdown 编辑器 -->
-                    <MdEditor v-model="form.content" @onUploadImg="onUploadImg" editorId="publishArticleEditor" :no-upload-img="true" />
+                    <MdEditor v-model="form.content" @onUploadImg="onUploadImg" editorId="publishArticleEditor" />
                 </el-form-item>
                 <el-form-item label="封面" prop="cover">
                     <el-upload class="avatar-uploader" action="#" :on-change="handleCoverChange" :auto-upload="false"
@@ -148,7 +127,7 @@
                     <!-- :rows="3" 指定 textarea 默认显示 3 行 -->
                     <el-input v-model="form.summary" :rows="3" type="textarea" placeholder="请输入文章摘要" />
                 </el-form-item>
-<el-form-item label="分类" prop="categoryId">
+                <el-form-item label="分类" prop="categoryId">
                     <el-select v-model="form.categoryId" clearable placeholder="---请选择---" size="large">
                         <el-option v-for="item in categories" :key="item.id" :label="item.name" :value="item.id" />
                     </el-select>
@@ -163,13 +142,10 @@
                         </el-select>
                     </span>
                 </el-form-item>
-                <el-form-item label="是否发布">
-                    <el-switch v-model="form.isPublish" inline-prompt active-text="发布" inactive-text="草稿" />
-                </el-form-item>
             </el-form>
         </el-dialog>
 
-<!-- 编辑博客 -->
+        <!-- 编辑博客 -->
         <el-dialog v-model="isArticleUpdateEditorShow" :fullscreen="true" :show-close="false"
             :close-on-press-escape="false">
             <template #header="{ close, titleId, titleClass }">
@@ -201,7 +177,7 @@
                 <el-form-item label="内容" prop="content">
                     <!-- Markdown 编辑器 -->
                     <MdEditor v-model="updateArticleForm.content" @onUploadImg="onUploadImg"
-                        editorId="updateArticleEditor" :no-upload-img="true" />
+                        editorId="updateArticleEditor" />
                 </el-form-item>
                 <el-form-item label="封面" prop="cover">
                     <el-upload class="avatar-uploader" action="#" :on-change="handleUpdateCoverChange" :auto-upload="false"
@@ -216,7 +192,7 @@
                     <!-- :rows="3" 指定 textarea 默认显示 3 行 -->
                     <el-input v-model="updateArticleForm.summary" :rows="3" type="textarea" placeholder="请输入文章摘要" />
                 </el-form-item>
-<el-form-item label="分类" prop="categoryId">
+                <el-form-item label="分类" prop="categoryId">
                     <el-select v-model="updateArticleForm.categoryId" clearable placeholder="---请选择---" size="large">
                         <el-option v-for="item in categories" :key="item.id" :label="item.name" :value="item.id" />
                     </el-select>
@@ -231,156 +207,26 @@
                         </el-select>
                     </span>
                 </el-form-item>
-                <el-form-item label="是否发布">
-                    <el-switch v-model="updateArticleForm.isPublish" inline-prompt active-text="发布" inactive-text="草稿" />
-                </el-form-item>
             </el-form>
         </el-dialog>
-
-        <!-- AI 助手弹窗 -->
-        <AiAssistantDialog v-model="isAiAssistantShow" @insert-content="handleAiInsertContent" />
     </div>
 </template>
 
 <script setup>
-defineOptions({ name: 'AdminArticleList' })
 import { ref, reactive } from 'vue'
-import { Search, RefreshRight, Check, Close, MagicStick, CircleCheck, CircleClose, Loading } from '@element-plus/icons-vue'
+import { Search, RefreshRight, Check, Close } from '@element-plus/icons-vue'
 import { getArticlePageList, deleteArticle, publishArticle, getArticleDetail, updateArticle, updateArticleIsTop } from '@/api/admin/article'
 import { uploadFile } from '@/api/admin/file'
 import { getCategorySelectList } from '@/api/admin/category'
 import { searchTags, getTagSelectList } from '@/api/admin/tag'
-import { getAiSummaryAdmin, generateAiSummaryApi } from '@/api/admin/aiSummary'
 import moment from 'moment'
 import { showMessage, showModel } from '@/composables/util'
-import { getToken } from '@/composables/cookie'
+import { setCache, getCache, clearCacheByPrefix } from '@/composables/useCache'
 import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 import { useRouter } from 'vue-router'
-import AiAssistantDialog from '@/components/AiAssistantDialog.vue'
 
 const router = useRouter()
-
-// AI 助手弹窗
-const isAiAssistantShow = ref(false)
-const aiAssistantTarget = ref('')
-
-const showAiAssistant = (target) => {
-    aiAssistantTarget.value = target
-    isAiAssistantShow.value = true
-}
-
-// AI 摘要状态管理
-const aiSummaryStatus = reactive({})
-
-// 初始化 AI 摘要状态
-const initAiSummaryStatus = (articles) => {
-    articles.forEach(article => {
-        if (!aiSummaryStatus[article.id]) {
-            aiSummaryStatus[article.id] = { loading: false, hasSummary: null }
-        }
-    })
-}
-
-// 检查文章是否有 AI 摘要
-const checkAiSummaryStatus = (articleId) => {
-    if (aiSummaryStatus[articleId]?.hasSummary !== null) return
-    getAiSummaryAdmin(articleId).then(res => {
-        if (res.success && res.data && res.data.id) {
-            aiSummaryStatus[articleId] = { loading: false, hasSummary: true }
-        } else {
-            aiSummaryStatus[articleId] = { loading: false, hasSummary: false }
-        }
-    }).catch(() => {
-        aiSummaryStatus[articleId] = { loading: false, hasSummary: false }
-    })
-}
-
-// 生成 AI 摘要
-const generateAiSummary = async (row) => {
-    if (aiSummaryStatus[row.id]?.loading) return
-    
-    aiSummaryStatus[row.id] = { loading: true, hasSummary: aiSummaryStatus[row.id]?.hasSummary || false }
-    
-    try {
-        const token = getToken()
-        if (!token) {
-            showMessage('请先登录', 'error')
-            aiSummaryStatus[row.id] = { loading: false, hasSummary: aiSummaryStatus[row.id]?.hasSummary || false }
-            return
-        }
-        
-        const response = await fetch(`/api/admin/ai-summary/generate/${row.id}`, {
-            method: 'POST',
-            headers: {
-                'Authorization': 'Bearer ' + token,
-                'Content-Type': 'application/json'
-            }
-        })
-        
-        if (!response.ok) {
-            throw new Error('请求失败，状态码: ' + response.status)
-        }
-        
-        const reader = response.body?.getReader()
-        if (!reader) {
-            throw new Error('获取读取器失败')
-        }
-        
-        const decoder = new TextDecoder()
-        let result = ''
-        let hasError = false
-        
-        while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-            
-            const chunk = decoder.decode(value, { stream: true })
-            const lines = chunk.split('\n')
-            
-            for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                    try {
-                        const data = JSON.parse(line.slice(6))
-                        if (data.error) {
-                            showMessage(data.error, 'error')
-                            hasError = true
-                            break
-                        }
-                        if (data.content) {
-                            result += data.content
-                        }
-                        if (data.done) {
-                            break
-                        }
-                    } catch (e) {
-                        // Ignore parse errors for incomplete JSON
-                    }
-                }
-            }
-            if (hasError) break
-        }
-        
-        if (!hasError && result) {
-            aiSummaryStatus[row.id] = { loading: false, hasSummary: true }
-            showMessage('AI 摘要生成成功', 'success')
-        } else if (!hasError && !result) {
-            aiSummaryStatus[row.id] = { loading: false, hasSummary: aiSummaryStatus[row.id]?.hasSummary || false }
-        }
-    } catch (error) {
-        console.error('AI 摘要生成失败:', error)
-        showMessage('生成失败: ' + error.message, 'error')
-        aiSummaryStatus[row.id] = { loading: false, hasSummary: aiSummaryStatus[row.id]?.hasSummary || false }
-    }
-}
-
-const handleAiInsertContent = (content) => {
-    if (aiAssistantTarget.value === 'publish') {
-        form.content = form.content ? form.content + '\n\n' + content : content
-    } else if (aiAssistantTarget.value === 'update') {
-        updateArticleForm.content = updateArticleForm.content ? updateArticleForm.content + '\n\n' + content : content
-    }
-}
 
 // 模糊搜索的文章标题
 const searchArticleTitle = ref('')
@@ -451,25 +297,37 @@ const size = ref(10)
 
 // 获取分页数据
 function getTableData() {
-    // 显示表格 loading
-    tableLoading.value = true
-    // 调用后台分页接口，并传入所需参数
-    getArticlePageList({ pageNum: current.value, pageSize: size.value, startDate: startDate.value, endDate: endDate.value, title: searchArticleTitle.value }, true)
+    const cacheKey = `admin_articles_${current.value}_${size.value}_${searchArticleTitle.value || ''}_${startDate.value || ''}_${endDate.value || ''}`
+
+    // SWR: 有缓存先展示缓存，再发请求刷新
+    const cached = getCache(cacheKey)
+    if (cached) {
+        tableData.value = cached.list
+        current.value = cached.pageNum
+        size.value = cached.pageSize
+        total.value = cached.total
+        tableLoading.value = false
+    } else {
+        tableLoading.value = true
+    }
+
+    getArticlePageList({ pageNum: current.value, pageSize: size.value, startDate: startDate.value, endDate: endDate.value, title: searchArticleTitle.value })
         .then((res) => {
             if (res.success == true) {
                 tableData.value = res.data.list
                 current.value = res.data.pageNum
                 size.value = res.data.pageSize
                 total.value = res.data.total
-                // 初始化 AI 摘要状态
-                initAiSummaryStatus(res.data.list)
-                // 检查每篇文章的 AI 摘要状态
-                res.data.list.forEach(article => {
-                    checkAiSummaryStatus(article.id)
-                })
+                // 缓存 30 秒，后台数据变更频繁度适中
+                setCache(cacheKey, {
+                    list: res.data.list,
+                    pageNum: res.data.pageNum,
+                    pageSize: res.data.pageSize,
+                    total: res.data.total
+                }, 30 * 1000)
             }
         })
-        .finally(() => tableLoading.value = false) // 隐藏表格 loading
+        .finally(() => tableLoading.value = false)
 }
 getTableData()
 
@@ -494,6 +352,9 @@ const deleteArticleSubmit = (row) => {
             }
 
             showMessage('删除成功')
+            // 清除缓存
+            clearCacheByPrefix('articles_page_')
+            clearCacheByPrefix('admin_articles_')
             // 重新请求分页接口，渲染数据
             getTableData()
         })
@@ -515,8 +376,7 @@ const form = reactive({
     cover: '',
     categoryId: null,
     tags: [],
-    summary: "",
-    isPublish: true
+    summary: ""
 })
 
 // 修改文章表单对象
@@ -527,8 +387,7 @@ const updateArticleForm = reactive({
     cover: '',
     categoryId: null,
     tags: [],
-    summary: "",
-    isPublish: true
+    summary: ""
 })
 
 // 表单校验规则
@@ -585,27 +444,22 @@ const handleUpdateCoverChange = (file) => {
 
 // 编辑器图片上传
 const onUploadImg = async (files, callback) => {
-    const resList = []
-    for (const file of files) {
-        console.log('==> 编辑器开始上传文件...', file.name)
-        let formData = new FormData()
-        formData.append("file", file)
-        try {
-            const res = await uploadFile(formData)
-            console.log('上传结果:', res)
-            if (res.success && res.data) {
-                console.log('访问路径：' + res.data)
-                resList.push(res.data)
-            } else {
-                showMessage('图片上传失败: ' + (res.message || '未知错误'), 'error')
-            }
-        } catch (err) {
-            showMessage('图片上传失败: ' + err.message, 'error')
-        }
-    }
-    if (resList.length > 0) {
-        callback(resList)
-    }
+    const res = await Promise.all(
+        files.map((file) => {
+            return new Promise((rev, rej) => {
+                console.log('==> 编辑器开始上传文件...')
+                let formData = new FormData()
+                formData.append("file", file);
+                uploadFile(formData).then((res) => {
+                    console.log(res)
+                    console.log('访问路径：' + res.data)
+                    // 调用 callback 函数，回显上传图片
+                    callback([res.data]);
+                    rev(res.data)
+                }).catch(rej)
+            });
+        })
+    );
 }
 
 // 文章分类
@@ -644,6 +498,7 @@ const remoteMethod = (query) => {
 
 // 发布文章
 const publishArticleSubmit = () => {
+    // isArticlePublishEditorShow.value = true
     console.log('提交 md 内容：' + form.content)
     // 校验表单
     publishArticleFormRef.value.validate((valid) => {
@@ -651,17 +506,17 @@ const publishArticleSubmit = () => {
             return false
         }
 
-        const payload = { ...form, status: form.isPublish ? 1 : 0 }
-        publishArticle(payload).then((res) => {
+        publishArticle(form).then((res) => {
             if (res.success == false) {
-                // 获取服务端返回的错误消息
                 let message = res.message
-                // 提示错误消息
                 showMessage(message, 'error')
                 return
             }
 
             showMessage('发布成功')
+            // 清除缓存：前端文章列表 + 后台表格
+            clearCacheByPrefix('articles_page_')
+            clearCacheByPrefix('admin_articles_')
             // 隐藏发布文章对话框
             isArticlePublishEditorShow.value = false
             // 将 form 表单字段置空
@@ -671,7 +526,6 @@ const publishArticleSubmit = () => {
             form.summary = ''
             form.categoryId = null
             form.tags = []
-            form.isPublish = true
             // 重新请求分页接口，渲染列表数据
             getTableData()
         })
@@ -699,7 +553,6 @@ const showArticleUpdateEditor = (row) => {
             updateArticleForm.categoryId = res.data.categoryId
             updateArticleForm.tags = res.data.tagIds
             updateArticleForm.summary = res.data.summary
-            updateArticleForm.isPublish = res.data.status !== 0
         }
     })
 }
@@ -714,8 +567,7 @@ const updateSubmit = () => {
         }
 
         // 请求更新文章接口
-        const payload = { ...updateArticleForm, status: updateArticleForm.isPublish ? 1 : 0 }
-        updateArticle(payload).then((res) => {
+        updateArticle(updateArticleForm).then((res) => {
             if (res.success == false) {
                 // 获取服务端返回的错误消息
                 let message = res.message
@@ -725,6 +577,9 @@ const updateSubmit = () => {
             }
 
             showMessage('保存成功')
+            // 清除缓存
+            clearCacheByPrefix('articles_page_')
+            clearCacheByPrefix('admin_articles_')
             // 隐藏编辑框
             isArticleUpdateEditorShow.value = false
             // 重新请求分页接口，渲染列表数据
@@ -739,21 +594,21 @@ const goArticleDetailPage = (articleId) => {
     router.push('/article/' + articleId)
 }
 
-// 点击置顶
+// 点击置顶（乐观更新：先改 UI，失败再回滚）
 const handleIsTopChange = (row) => {
+    const previousValue = !row.isTop
     updateArticleIsTop({id: row.id, isTop: row.isTop}).then((res) => {
-        // 重新请求分页接口，渲染列表数据
-        getTableData()
-
         if (res.success == false) {
-            // 获取服务端返回的错误消息
+            // 回滚
+            row.isTop = previousValue
             let message = res.message
-            // 提示错误消息
             showMessage(message, 'error')
             return
         }
-
         showMessage(row.isTop ? '置顶成功' : "已取消置顶")
+    }).catch(() => {
+        // 网络错误也回滚
+        row.isTop = previousValue
     })
 }
 </script>
@@ -778,44 +633,10 @@ const handleIsTopChange = (row) => {
 .el-select--large {
     width: 600px;
 }
-
-/* AI 助手按钮样式 */
-.ai-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: none;
-    color: #fff;
-}
-
-.ai-btn:hover {
-    background: linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%);
-    color: #fff;
-}
 </style>
 
 <style>
 .md-editor-footer {
     height: 40px;
-}
-
-/* 表格悬停效果 */
-.admin-table {
-    --el-table-row-hover-bg-color: rgba(59, 130, 246, 0.08);
-    transition: all 0.2s ease;
-}
-
-.admin-table ::v-deep(.el-table__row) {
-    transition: all 0.2s ease;
-}
-
-.admin-table ::v-deep(.el-table__row:hover) {
-    transform: translateX(2px);
-}
-
-.admin-table ::v-deep(.el-table__row:hover > td) {
-    background: var(--el-table-row-hover-bg-color) !important;
-}
-
-.admin-table ::v-deep(.el-table__cell) {
-    transition: all 0.2s ease;
 }
 </style>

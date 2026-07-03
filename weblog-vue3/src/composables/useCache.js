@@ -81,3 +81,22 @@ export function clearAllCache() {
         }
     })
 }
+
+/**
+ * 清除匹配前缀的所有缓存项
+ * @param {string} prefix - 缓存 key 前缀（不含 CACHE_PREFIX）
+ */
+export function clearCacheByPrefix(prefix) {
+    const fullPrefix = CACHE_PREFIX + prefix
+    const keys = Object.keys(localStorage)
+    let cleared = 0
+    keys.forEach(key => {
+        if (key.startsWith(fullPrefix)) {
+            localStorage.removeItem(key)
+            cleared++
+        }
+    })
+    if (cleared > 0) {
+        console.log(`[Cache] Cleared ${cleared} items with prefix "${prefix}"`)
+    }
+}

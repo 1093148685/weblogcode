@@ -26,6 +26,9 @@ function initChart() {
     }
 
     myChart = echarts.init(chartRef.value)
+    const rootStyle = getComputedStyle(chartRef.value)
+    const textColor = rootStyle.getPropertyValue('--admin-text-muted').trim() || '#94a3b8'
+    const cardColor = rootStyle.getPropertyValue('--admin-bg-card').trim() || '#0f172a'
 
     const data = props.value.map(item => ({
         name: item.name,
@@ -42,7 +45,8 @@ function initChart() {
             right: 10,
             top: 'center',
             textStyle: {
-                fontSize: 12
+                fontSize: 12,
+                color: textColor
             }
         },
         series: [
@@ -53,7 +57,7 @@ function initChart() {
                 avoidLabelOverlap: false,
                 itemStyle: {
                     borderRadius: 5,
-                    borderColor: '#fff',
+                    borderColor: cardColor,
                     borderWidth: 2
                 },
                 label: {

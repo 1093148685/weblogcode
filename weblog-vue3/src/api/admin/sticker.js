@@ -1,11 +1,11 @@
 import axios from "@/axios";
 
-export function createStickerPack(data) {
-    return axios.post('/admin/sticker/packs', data)
+export function getAllStickerPacks() {
+    return axios.get("/admin/sticker/packs")
 }
 
-export function getAllStickerPacks() {
-    return axios.get('/admin/sticker/packs')
+export function createStickerPack(data) {
+    return axios.post("/admin/sticker/packs", data)
 }
 
 export function updateStickerPack(id, data) {
@@ -19,9 +19,7 @@ export function deleteStickerPack(id) {
 export function uploadStickerZip(packId, file) {
     const formData = new FormData()
     formData.append('file', file)
-    return axios.post(`/admin/sticker/packs/${packId}/upload`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-    })
+    return axios.post(`/admin/sticker/packs/${packId}/upload`, formData)
 }
 
 export function deleteSticker(id) {

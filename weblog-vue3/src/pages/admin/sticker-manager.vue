@@ -144,10 +144,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { getStickerPacks, getStickerPack } from '@/api/frontend/sticker'
 import { createStickerPack, getAllStickerPacks, updateStickerPack, deleteStickerPack, uploadStickerZip, deleteSticker, setStickerCover } from '@/api/admin/sticker'
 import { showMessage } from '@/composables/util'
+import { useUserStore } from '@/stores/user'
 
 const loading = ref(false)
 const tableData = ref([])
@@ -160,6 +161,16 @@ const uploadRef = ref(null)
 const currentPack = ref(null)
 const currentPackStickers = ref([])
 const selectedFile = ref(null)
+const userStore = useUserStore()
+const isAdmin = computed(() => userStore.userInfo?.role === 'admin')
+
+const ensureAdmin = () => {
+    if (!isAdmin.value) {
+        showMessage('演示账号仅支持查询操作！', 'error')
+        return false
+    }
+    return true
+}
 
 const form = reactive({
     id: null,
@@ -184,6 +195,7 @@ const loadData = async () => {
 }
 
 const showCreateDialog = () => {
+    if (!ensureAdmin()) return
     form.id = null
     form.name = ''
     form.description = ''
@@ -194,6 +206,7 @@ const showCreateDialog = () => {
 }
 
 const editPack = (pack) => {
+    if (!ensureAdmin()) return
     form.id = pack.id
     form.name = pack.name
     form.description = pack.description || ''
@@ -204,6 +217,7 @@ const editPack = (pack) => {
 }
 
 const submitForm = async () => {
+    if (!ensureAdmin()) return
     if (!form.name) {
         showMessage('请输入名称', 'warning')
         return
@@ -231,6 +245,7 @@ const submitForm = async () => {
 }
 
 const deletePack = async (pack) => {
+    if (!ensureAdmin()) return
     try {
         await ElMessageBox.confirm(`确定要删除贴纸包 "${pack.name}" 吗？`, '提示', {
             confirmButtonText: '确定',
@@ -271,6 +286,7 @@ const showStickersDialog = async (pack) => {
 }
 
 const showUploadDialog = (pack) => {
+    if (!ensureAdmin()) return
     currentPack.value = pack
     selectedFile.value = null
     uploadRef.value?.clearFiles()
@@ -282,6 +298,7 @@ const handleFileChange = (file) => {
 }
 
 const submitUpload = async () => {
+    if (!ensureAdmin()) return
     if (!selectedFile.value) {
         showMessage('请选择文件', 'warning')
         return
@@ -320,6 +337,7 @@ const submitUpload = async () => {
 }
 
 const removeSticker = async (stickerItem) => {
+    if (!ensureAdmin()) return
     try {
         await ElMessageBox.confirm('确定要删除这个贴纸吗？', '提示', {
             confirmButtonText: '确定',
@@ -353,6 +371,7 @@ const isAnimatedUrl = (url) => {
 }
 
 const setCover = async (stickerItem) => {
+    if (!ensureAdmin()) return
     const res = await setStickerCover(currentPack.value.id, stickerItem.id)
     if (res.success) {
         showMessage('设置封面成功', 'success')

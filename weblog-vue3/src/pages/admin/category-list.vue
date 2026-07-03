@@ -50,7 +50,7 @@
             <div class="mt-10 flex justify-center">
                 <el-pagination v-model:current-page="current" v-model:page-size="size" :page-sizes="[10, 20, 50]"
                 :small="false" :background="true" layout="total, sizes, prev, pager, next, jumper"
-                :total="total" @size-change="handleSizeChange" @current-change="handleCurrentChange" />
+                :total="total" @size-change="handleSizeChange" @current-change="getTableData" />
             </div>
 
         </el-card>
@@ -68,15 +68,13 @@
 </template>
 
 <script setup>
-defineOptions({
-    name: 'AdminCategoryList'
-})
 import { Search, RefreshRight } from '@element-plus/icons-vue'
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive } from 'vue'
 import { getCategoryPageList, addCategory, deleteCategory } from '@/api/admin/category'
 import moment from 'moment'
 import { showMessage, showModel } from '@/composables/util'
 import FormDialog from '@/components/FormDialog.vue'
+import { setCache, getCache } from '@/composables/useCache'
 
 // 分页查询的分类名称
 const searchCategoryName = ref('')
@@ -137,42 +135,44 @@ const total = ref(0)
 const size = ref(10)
 
 
-// 数据是否已加载
-const dataLoaded = ref(false)
-
 // 获取分页数据
 function getTableData() {
-    // 显示表格 loading
-    tableLoading.value = true
-    // 调用后台分页接口，并传入所需参数
+    const cacheKey = `admin_categories_${current.value}_${size.value}_${searchCategoryName.value || ''}_${startDate.value || ''}_${endDate.value || ''}`
 
-    getCategoryPageList({pageNum: current.value, pageSize: size.value, startDate: startDate.value, endDate: endDate.value, name: searchCategoryName.value}, true)
+    const cached = getCache(cacheKey)
+    if (cached) {
+        tableData.value = cached.list
+        current.value = cached.pageNum
+        size.value = cached.pageSize
+        total.value = cached.total
+        tableLoading.value = false
+    } else {
+        tableLoading.value = true
+    }
+
+    getCategoryPageList({pageNum: current.value, pageSize: size.value, startDate: startDate.value, endDate: endDate.value, name: searchCategoryName.value})
     .then((res) => {
         if (res.success == true) {
             tableData.value = res.data.list
             current.value = res.data.pageNum
             size.value = res.data.pageSize
             total.value = res.data.total
-            dataLoaded.value = true
+            setCache(cacheKey, {
+                list: res.data.list,
+                pageNum: res.data.pageNum,
+                pageSize: res.data.pageSize,
+                total: res.data.total
+            }, 30 * 1000)
         }
     })
-    .finally(() => tableLoading.value = false) // 隐藏表格 loading
+    .finally(() => tableLoading.value = false)
 }
-
-onMounted(() => {
-    getTableData()
-})
+getTableData()
 
 // 每页展示数量变更事件
 const handleSizeChange = (chooseSize) => {
     console.log('选择的页码' + chooseSize)
     size.value = chooseSize
-    getTableData()
-}
-
-// 当前页码变更事件
-const handleCurrentChange = (page) => {
-    current.value = page
     getTableData()
 }
 
@@ -251,7 +251,6 @@ const deleteCategorySubmit = (row) => {
             if (res.success == true) {
                 showMessage('删除成功')
                 // 重新请求分页接口，渲染数据
-                dataLoaded.value = false
                 getTableData()
             } else {
                 // 获取服务端返回的错误消息
